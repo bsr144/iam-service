@@ -1,0 +1,2367 @@
+openapi: 3.0.3
+info:
+  title: IAM System API
+  description: |
+    Generic Multi-Tenant Identity and Access Management System API.
+    
+    ## Overview
+    This API provides authentication, authorization, and user management capabilities
+    for multi-tenant applications.
+    
+    ## Authentication
+    Most endpoints require a JWT Bearer token in the Authorization header.
+    Tokens are obtained via the `/auth/login` and `/auth/verify-pin` endpoints.
+    
+    ## Multi-Tenancy
+    The `X-Tenant-Code` header is required for authentication endpoints to identify
+    the tenant context. For authenticated requests, the tenant is extracted from the JWT.
+    
+    ## Rate Limiting
+    All endpoints are rate-limited. See the rate limit headers in responses:
+    - `X-RateLimit-Limit`: Maximum requests allowed
+    - `X-RateLimit-Remaining`: Remaining requests in window
+    - `X-RateLimit-Reset`: Unix timestamp when limit resets
+  version: 1.0.0
+  contact:
+    name: API Support
+    email: api-support@example.com
+  license:
+    name: Proprietary
+    url: https://example.com/license
+
+servers:
+  - url: https://api.example.com/api/iam/v1
+    description: Production
+  - url: https://api-staging.example.com/api/iam/v1
+    description: Staging
+  - url: http://localhost:8080/api/iam/v1
+    description: Development
+
+tags:
+  - name: Authentication
+    description: User authentication and token management
+  - name: Users
+    description: User management operations
+  - name: Profile
+    description: Current user profile operations
+  - name: Applications
+    description: Application management
+  - name: Roles
+    description: Role management
+  - name: Permissions
+    description: Permission management
+  - name: Branches
+    description: Branch management
+  - name: Tenants
+    description: Tenant management (Platform Admin)
+  - name: Audit
+    description: Audit log queries
+  - name: Health
+    description: Health check endpoints
+
+paths:
+  # ==========================================
+  # AUTHENTICATION
+  # ==========================================
+  /auth/login:
+    post:
+      tags: [Authentication]
+      summary: User login with email and password
+      description: |
+        Authenticates user with email and password. If PIN is set, returns a partial
+        token that must be used with `/auth/verify-pin`. If PIN is not set (first login),
+        returns full tokens with `requires_pin_setup: true`.
+      operationId: login
+      security: []
+      parameters:
+        - $ref: '#/components/parameters/TenantCode'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+      responses:
+        '200':
+          description: Login successful or PIN required
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - $ref: '#/components/schemas/LoginPartialResponse'
+                  - $ref: '#/components/schemas/LoginSuccessResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+
+  /auth/verify-pin:
+    post:
+      tags: [Authentication]
+      summary: Verify PIN after password authentication
+      description: Completes the two-factor authentication by verifying the 6-digit PIN.
+      operationId: verifyPin
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/VerifyPinRequest'
+      responses:
+        '200':
+          description: PIN verified, login successful
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LoginSuccessResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+
+  /auth/refresh:
+    post:
+      tags: [Authentication]
+      summary: Refresh access token
+      description: |
+        Exchanges a valid refresh token for a new access token and refresh token.
+        The old refresh token is invalidated (token rotation).
+      operationId: refreshToken
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RefreshTokenRequest'
+      responses:
+        '200':
+          description: Tokens refreshed successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TokenResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /auth/logout:
+    post:
+      tags: [Authentication]
+      summary: Logout and revoke tokens
+      description: Revokes the current access token and optionally the refresh token.
+      operationId: logout
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LogoutRequest'
+      responses:
+        '200':
+          description: Logged out successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+
+  /auth/register:
+    post:
+      tags: [Authentication]
+      summary: Register new user
+      description: |
+        Registers a new user account. An email verification OTP will be sent.
+        After email verification, account status becomes PENDING_APPROVAL if
+        tenant requires approval, otherwise ACTIVE.
+      operationId: register
+      security: []
+      parameters:
+        - $ref: '#/components/parameters/TenantCode'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RegisterRequest'
+      responses:
+        '201':
+          description: Registration successful
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RegisterResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '409':
+          description: Email already exists
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /auth/verify-email:
+    post:
+      tags: [Authentication]
+      summary: Verify email with OTP
+      description: Verifies the user's email address using the OTP sent during registration.
+      operationId: verifyEmail
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/VerifyEmailRequest'
+      responses:
+        '200':
+          description: Email verified successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+
+  /auth/setup-pin:
+    post:
+      tags: [Authentication]
+      summary: Set up PIN for two-factor authentication
+      description: Sets up the 6-digit PIN for the authenticated user.
+      operationId: setupPin
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SetupPinRequest'
+      responses:
+        '200':
+          description: PIN set up successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+
+  /auth/change-password:
+    post:
+      tags: [Authentication]
+      summary: Change password
+      description: Changes the current user's password. Requires current password verification.
+      operationId: changePassword
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ChangePasswordRequest'
+      responses:
+        '200':
+          description: Password changed successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+
+  /auth/forgot-password:
+    post:
+      tags: [Authentication]
+      summary: Request password reset
+      description: |
+        Sends a password reset email with a reset token.
+        Always returns 200 to prevent email enumeration.
+      operationId: forgotPassword
+      security: []
+      parameters:
+        - $ref: '#/components/parameters/TenantCode'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ForgotPasswordRequest'
+      responses:
+        '200':
+          description: Reset email sent (if email exists)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+
+  /auth/reset-password:
+    post:
+      tags: [Authentication]
+      summary: Reset password with token
+      description: Resets the password using the token from the reset email.
+      operationId: resetPassword
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ResetPasswordRequest'
+      responses:
+        '200':
+          description: Password reset successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+
+  /auth/google:
+    post:
+      tags: [Authentication]
+      summary: Google OAuth login
+      description: Authenticates or registers a user using Google OAuth.
+      operationId: googleAuth
+      security: []
+      parameters:
+        - $ref: '#/components/parameters/TenantCode'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/GoogleAuthRequest'
+      responses:
+        '200':
+          description: Authentication successful
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LoginSuccessResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  # ==========================================
+  # USERS - PROFILE
+  # ==========================================
+  /users/me:
+    get:
+      tags: [Profile]
+      summary: Get current user profile
+      description: Returns the authenticated user's profile information.
+      operationId: getCurrentUser
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Profile retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserProfileResponse'
+    put:
+      tags: [Profile]
+      summary: Update current user profile
+      description: Updates the authenticated user's profile information.
+      operationId: updateCurrentUser
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateProfileRequest'
+      responses:
+        '200':
+          description: Profile updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+
+  # ==========================================
+  # USERS - ADMIN
+  # ==========================================
+  /users:
+    get:
+      tags: [Users]
+      summary: List users
+      description: Returns a paginated list of users. Requires `user:read` permission.
+      operationId: listUsers
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/PerPage'
+        - $ref: '#/components/parameters/SortBy'
+        - $ref: '#/components/parameters/SortOrder'
+        - name: status
+          in: query
+          schema:
+            $ref: '#/components/schemas/UserStatus'
+        - name: search
+          in: query
+          description: Search by email, first name, or last name
+          schema:
+            type: string
+        - name: branch_id
+          in: query
+          schema:
+            type: string
+            format: uuid
+        - name: role_id
+          in: query
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Users retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserListResponse'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+    post:
+      tags: [Users]
+      summary: Create user
+      description: Creates a new user. Requires `user:create` permission.
+      operationId: createUser
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateUserRequest'
+      responses:
+        '201':
+          description: User created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '409':
+          description: Email already exists
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /users/{id}:
+    get:
+      tags: [Users]
+      summary: Get user by ID
+      description: Returns a user by ID. Requires `user:read` permission.
+      operationId: getUser
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/UserId'
+      responses:
+        '200':
+          description: User retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserDetailResponse'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    put:
+      tags: [Users]
+      summary: Update user
+      description: Updates a user. Requires `user:update` permission.
+      operationId: updateUser
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/UserId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateUserRequest'
+      responses:
+        '200':
+          description: User updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserResponse'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          description: Optimistic lock conflict
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+    delete:
+      tags: [Users]
+      summary: Delete user
+      description: Soft deletes a user. Requires `user:delete` permission.
+      operationId: deleteUser
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/UserId'
+      responses:
+        '204':
+          description: User deleted successfully
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /users/{id}/approve:
+    post:
+      tags: [Users]
+      summary: Approve user registration
+      description: Approves a pending user. Requires `user:approve` permission.
+      operationId: approveUser
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/UserId'
+      responses:
+        '200':
+          description: User approved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserResponse'
+        '422':
+          description: User not in PENDING_APPROVAL status
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /users/{id}/reject:
+    post:
+      tags: [Users]
+      summary: Reject user registration
+      description: Rejects a pending user. Requires `user:approve` permission.
+      operationId: rejectUser
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/UserId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                reason:
+                  type: string
+                  description: Rejection reason
+              required:
+                - reason
+      responses:
+        '200':
+          description: User rejected successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserResponse'
+
+  /users/{id}/unlock:
+    post:
+      tags: [Users]
+      summary: Unlock user account
+      description: Unlocks a locked user account. Requires `user:update` permission.
+      operationId: unlockUser
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/UserId'
+      responses:
+        '200':
+          description: User unlocked successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserResponse'
+
+  /users/{id}/reset-pin:
+    post:
+      tags: [Users]
+      summary: Reset user PIN
+      description: Resets a user's PIN. User must set up new PIN on next login.
+      operationId: resetUserPin
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/UserId'
+      responses:
+        '200':
+          description: PIN reset successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+
+  /users/{id}/roles:
+    get:
+      tags: [Users]
+      summary: Get user roles
+      description: Returns all roles assigned to a user.
+      operationId: getUserRoles
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/UserId'
+      responses:
+        '200':
+          description: Roles retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserRolesResponse'
+    post:
+      tags: [Users]
+      summary: Assign role to user
+      description: Assigns a role to a user. Requires `role:update` permission.
+      operationId: assignUserRole
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/UserId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AssignRoleRequest'
+      responses:
+        '201':
+          description: Role assigned successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+
+  /users/{id}/roles/{assignmentId}:
+    delete:
+      tags: [Users]
+      summary: Remove role from user
+      description: Removes a role assignment from a user.
+      operationId: removeUserRole
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/UserId'
+        - name: assignmentId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '204':
+          description: Role removed successfully
+
+  # ==========================================
+  # APPLICATIONS
+  # ==========================================
+  /applications:
+    get:
+      tags: [Applications]
+      summary: List applications
+      operationId: listApplications
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/PerPage'
+      responses:
+        '200':
+          description: Applications retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApplicationListResponse'
+    post:
+      tags: [Applications]
+      summary: Create application
+      operationId: createApplication
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateApplicationRequest'
+      responses:
+        '201':
+          description: Application created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApplicationResponse'
+
+  /applications/{id}:
+    get:
+      tags: [Applications]
+      summary: Get application by ID
+      operationId: getApplication
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Application retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApplicationResponse'
+    put:
+      tags: [Applications]
+      summary: Update application
+      operationId: updateApplication
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateApplicationRequest'
+      responses:
+        '200':
+          description: Application updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApplicationResponse'
+    delete:
+      tags: [Applications]
+      summary: Delete application
+      operationId: deleteApplication
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '204':
+          description: Application deleted successfully
+
+  # ==========================================
+  # ROLES
+  # ==========================================
+  /applications/{appId}/roles:
+    get:
+      tags: [Roles]
+      summary: List roles for application
+      operationId: listRoles
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: appId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/PerPage'
+      responses:
+        '200':
+          description: Roles retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RoleListResponse'
+    post:
+      tags: [Roles]
+      summary: Create role
+      operationId: createRole
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: appId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateRoleRequest'
+      responses:
+        '201':
+          description: Role created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RoleResponse'
+
+  /roles/{id}:
+    get:
+      tags: [Roles]
+      summary: Get role by ID
+      operationId: getRole
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Role retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RoleDetailResponse'
+    put:
+      tags: [Roles]
+      summary: Update role
+      operationId: updateRole
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateRoleRequest'
+      responses:
+        '200':
+          description: Role updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RoleResponse'
+    delete:
+      tags: [Roles]
+      summary: Delete role
+      operationId: deleteRole
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '204':
+          description: Role deleted successfully
+
+  /roles/{id}/permissions:
+    put:
+      tags: [Roles]
+      summary: Update role permissions
+      description: Replaces all permissions for a role.
+      operationId: updateRolePermissions
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                permission_ids:
+                  type: array
+                  items:
+                    type: string
+                    format: uuid
+              required:
+                - permission_ids
+      responses:
+        '200':
+          description: Permissions updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+
+  # ==========================================
+  # PERMISSIONS
+  # ==========================================
+  /applications/{appId}/permissions:
+    get:
+      tags: [Permissions]
+      summary: List permissions for application
+      operationId: listPermissions
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: appId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/PerPage'
+      responses:
+        '200':
+          description: Permissions retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PermissionListResponse'
+    post:
+      tags: [Permissions]
+      summary: Create permission
+      operationId: createPermission
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: appId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreatePermissionRequest'
+      responses:
+        '201':
+          description: Permission created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PermissionResponse'
+
+  # ==========================================
+  # BRANCHES
+  # ==========================================
+  /branches:
+    get:
+      tags: [Branches]
+      summary: List branches
+      operationId: listBranches
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/PerPage'
+      responses:
+        '200':
+          description: Branches retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BranchListResponse'
+    post:
+      tags: [Branches]
+      summary: Create branch
+      operationId: createBranch
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateBranchRequest'
+      responses:
+        '201':
+          description: Branch created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BranchResponse'
+
+  /branches/{id}:
+    get:
+      tags: [Branches]
+      summary: Get branch by ID
+      operationId: getBranch
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Branch retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BranchResponse'
+    put:
+      tags: [Branches]
+      summary: Update branch
+      operationId: updateBranch
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateBranchRequest'
+      responses:
+        '200':
+          description: Branch updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BranchResponse'
+    delete:
+      tags: [Branches]
+      summary: Delete branch
+      operationId: deleteBranch
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '204':
+          description: Branch deleted successfully
+
+  # ==========================================
+  # TENANTS (Platform Admin)
+  # ==========================================
+  /tenants:
+    get:
+      tags: [Tenants]
+      summary: List tenants
+      description: Platform admin only. Lists all tenants.
+      operationId: listTenants
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/PerPage'
+      responses:
+        '200':
+          description: Tenants retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TenantListResponse'
+    post:
+      tags: [Tenants]
+      summary: Create tenant
+      description: Platform admin only. Creates a new tenant.
+      operationId: createTenant
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateTenantRequest'
+      responses:
+        '201':
+          description: Tenant created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TenantResponse'
+
+  # ==========================================
+  # AUDIT
+  # ==========================================
+  /audit/logs:
+    get:
+      tags: [Audit]
+      summary: Query audit logs
+      description: Queries audit logs from OpenSearch. Requires `audit:read` permission.
+      operationId: queryAuditLogs
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/PerPage'
+        - name: event_type
+          in: query
+          schema:
+            type: string
+        - name: actor_id
+          in: query
+          schema:
+            type: string
+            format: uuid
+        - name: resource_type
+          in: query
+          schema:
+            type: string
+        - name: from
+          in: query
+          schema:
+            type: string
+            format: date-time
+        - name: to
+          in: query
+          schema:
+            type: string
+            format: date-time
+      responses:
+        '200':
+          description: Audit logs retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuditLogListResponse'
+
+  # ==========================================
+  # HEALTH
+  # ==========================================
+  /health:
+    get:
+      tags: [Health]
+      summary: Basic health check
+      description: Returns basic health status. Used for liveness probes.
+      operationId: healthCheck
+      security: []
+      responses:
+        '200':
+          description: Service is healthy
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthResponse'
+
+  /health/ready:
+    get:
+      tags: [Health]
+      summary: Readiness check
+      description: Checks all dependencies. Used for readiness probes.
+      operationId: readinessCheck
+      security: []
+      responses:
+        '200':
+          description: Service is ready
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReadinessResponse'
+        '503':
+          description: Service is not ready
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReadinessResponse'
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: JWT access token
+
+  parameters:
+    TenantCode:
+      name: X-Tenant-Code
+      in: header
+      required: true
+      description: Tenant identifier code
+      schema:
+        type: string
+        example: acme-corp
+    
+    UserId:
+      name: id
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    
+    Page:
+      name: page
+      in: query
+      description: Page number (1-indexed)
+      schema:
+        type: integer
+        minimum: 1
+        default: 1
+    
+    PerPage:
+      name: per_page
+      in: query
+      description: Items per page
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 100
+        default: 20
+    
+    SortBy:
+      name: sort_by
+      in: query
+      description: Sort field
+      schema:
+        type: string
+        default: created_at
+    
+    SortOrder:
+      name: sort_order
+      in: query
+      description: Sort direction
+      schema:
+        type: string
+        enum: [asc, desc]
+        default: desc
+
+  schemas:
+    # ==========================================
+    # COMMON
+    # ==========================================
+    Meta:
+      type: object
+      properties:
+        request_id:
+          type: string
+          format: uuid
+        timestamp:
+          type: string
+          format: date-time
+    
+    Pagination:
+      type: object
+      properties:
+        page:
+          type: integer
+        per_page:
+          type: integer
+        total_items:
+          type: integer
+        total_pages:
+          type: integer
+    
+    SuccessResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        message:
+          type: string
+        data:
+          type: object
+          nullable: true
+        meta:
+          $ref: '#/components/schemas/Meta'
+    
+    ErrorResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: false
+        message:
+          type: string
+        error:
+          type: object
+          properties:
+            code:
+              type: string
+            details:
+              type: array
+              items:
+                type: object
+                properties:
+                  field:
+                    type: string
+                  message:
+                    type: string
+        meta:
+          $ref: '#/components/schemas/Meta'
+    
+    UserStatus:
+      type: string
+      enum:
+        - PENDING
+        - PENDING_APPROVAL
+        - ACTIVE
+        - INACTIVE
+        - SUSPENDED
+        - LOCKED
+
+    # ==========================================
+    # AUTHENTICATION
+    # ==========================================
+    LoginRequest:
+      type: object
+      properties:
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+          minLength: 1
+          maxLength: 128
+      required:
+        - email
+        - password
+    
+    LoginPartialResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        message:
+          type: string
+        data:
+          type: object
+          properties:
+            partial_token:
+              type: string
+            requires_pin:
+              type: boolean
+              example: true
+            expires_in:
+              type: integer
+              example: 300
+        meta:
+          $ref: '#/components/schemas/Meta'
+    
+    LoginSuccessResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        message:
+          type: string
+        data:
+          type: object
+          properties:
+            access_token:
+              type: string
+            refresh_token:
+              type: string
+            token_type:
+              type: string
+              example: Bearer
+            expires_in:
+              type: integer
+              example: 1800
+            requires_pin_setup:
+              type: boolean
+            user:
+              $ref: '#/components/schemas/UserBasic'
+        meta:
+          $ref: '#/components/schemas/Meta'
+    
+    VerifyPinRequest:
+      type: object
+      properties:
+        partial_token:
+          type: string
+        pin:
+          type: string
+          pattern: '^\d{6}$'
+      required:
+        - partial_token
+        - pin
+    
+    RefreshTokenRequest:
+      type: object
+      properties:
+        refresh_token:
+          type: string
+      required:
+        - refresh_token
+    
+    TokenResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        data:
+          type: object
+          properties:
+            access_token:
+              type: string
+            refresh_token:
+              type: string
+            token_type:
+              type: string
+            expires_in:
+              type: integer
+        meta:
+          $ref: '#/components/schemas/Meta'
+    
+    LogoutRequest:
+      type: object
+      properties:
+        refresh_token:
+          type: string
+    
+    RegisterRequest:
+      type: object
+      properties:
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+          minLength: 8
+          maxLength: 128
+        first_name:
+          type: string
+          maxLength: 100
+        last_name:
+          type: string
+          maxLength: 100
+        phone_number:
+          type: string
+      required:
+        - email
+        - password
+        - first_name
+        - last_name
+    
+    RegisterResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        message:
+          type: string
+        data:
+          type: object
+          properties:
+            user_id:
+              type: string
+              format: uuid
+            email:
+              type: string
+            status:
+              $ref: '#/components/schemas/UserStatus'
+            requires_email_verification:
+              type: boolean
+        meta:
+          $ref: '#/components/schemas/Meta'
+    
+    VerifyEmailRequest:
+      type: object
+      properties:
+        email:
+          type: string
+          format: email
+        otp:
+          type: string
+      required:
+        - email
+        - otp
+    
+    SetupPinRequest:
+      type: object
+      properties:
+        pin:
+          type: string
+          pattern: '^\d{6}$'
+        confirm_pin:
+          type: string
+          pattern: '^\d{6}$'
+      required:
+        - pin
+        - confirm_pin
+    
+    ChangePasswordRequest:
+      type: object
+      properties:
+        current_password:
+          type: string
+        new_password:
+          type: string
+          minLength: 8
+        confirm_password:
+          type: string
+      required:
+        - current_password
+        - new_password
+        - confirm_password
+    
+    ForgotPasswordRequest:
+      type: object
+      properties:
+        email:
+          type: string
+          format: email
+      required:
+        - email
+    
+    ResetPasswordRequest:
+      type: object
+      properties:
+        token:
+          type: string
+        new_password:
+          type: string
+          minLength: 8
+        confirm_password:
+          type: string
+      required:
+        - token
+        - new_password
+        - confirm_password
+    
+    GoogleAuthRequest:
+      type: object
+      properties:
+        code:
+          type: string
+          description: Authorization code from Google
+      required:
+        - code
+
+    # ==========================================
+    # USERS
+    # ==========================================
+    UserBasic:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        email:
+          type: string
+        first_name:
+          type: string
+        last_name:
+          type: string
+        status:
+          $ref: '#/components/schemas/UserStatus'
+    
+    UserResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        message:
+          type: string
+        data:
+          $ref: '#/components/schemas/UserBasic'
+        meta:
+          $ref: '#/components/schemas/Meta'
+    
+    UserProfileResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        data:
+          type: object
+          allOf:
+            - $ref: '#/components/schemas/UserBasic'
+            - type: object
+              properties:
+                phone_number:
+                  type: string
+                date_of_birth:
+                  type: string
+                  format: date
+                gender:
+                  type: string
+                email_verified:
+                  type: boolean
+                pin_set:
+                  type: boolean
+                last_login_at:
+                  type: string
+                  format: date-time
+                created_at:
+                  type: string
+                  format: date-time
+                tenant:
+                  $ref: '#/components/schemas/TenantBasic'
+                branches:
+                  type: array
+                  items:
+                    $ref: '#/components/schemas/BranchBasic'
+                roles:
+                  type: array
+                  items:
+                    $ref: '#/components/schemas/RoleBasic'
+        meta:
+          $ref: '#/components/schemas/Meta'
+    
+    UserDetailResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        data:
+          type: object
+          allOf:
+            - $ref: '#/components/schemas/UserBasic'
+            - type: object
+              properties:
+                phone_number:
+                  type: string
+                registration_source:
+                  type: string
+                email_verified:
+                  type: boolean
+                pin_set:
+                  type: boolean
+                last_login_at:
+                  type: string
+                  format: date-time
+                created_at:
+                  type: string
+                  format: date-time
+                updated_at:
+                  type: string
+                  format: date-time
+                branches:
+                  type: array
+                  items:
+                    $ref: '#/components/schemas/BranchBasic'
+                roles:
+                  type: array
+                  items:
+                    $ref: '#/components/schemas/RoleBasic'
+        meta:
+          $ref: '#/components/schemas/Meta'
+    
+    UserListResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/UserBasic'
+        pagination:
+          $ref: '#/components/schemas/Pagination'
+        meta:
+          $ref: '#/components/schemas/Meta'
+    
+    CreateUserRequest:
+      type: object
+      properties:
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+          minLength: 8
+        first_name:
+          type: string
+          maxLength: 100
+        last_name:
+          type: string
+          maxLength: 100
+        phone_number:
+          type: string
+        status:
+          $ref: '#/components/schemas/UserStatus'
+        branch_ids:
+          type: array
+          items:
+            type: string
+            format: uuid
+        role_ids:
+          type: array
+          items:
+            type: string
+            format: uuid
+      required:
+        - email
+        - password
+        - first_name
+        - last_name
+    
+    UpdateUserRequest:
+      type: object
+      properties:
+        first_name:
+          type: string
+          maxLength: 100
+        last_name:
+          type: string
+          maxLength: 100
+        phone_number:
+          type: string
+        status:
+          $ref: '#/components/schemas/UserStatus'
+        version:
+          type: integer
+          description: For optimistic locking
+      required:
+        - version
+    
+    UpdateProfileRequest:
+      type: object
+      properties:
+        first_name:
+          type: string
+          maxLength: 100
+        last_name:
+          type: string
+          maxLength: 100
+        phone_number:
+          type: string
+        date_of_birth:
+          type: string
+          format: date
+        gender:
+          type: string
+          enum: [MALE, FEMALE, OTHER]
+        address:
+          type: string
+          maxLength: 500
+    
+    UserRolesResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        data:
+          type: array
+          items:
+            type: object
+            properties:
+              assignment_id:
+                type: string
+                format: uuid
+              role:
+                $ref: '#/components/schemas/RoleBasic'
+              application:
+                $ref: '#/components/schemas/ApplicationBasic'
+              branch:
+                $ref: '#/components/schemas/BranchBasic'
+              assigned_at:
+                type: string
+                format: date-time
+              expires_at:
+                type: string
+                format: date-time
+              status:
+                type: string
+        meta:
+          $ref: '#/components/schemas/Meta'
+    
+    AssignRoleRequest:
+      type: object
+      properties:
+        role_id:
+          type: string
+          format: uuid
+        branch_id:
+          type: string
+          format: uuid
+          description: Optional - scope role to branch
+        expires_at:
+          type: string
+          format: date-time
+          description: Optional - time-bound assignment
+      required:
+        - role_id
+
+    # ==========================================
+    # APPLICATIONS
+    # ==========================================
+    ApplicationBasic:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        code:
+          type: string
+        name:
+          type: string
+    
+    ApplicationResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        data:
+          type: object
+          allOf:
+            - $ref: '#/components/schemas/ApplicationBasic'
+            - type: object
+              properties:
+                description:
+                  type: string
+                status:
+                  type: string
+                created_at:
+                  type: string
+                  format: date-time
+        meta:
+          $ref: '#/components/schemas/Meta'
+    
+    ApplicationListResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/ApplicationBasic'
+        pagination:
+          $ref: '#/components/schemas/Pagination'
+        meta:
+          $ref: '#/components/schemas/Meta'
+    
+    CreateApplicationRequest:
+      type: object
+      properties:
+        code:
+          type: string
+          maxLength: 50
+        name:
+          type: string
+          maxLength: 255
+        description:
+          type: string
+      required:
+        - code
+        - name
+    
+    UpdateApplicationRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          maxLength: 255
+        description:
+          type: string
+        status:
+          type: string
+          enum: [ACTIVE, INACTIVE]
+        version:
+          type: integer
+      required:
+        - version
+
+    # ==========================================
+    # ROLES
+    # ==========================================
+    RoleBasic:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        code:
+          type: string
+        name:
+          type: string
+        application:
+          $ref: '#/components/schemas/ApplicationBasic'
+    
+    RoleResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        data:
+          $ref: '#/components/schemas/RoleBasic'
+        meta:
+          $ref: '#/components/schemas/Meta'
+    
+    RoleDetailResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        data:
+          type: object
+          allOf:
+            - $ref: '#/components/schemas/RoleBasic'
+            - type: object
+              properties:
+                description:
+                  type: string
+                is_system:
+                  type: boolean
+                status:
+                  type: string
+                permissions:
+                  type: array
+                  items:
+                    $ref: '#/components/schemas/PermissionBasic'
+        meta:
+          $ref: '#/components/schemas/Meta'
+    
+    RoleListResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        data:
+          type: array
+          items:
+            type: object
+            allOf:
+              - $ref: '#/components/schemas/RoleBasic'
+              - type: object
+                properties:
+                  is_system:
+                    type: boolean
+                  status:
+                    type: string
+                  permission_count:
+                    type: integer
+                  user_count:
+                    type: integer
+        pagination:
+          $ref: '#/components/schemas/Pagination'
+        meta:
+          $ref: '#/components/schemas/Meta'
+    
+    CreateRoleRequest:
+      type: object
+      properties:
+        code:
+          type: string
+          maxLength: 50
+        name:
+          type: string
+          maxLength: 255
+        description:
+          type: string
+        permission_ids:
+          type: array
+          items:
+            type: string
+            format: uuid
+      required:
+        - code
+        - name
+    
+    UpdateRoleRequest:
+      type: object
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+        status:
+          type: string
+          enum: [ACTIVE, INACTIVE]
+        version:
+          type: integer
+      required:
+        - version
+
+    # ==========================================
+    # PERMISSIONS
+    # ==========================================
+    PermissionBasic:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        code:
+          type: string
+        name:
+          type: string
+    
+    PermissionResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        data:
+          type: object
+          allOf:
+            - $ref: '#/components/schemas/PermissionBasic'
+            - type: object
+              properties:
+                description:
+                  type: string
+                resource_type:
+                  type: string
+                action:
+                  type: string
+                status:
+                  type: string
+        meta:
+          $ref: '#/components/schemas/Meta'
+    
+    PermissionListResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/PermissionBasic'
+        pagination:
+          $ref: '#/components/schemas/Pagination'
+        meta:
+          $ref: '#/components/schemas/Meta'
+    
+    CreatePermissionRequest:
+      type: object
+      properties:
+        code:
+          type: string
+          pattern: '^[a-z_]+:[a-z_]+$'
+          description: Format resource:action
+        name:
+          type: string
+          maxLength: 255
+        description:
+          type: string
+      required:
+        - code
+        - name
+
+    # ==========================================
+    # BRANCHES
+    # ==========================================
+    BranchBasic:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        code:
+          type: string
+        name:
+          type: string
+        is_primary:
+          type: boolean
+    
+    BranchResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        data:
+          type: object
+          allOf:
+            - $ref: '#/components/schemas/BranchBasic'
+            - type: object
+              properties:
+                address:
+                  type: string
+                status:
+                  type: string
+                created_at:
+                  type: string
+                  format: date-time
+        meta:
+          $ref: '#/components/schemas/Meta'
+    
+    BranchListResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/BranchBasic'
+        pagination:
+          $ref: '#/components/schemas/Pagination'
+        meta:
+          $ref: '#/components/schemas/Meta'
+    
+    CreateBranchRequest:
+      type: object
+      properties:
+        code:
+          type: string
+          maxLength: 50
+        name:
+          type: string
+          maxLength: 255
+        address:
+          type: string
+      required:
+        - code
+        - name
+    
+    UpdateBranchRequest:
+      type: object
+      properties:
+        name:
+          type: string
+        address:
+          type: string
+        status:
+          type: string
+          enum: [ACTIVE, INACTIVE]
+        version:
+          type: integer
+      required:
+        - version
+
+    # ==========================================
+    # TENANTS
+    # ==========================================
+    TenantBasic:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        code:
+          type: string
+        name:
+          type: string
+    
+    TenantResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        data:
+          type: object
+          allOf:
+            - $ref: '#/components/schemas/TenantBasic'
+            - type: object
+              properties:
+                status:
+                  type: string
+                settings:
+                  type: object
+                created_at:
+                  type: string
+                  format: date-time
+        meta:
+          $ref: '#/components/schemas/Meta'
+    
+    TenantListResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/TenantBasic'
+        pagination:
+          $ref: '#/components/schemas/Pagination'
+        meta:
+          $ref: '#/components/schemas/Meta'
+    
+    CreateTenantRequest:
+      type: object
+      properties:
+        code:
+          type: string
+          maxLength: 50
+        name:
+          type: string
+          maxLength: 255
+        settings:
+          type: object
+      required:
+        - code
+        - name
+
+    # ==========================================
+    # AUDIT
+    # ==========================================
+    AuditLogListResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        data:
+          type: array
+          items:
+            type: object
+            properties:
+              id:
+                type: string
+              timestamp:
+                type: string
+                format: date-time
+              event_type:
+                type: string
+              actor:
+                type: object
+                properties:
+                  id:
+                    type: string
+                  email:
+                    type: string
+                  ip_address:
+                    type: string
+              resource:
+                type: object
+                properties:
+                  type:
+                    type: string
+                  id:
+                    type: string
+              action:
+                type: string
+              status:
+                type: string
+              details:
+                type: object
+        pagination:
+          $ref: '#/components/schemas/Pagination'
+        meta:
+          $ref: '#/components/schemas/Meta'
+
+    # ==========================================
+    # HEALTH
+    # ==========================================
+    HealthResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          example: healthy
+        timestamp:
+          type: string
+          format: date-time
+        version:
+          type: string
+    
+    ReadinessResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          enum: [ready, not_ready]
+        timestamp:
+          type: string
+          format: date-time
+        checks:
+          type: object
+          properties:
+            database:
+              type: string
+            redis:
+              type: string
+            opensearch:
+              type: string
+            vault:
+              type: string
+
+  responses:
+    BadRequest:
+      description: Bad request - validation error
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    
+    Unauthorized:
+      description: Unauthorized - authentication required or failed
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    
+    Forbidden:
+      description: Forbidden - insufficient permissions
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    
+    NotFound:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    
+    TooManyRequests:
+      description: Rate limit exceeded
+      headers:
+        X-RateLimit-Limit:
+          schema:
+            type: integer
+        X-RateLimit-Remaining:
+          schema:
+            type: integer
+        X-RateLimit-Reset:
+          schema:
+            type: integer
+        Retry-After:
+          schema:
+            type: integer
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
