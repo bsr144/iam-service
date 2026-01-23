@@ -1,0 +1,93 @@
+package postgres
+
+import (
+	"context"
+	"errors"
+	"time"
+
+	"iam-service/entity"
+	"iam-service/internal/auth/contract"
+
+	"github.com/google/uuid"
+	"gorm.io/gorm"
+)
+
+type emailVerificationRepository struct {
+	db *gorm.DB
+}
+
+func NewEmailVerificationRepository(db *gorm.DB) contract.EmailVerificationRepository {
+	return &emailVerificationRepository{db: db}
+}
+
+func (r *emailVerificationRepository) Create(ctx context.Context, verification *entity.EmailVerification) error {
+	return r.db.WithContext(ctx).Create(verification).Error
+}
+
+func (r *emailVerificationRepository) GetByID(ctx context.Context, id uuid.UUID) (*entity.EmailVerification, error) {
+	var verification entity.EmailVerification
+	err := r.db.WithContext(ctx).Where("email_verification_id = ?", id).First(&verification).Error
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, nil
+		}
+		return nil, err
+	}
+	return &verification, nil
+}
+
+func (r *emailVerificationRepository) GetLatestByEmail(ctx context.Context, email string, otpType entity.OTPType) (*entity.EmailVerification, error) {
+	var verification entity.EmailVerification
+	err := r.db.WithContext(ctx).
+		Where("email = ? AND otp_type = ? AND verified_at IS NULL AND expires_at > ?", email, otpType, time.Now()).
+		Order("created_at DESC").
+		First(&verification).Error
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, nil
+		}
+		return nil, err
+	}
+	return &verification, nil
+}
+
+func (r *emailVerificationRepository) GetLatestByUserID(ctx context.Context, userID uuid.UUID, otpType entity.OTPType) (*entity.EmailVerification, error) {
+	var verification entity.EmailVerification
+	err := r.db.WithContext(ctx).
+		Where("user_id = ? AND otp_type = ? AND verified_at IS NULL AND expires_at > ?", userID, otpType, time.Now()).
+		Order("created_at DESC").
+		First(&verification).Error
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, nil
+		}
+		return nil, err
+	}
+	return &verification, nil
+}
+
+func (r *emailVerificationRepository) MarkAsVerified(ctx context.Context, id uuid.UUID) error {
+	now := time.Now()
+	return r.db.WithContext(ctx).
+		Model(&entity.EmailVerification{}).
+		Where("email_verification_id = ?", id).
+		Update("verified_at", now).Error
+}
+
+func (r *emailVerificationRepository) CountActiveOTPsByEmail(ctx context.Context, email string, otpType entity.OTPType) (int, error) {
+	var count int64
+	err := r.db.WithContext(ctx).
+		Model(&entity.EmailVerification{}).
+		Where("email = ? AND otp_type = ? AND verified_at IS NULL AND expires_at > ?", email, otpType, time.Now()).
+		Count(&count).Error
+	if err != nil {
+		return 0, err
+	}
+	return int(count), nil
+}
+
+func (r *emailVerificationRepository) DeleteExpiredByEmail(ctx context.Context, email string) error {
+	return r.db.WithContext(ctx).
+		Where("email = ? AND expires_at < ?", email, time.Now()).
+		Delete(&entity.EmailVerification{}).Error
+}
