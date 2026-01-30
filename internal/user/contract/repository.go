@@ -8,13 +8,28 @@ import (
 	"github.com/google/uuid"
 )
 
+type UserListFilter struct {
+	TenantID  *uuid.UUID
+	BranchID  *uuid.UUID
+	RoleID    *uuid.UUID
+	Search    string
+	IsActive  *bool
+	Page      int
+	PerPage   int
+	SortBy    string
+	SortOrder string
+}
+
 type UserRepository interface {
 	Create(ctx context.Context, user *entity.User) error
 	GetByID(ctx context.Context, id uuid.UUID) (*entity.User, error)
 	GetByEmail(ctx context.Context, tenantID uuid.UUID, email string) (*entity.User, error)
 	GetByEmailAnyTenant(ctx context.Context, email string) (*entity.User, error)
 	Update(ctx context.Context, user *entity.User) error
+	Delete(ctx context.Context, id uuid.UUID) error
 	EmailExistsInTenant(ctx context.Context, tenantID uuid.UUID, email string) (bool, error)
+	List(ctx context.Context, filter *UserListFilter) ([]*entity.User, int64, error)
+	GetPendingApprovalUsers(ctx context.Context, tenantID uuid.UUID) ([]*entity.User, error)
 }
 type UserProfileRepository interface {
 	Create(ctx context.Context, profile *entity.UserProfile) error

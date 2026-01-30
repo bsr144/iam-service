@@ -165,11 +165,25 @@ func (s *Server) setupRoleRoutes(api fiber.Router, roleController *controller.Ro
 
 func (s *Server) setupUserRoutes(api fiber.Router, userController *controller.UserController) {
 	users := api.Group("/users")
-
 	users.Use(middleware.JWTAuth(s.config))
-	users.Use(middleware.RequirePlatformAdmin())
 
-	users.Post("/", userController.Create)
+	// Self endpoints (any authenticated user)
+	users.Get("/me", userController.GetMe)
+	users.Put("/me", userController.UpdateMe)
+
+	// Admin endpoints
+	adminUsers := users.Group("")
+	adminUsers.Use(middleware.RequirePlatformAdmin())
+
+	adminUsers.Post("/", userController.Create)
+	adminUsers.Get("/", userController.List)
+	adminUsers.Get("/:id", userController.GetByID)
+	adminUsers.Put("/:id", userController.Update)
+	adminUsers.Delete("/:id", userController.Delete)
+	adminUsers.Post("/:id/approve", userController.Approve)
+	adminUsers.Post("/:id/reject", userController.Reject)
+	adminUsers.Post("/:id/unlock", userController.Unlock)
+	adminUsers.Post("/:id/reset-pin", userController.ResetPIN)
 }
 
 func (s *Server) App() *fiber.App {
