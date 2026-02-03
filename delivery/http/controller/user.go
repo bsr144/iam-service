@@ -2,6 +2,7 @@ package controller
 
 import (
 	"iam-service/config"
+	"iam-service/delivery/http/dto/response"
 	"iam-service/delivery/http/middleware"
 	"iam-service/iam/user"
 	"iam-service/iam/user/userdto"
@@ -29,7 +30,7 @@ func NewUserController(cfg *config.Config, userUsecase user.Usecase) *UserContro
 func (uc *UserController) Create(c *fiber.Ctx) error {
 	var req userdto.CreateRequest
 	if err := c.BodyParser(&req); err != nil {
-		return c.Status(fiber.StatusBadRequest).JSON(ErrorResponse(
+		return c.Status(fiber.StatusBadRequest).JSON(response.ErrorResponse(
 			errors.CodeBadRequest,
 			"Invalid request body",
 		))
@@ -37,7 +38,7 @@ func (uc *UserController) Create(c *fiber.Ctx) error {
 
 	if err := uc.validate.Struct(&req); err != nil {
 		validationErrors := err.(validator.ValidationErrors)
-		return c.Status(fiber.StatusBadRequest).JSON(ErrorResponseWithDetails(
+		return c.Status(fiber.StatusBadRequest).JSON(response.ErrorResponseWithDetails(
 			errors.CodeValidation,
 			"Validation failed",
 			formatValidationErrors(validationErrors),
@@ -49,7 +50,7 @@ func (uc *UserController) Create(c *fiber.Ctx) error {
 		return handleError(c, err)
 	}
 
-	return c.Status(fiber.StatusCreated).JSON(SuccessResponse(
+	return c.Status(fiber.StatusCreated).JSON(response.SuccessResponse(
 		"User created successfully",
 		resp,
 	))
@@ -66,7 +67,7 @@ func (uc *UserController) GetMe(c *fiber.Ctx) error {
 		return handleError(c, err)
 	}
 
-	return c.Status(fiber.StatusOK).JSON(SuccessResponse(
+	return c.Status(fiber.StatusOK).JSON(response.SuccessResponse(
 		"User profile retrieved successfully",
 		resp,
 	))
@@ -80,7 +81,7 @@ func (uc *UserController) UpdateMe(c *fiber.Ctx) error {
 
 	var req userdto.UpdateMeRequest
 	if err := c.BodyParser(&req); err != nil {
-		return c.Status(fiber.StatusBadRequest).JSON(ErrorResponse(
+		return c.Status(fiber.StatusBadRequest).JSON(response.ErrorResponse(
 			errors.CodeBadRequest,
 			"Invalid request body",
 		))
@@ -88,7 +89,7 @@ func (uc *UserController) UpdateMe(c *fiber.Ctx) error {
 
 	if err := uc.validate.Struct(&req); err != nil {
 		validationErrors := err.(validator.ValidationErrors)
-		return c.Status(fiber.StatusBadRequest).JSON(ErrorResponseWithDetails(
+		return c.Status(fiber.StatusBadRequest).JSON(response.ErrorResponseWithDetails(
 			errors.CodeValidation,
 			"Validation failed",
 			formatValidationErrors(validationErrors),
@@ -100,7 +101,7 @@ func (uc *UserController) UpdateMe(c *fiber.Ctx) error {
 		return handleError(c, err)
 	}
 
-	return c.Status(fiber.StatusOK).JSON(SuccessResponse(
+	return c.Status(fiber.StatusOK).JSON(response.SuccessResponse(
 		"Profile updated successfully",
 		resp,
 	))
@@ -114,7 +115,7 @@ func (uc *UserController) List(c *fiber.Ctx) error {
 
 	var req userdto.ListRequest
 	if err := c.QueryParser(&req); err != nil {
-		return c.Status(fiber.StatusBadRequest).JSON(ErrorResponse(
+		return c.Status(fiber.StatusBadRequest).JSON(response.ErrorResponse(
 			errors.CodeBadRequest,
 			"Invalid query parameters",
 		))
@@ -125,11 +126,11 @@ func (uc *UserController) List(c *fiber.Ctx) error {
 		return handleError(c, err)
 	}
 
-	return c.Status(fiber.StatusOK).JSON(APIResponse{
+	return c.Status(fiber.StatusOK).JSON(response.APIResponse{
 		Success: true,
 		Message: "Users retrieved successfully",
 		Data:    resp.Users,
-		Pagination: &Pagination{
+		Pagination: &response.Pagination{
 			Total:      resp.Pagination.Total,
 			Page:       resp.Pagination.Page,
 			Limit:      resp.Pagination.PerPage,
@@ -142,7 +143,7 @@ func (uc *UserController) GetByID(c *fiber.Ctx) error {
 	idParam := c.Params("id")
 	id, err := uuid.Parse(idParam)
 	if err != nil {
-		return c.Status(fiber.StatusBadRequest).JSON(ErrorResponse(
+		return c.Status(fiber.StatusBadRequest).JSON(response.ErrorResponse(
 			errors.CodeBadRequest,
 			"Invalid user ID",
 		))
@@ -153,7 +154,7 @@ func (uc *UserController) GetByID(c *fiber.Ctx) error {
 		return handleError(c, err)
 	}
 
-	return c.Status(fiber.StatusOK).JSON(SuccessResponse(
+	return c.Status(fiber.StatusOK).JSON(response.SuccessResponse(
 		"User retrieved successfully",
 		resp,
 	))
@@ -163,7 +164,7 @@ func (uc *UserController) Update(c *fiber.Ctx) error {
 	idParam := c.Params("id")
 	id, err := uuid.Parse(idParam)
 	if err != nil {
-		return c.Status(fiber.StatusBadRequest).JSON(ErrorResponse(
+		return c.Status(fiber.StatusBadRequest).JSON(response.ErrorResponse(
 			errors.CodeBadRequest,
 			"Invalid user ID",
 		))
@@ -171,7 +172,7 @@ func (uc *UserController) Update(c *fiber.Ctx) error {
 
 	var req userdto.UpdateRequest
 	if err := c.BodyParser(&req); err != nil {
-		return c.Status(fiber.StatusBadRequest).JSON(ErrorResponse(
+		return c.Status(fiber.StatusBadRequest).JSON(response.ErrorResponse(
 			errors.CodeBadRequest,
 			"Invalid request body",
 		))
@@ -179,7 +180,7 @@ func (uc *UserController) Update(c *fiber.Ctx) error {
 
 	if err := uc.validate.Struct(&req); err != nil {
 		validationErrors := err.(validator.ValidationErrors)
-		return c.Status(fiber.StatusBadRequest).JSON(ErrorResponseWithDetails(
+		return c.Status(fiber.StatusBadRequest).JSON(response.ErrorResponseWithDetails(
 			errors.CodeValidation,
 			"Validation failed",
 			formatValidationErrors(validationErrors),
@@ -191,7 +192,7 @@ func (uc *UserController) Update(c *fiber.Ctx) error {
 		return handleError(c, err)
 	}
 
-	return c.Status(fiber.StatusOK).JSON(SuccessResponse(
+	return c.Status(fiber.StatusOK).JSON(response.SuccessResponse(
 		"User updated successfully",
 		resp,
 	))
@@ -201,7 +202,7 @@ func (uc *UserController) Delete(c *fiber.Ctx) error {
 	idParam := c.Params("id")
 	id, err := uuid.Parse(idParam)
 	if err != nil {
-		return c.Status(fiber.StatusBadRequest).JSON(ErrorResponse(
+		return c.Status(fiber.StatusBadRequest).JSON(response.ErrorResponse(
 			errors.CodeBadRequest,
 			"Invalid user ID",
 		))
@@ -211,7 +212,7 @@ func (uc *UserController) Delete(c *fiber.Ctx) error {
 		return handleError(c, err)
 	}
 
-	return c.Status(fiber.StatusOK).JSON(SuccessResponse(
+	return c.Status(fiber.StatusOK).JSON(response.SuccessResponse(
 		"User deleted successfully",
 		nil,
 	))
@@ -221,7 +222,7 @@ func (uc *UserController) Approve(c *fiber.Ctx) error {
 	idParam := c.Params("id")
 	id, err := uuid.Parse(idParam)
 	if err != nil {
-		return c.Status(fiber.StatusBadRequest).JSON(ErrorResponse(
+		return c.Status(fiber.StatusBadRequest).JSON(response.ErrorResponse(
 			errors.CodeBadRequest,
 			"Invalid user ID",
 		))
@@ -237,7 +238,7 @@ func (uc *UserController) Approve(c *fiber.Ctx) error {
 		return handleError(c, err)
 	}
 
-	return c.Status(fiber.StatusOK).JSON(SuccessResponse(
+	return c.Status(fiber.StatusOK).JSON(response.SuccessResponse(
 		resp.Message,
 		resp,
 	))
@@ -247,7 +248,7 @@ func (uc *UserController) Reject(c *fiber.Ctx) error {
 	idParam := c.Params("id")
 	id, err := uuid.Parse(idParam)
 	if err != nil {
-		return c.Status(fiber.StatusBadRequest).JSON(ErrorResponse(
+		return c.Status(fiber.StatusBadRequest).JSON(response.ErrorResponse(
 			errors.CodeBadRequest,
 			"Invalid user ID",
 		))
@@ -260,7 +261,7 @@ func (uc *UserController) Reject(c *fiber.Ctx) error {
 
 	var req userdto.RejectRequest
 	if err := c.BodyParser(&req); err != nil {
-		return c.Status(fiber.StatusBadRequest).JSON(ErrorResponse(
+		return c.Status(fiber.StatusBadRequest).JSON(response.ErrorResponse(
 			errors.CodeBadRequest,
 			"Invalid request body",
 		))
@@ -268,7 +269,7 @@ func (uc *UserController) Reject(c *fiber.Ctx) error {
 
 	if err := uc.validate.Struct(&req); err != nil {
 		validationErrors := err.(validator.ValidationErrors)
-		return c.Status(fiber.StatusBadRequest).JSON(ErrorResponseWithDetails(
+		return c.Status(fiber.StatusBadRequest).JSON(response.ErrorResponseWithDetails(
 			errors.CodeValidation,
 			"Validation failed",
 			formatValidationErrors(validationErrors),
@@ -280,7 +281,7 @@ func (uc *UserController) Reject(c *fiber.Ctx) error {
 		return handleError(c, err)
 	}
 
-	return c.Status(fiber.StatusOK).JSON(SuccessResponse(
+	return c.Status(fiber.StatusOK).JSON(response.SuccessResponse(
 		resp.Message,
 		resp,
 	))
@@ -290,7 +291,7 @@ func (uc *UserController) Unlock(c *fiber.Ctx) error {
 	idParam := c.Params("id")
 	id, err := uuid.Parse(idParam)
 	if err != nil {
-		return c.Status(fiber.StatusBadRequest).JSON(ErrorResponse(
+		return c.Status(fiber.StatusBadRequest).JSON(response.ErrorResponse(
 			errors.CodeBadRequest,
 			"Invalid user ID",
 		))
@@ -301,7 +302,7 @@ func (uc *UserController) Unlock(c *fiber.Ctx) error {
 		return handleError(c, err)
 	}
 
-	return c.Status(fiber.StatusOK).JSON(SuccessResponse(
+	return c.Status(fiber.StatusOK).JSON(response.SuccessResponse(
 		resp.Message,
 		resp,
 	))
@@ -311,7 +312,7 @@ func (uc *UserController) ResetPIN(c *fiber.Ctx) error {
 	idParam := c.Params("id")
 	id, err := uuid.Parse(idParam)
 	if err != nil {
-		return c.Status(fiber.StatusBadRequest).JSON(ErrorResponse(
+		return c.Status(fiber.StatusBadRequest).JSON(response.ErrorResponse(
 			errors.CodeBadRequest,
 			"Invalid user ID",
 		))
@@ -322,7 +323,7 @@ func (uc *UserController) ResetPIN(c *fiber.Ctx) error {
 		return handleError(c, err)
 	}
 
-	return c.Status(fiber.StatusOK).JSON(SuccessResponse(
+	return c.Status(fiber.StatusOK).JSON(response.SuccessResponse(
 		resp.Message,
 		resp,
 	))

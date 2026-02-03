@@ -7,6 +7,7 @@ import (
 	"iam-service/config"
 	"iam-service/delivery/http/controller"
 	"iam-service/delivery/http/middleware"
+	"iam-service/delivery/http/router"
 	"iam-service/iam/auth"
 	"iam-service/iam/health"
 	"iam-service/iam/role"
@@ -25,11 +26,6 @@ type Server struct {
 	app    *fiber.App
 	config *config.Config
 	logger *zap.Logger
-
-	healthUsecase health.Usecase
-	authUsecase   auth.Usecase
-	roleUsecase   role.Usecase
-	userUsecase   user.Usecase
 }
 
 func NewServer(cfg *config.Config) *Server {
@@ -45,11 +41,13 @@ func NewServer(cfg *config.Config) *Server {
 		ErrorHandler: defaultErrorHandler,
 	})
 
+	// Infrastructure
 	postgresDB, err := infrastructure.NewPostgres(cfg.Infra.Postgres, zapLogger)
 	if err != nil {
 		log.Fatal("failed to connect to postgres:", err)
 	}
 
+	// Repositories
 	authUserRepo := postgres.NewUserRepository(postgresDB)
 	userProfileRepo := postgres.NewUserProfileRepository(postgresDB)
 	userCredentialsRepo := postgres.NewUserCredentialsRepository(postgresDB)
@@ -59,8 +57,10 @@ func NewServer(cfg *config.Config) *Server {
 	userActivationTrackingRepo := postgres.NewUserActivationTrackingRepository(postgresDB)
 	roleRepo := postgres.NewRoleRepository(postgresDB)
 
+	// External services
 	emailService := mailer.NewEmailService()
 
+	// Usecases
 	healthUsecase := health.NewUsecase()
 	authUsecase := auth.NewUsecase(
 		postgresDB,
@@ -93,97 +93,32 @@ func NewServer(cfg *config.Config) *Server {
 		userActivationTrackingRepo,
 	)
 
+	// Controllers
+	healthController := controller.NewHealthController(cfg, healthUsecase)
+	authController := controller.NewRegistrationController(cfg, authUsecase)
+	roleController := controller.NewRoleController(cfg, roleUsecase)
+	userController := controller.NewUserController(cfg, userUsecase)
+
 	server := &Server{
-		app:           app,
-		config:        cfg,
-		logger:        zapLogger,
-		healthUsecase: healthUsecase,
-		authUsecase:   authUsecase,
-		roleUsecase:   roleUsecase,
-		userUsecase:   userUsecase,
+		app:    app,
+		config: cfg,
+		logger: zapLogger,
 	}
 
-	server.setupMiddleware()
-	server.setupRoutes()
+	// Setup middleware
+	mw := middleware.New(cfg, zapLogger)
+	mw.Setup(app)
 
-	return server
-}
-
-func (s *Server) setupMiddleware() {
-	mw := middleware.New(s.config, s.logger)
-	mw.Setup(s.app)
-}
-
-func (s *Server) setupRoutes() {
-	api := s.app.Group("/api")
+	// Setup routes
+	api := app.Group("/api")
 	v1 := api.Group("/v1")
 
-	healthController := controller.NewHealthController(s.config, s.healthUsecase)
-	authController := controller.NewRegistrationController(s.config, s.authUsecase)
-	roleController := controller.NewRoleController(s.config, s.roleUsecase)
-	userController := controller.NewUserController(s.config, s.userUsecase)
+	router.SetupHealthRoutes(v1, healthController)
+	router.SetupAuthRoutes(v1, cfg, authController)
+	router.SetupRoleRoutes(v1, cfg, roleController)
+	router.SetupUserRoutes(v1, cfg, userController)
 
-	s.setupHealthRoutes(v1, healthController)
-	s.setupAuthRoutes(v1, authController)
-	s.setupRoleRoutes(v1, roleController)
-	s.setupUserRoutes(v1, userController)
-}
-
-func (s *Server) setupHealthRoutes(api fiber.Router, healthController *controller.HealthController) {
-	health := api.Group("/health")
-	health.Get("/", healthController.Check)
-	health.Get("/ready", healthController.Ready)
-	health.Get("/live", healthController.Live)
-}
-
-func (s *Server) setupAuthRoutes(api fiber.Router, registrationController *controller.AuthController) {
-	auth := api.Group("/auth")
-
-	auth.Post("/register", registrationController.Register)
-	auth.Post("/register/special-account", registrationController.RegisterSpecialAccount)
-	auth.Post("/login", registrationController.Login)
-	auth.Post("/logout", registrationController.Logout)
-	auth.Post("/verify-otp", registrationController.VerifyOTP)
-	auth.Post("/complete-profile", registrationController.CompleteProfile)
-	auth.Post("/resend-otp", registrationController.ResendOTP)
-	auth.Post("/request-password-reset", registrationController.RequestPasswordReset)
-	auth.Post("/reset-password", registrationController.ResetPassword)
-
-	authProtected := auth.Group("")
-	authProtected.Use(middleware.JWTAuth(s.config))
-	authProtected.Post("/setup-pin", registrationController.SetupPIN)
-}
-
-func (s *Server) setupRoleRoutes(api fiber.Router, roleController *controller.RoleController) {
-	roles := api.Group("/roles")
-
-	roles.Use(middleware.JWTAuth(s.config))
-	roles.Use(middleware.RequirePlatformAdmin())
-
-	roles.Post("/", roleController.Create)
-}
-
-func (s *Server) setupUserRoutes(api fiber.Router, userController *controller.UserController) {
-	users := api.Group("/users")
-	users.Use(middleware.JWTAuth(s.config))
-
-	// Self endpoints (any authenticated user)
-	users.Get("/me", userController.GetMe)
-	users.Put("/me", userController.UpdateMe)
-
-	// Admin endpoints
-	adminUsers := users.Group("")
-	adminUsers.Use(middleware.RequirePlatformAdmin())
-
-	adminUsers.Post("/", userController.Create)
-	adminUsers.Get("/", userController.List)
-	adminUsers.Get("/:id", userController.GetByID)
-	adminUsers.Put("/:id", userController.Update)
-	adminUsers.Delete("/:id", userController.Delete)
-	adminUsers.Post("/:id/approve", userController.Approve)
-	adminUsers.Post("/:id/reject", userController.Reject)
-	adminUsers.Post("/:id/unlock", userController.Unlock)
-	adminUsers.Post("/:id/reset-pin", userController.ResetPIN)
+	return server
 }
 
 func (s *Server) App() *fiber.App {
