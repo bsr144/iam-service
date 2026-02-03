@@ -3,8 +3,8 @@ package controller
 import (
 	"iam-service/config"
 	"iam-service/delivery/http/middleware"
-	"iam-service/internal/user"
-	"iam-service/internal/user/userdto"
+	"iam-service/iam/user"
+	"iam-service/iam/user/userdto"
 	"iam-service/pkg/errors"
 
 	"github.com/go-playground/validator/v10"
@@ -126,9 +126,9 @@ func (uc *UserController) List(c *fiber.Ctx) error {
 	}
 
 	return c.Status(fiber.StatusOK).JSON(APIResponse{
-		Success:    true,
-		Message:    "Users retrieved successfully",
-		Data:       resp.Users,
+		Success: true,
+		Message: "Users retrieved successfully",
+		Data:    resp.Users,
 		Pagination: &Pagination{
 			Total:      resp.Pagination.Total,
 			Page:       resp.Pagination.Page,

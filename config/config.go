@@ -145,8 +145,8 @@ func setDefaults() {
 	viper.SetDefault("infra.vault.address", "http://localhost:8200")
 
 	viper.SetDefault("jwt.signing_method", "RS256")
-	viper.SetDefault("jwt.private_key_path", "config/keys/internal_private_key.pem")
-	viper.SetDefault("jwt.public_key_path", "config/keys/internal_public_key.pem")
+	viper.SetDefault("jwt.private_key_path", "config/keys/iam_private_key.pem")
+	viper.SetDefault("jwt.public_key_path", "config/keys/iam_public_key.pem")
 	viper.SetDefault("jwt.access_expiry", 15*time.Minute)
 	viper.SetDefault("jwt.refresh_expiry", 30*24*time.Hour)
 	viper.SetDefault("jwt.issuer", "iam-service")

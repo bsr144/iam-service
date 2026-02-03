@@ -5,7 +5,7 @@ import (
 	"time"
 
 	"iam-service/entity"
-	"iam-service/internal/auth/contract"
+	"iam-service/iam/auth/contract"
 
 	"github.com/google/uuid"
 	"gorm.io/gorm"

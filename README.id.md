@@ -119,7 +119,7 @@ iam-service/
 Project ini ngikutin prinsip **Clean Architecture**:
 
 - **Entity Layer**: Model bisnis inti (`entity/`)
-- **Use Case Layer**: Logika bisnis (`iam/*/internal/`)
+- **Use Case Layer**: Logika bisnis (`iam/*/iam/`)
 - **Repository Layer**: Abstraksi akses data (`iam/*/contract/`)
 - **Delivery Layer**: HTTP handlers (`delivery/http/`)
 - **Infrastructure Layer**: Service eksternal (`impl/`, `infrastructure/`)
@@ -417,7 +417,7 @@ migrate -path migration -database "postgresql://iam:iam_secret@localhost:5432/ia
 
 ### Konvensi Struktur Code
 
-1. **Use Cases**: Semua logika bisnis ada di `iam/*/internal/`
+1. **Use Cases**: Semua logika bisnis ada di `iam/*/iam/`
 2. **DTOs**: Struktur Request/Response di `iam/*/dto/`
 3. **Entities**: Model database di `entity/`
 4. **Repositories** atau **Services**: Akses data di `impl/`
@@ -459,7 +459,7 @@ go test ./...
 go test -cover ./...
 
 # Jalanin tests untuk package tertentu
-go test ./iam/auth/internal/...
+go test ./iam/auth/iam/...
 ```
 
 ## Environment Variables

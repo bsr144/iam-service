@@ -119,7 +119,7 @@ iam-service/
 This project follows **Clean Architecture** principles:
 
 - **Entity Layer**: Core business models (`entity/`)
-- **Use Case Layer**: Business logic (`iam/*/internal/`)
+- **Use Case Layer**: Business logic (`iam/*/iam/`)
 - **Repository Layer**: Data access abstractions (`iam/*/contract/`)
 - **Delivery Layer**: HTTP handlers (`delivery/http/`)
 - **Infrastructure Layer**: External services (`impl/`, `infrastructure/`)
@@ -417,7 +417,7 @@ migrate -path migration -database "postgresql://iam:iam_secret@localhost:5432/ia
 
 ### Code Structure Conventions
 
-1. **Use Cases**: All business logic goes in `iam/*/internal/`
+1. **Use Cases**: All business logic goes in `iam/*/iam/`
 2. **DTOs**: Request/Response structures in `iam/*/dto/`
 3. **Entities**: Database models in `entity/`
 4. **Repositories** atau **Services**: Data access in `impl/`
@@ -459,7 +459,7 @@ go test ./...
 go test -cover ./...
 
 # Run tests for specific package
-go test ./iam/auth/internal/...
+go test ./iam/auth/iam/...
 ```
 
 ## Environment Variables

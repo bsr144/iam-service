@@ -3,8 +3,8 @@ package controller
 import (
 	"iam-service/config"
 	"iam-service/delivery/http/middleware"
-	"iam-service/internal/auth"
-	"iam-service/internal/auth/authdto"
+	"iam-service/iam/auth"
+	"iam-service/iam/auth/authdto"
 	"iam-service/pkg/errors"
 
 	"github.com/go-playground/validator/v10"

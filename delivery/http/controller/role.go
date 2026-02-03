@@ -2,8 +2,8 @@ package controller
 
 import (
 	"iam-service/config"
-	"iam-service/internal/role"
-	"iam-service/internal/role/roledto"
+	"iam-service/iam/role"
+	"iam-service/iam/role/roledto"
 	"iam-service/pkg/errors"
 
 	"github.com/go-playground/validator/v10"

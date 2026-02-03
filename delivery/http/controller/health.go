@@ -2,7 +2,7 @@ package controller
 
 import (
 	"iam-service/config"
-	"iam-service/internal/health"
+	"iam-service/iam/health"
 
 	"github.com/gofiber/fiber/v2"
 )
