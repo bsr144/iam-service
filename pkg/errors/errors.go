@@ -4,7 +4,49 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"runtime"
+	"strings"
 )
+
+type Kind int
+
+const (
+	KindUnexpected Kind = iota
+	KindNotFound
+	KindDuplicate
+	KindValidation
+	KindConnection
+	KindTimeout
+	KindPermission
+	KindBadRequest
+	KindUnauthorized
+	KindForbidden
+)
+
+func (k Kind) String() string {
+	switch k {
+	case KindNotFound:
+		return "not_found"
+	case KindDuplicate:
+		return "duplicate"
+	case KindValidation:
+		return "validation"
+	case KindConnection:
+		return "connection"
+	case KindTimeout:
+		return "timeout"
+	case KindPermission:
+		return "permission"
+	case KindBadRequest:
+		return "bad_request"
+	case KindUnauthorized:
+		return "unauthorized"
+	case KindForbidden:
+		return "forbidden"
+	default:
+		return "unexpected"
+	}
+}
 
 const (
 	CodeInternal           = "ERR_INTERNAL"
@@ -71,11 +113,17 @@ const (
 )
 
 type AppError struct {
-	Code       string                 `json:"code"`
-	Message    string                 `json:"message"`
-	HTTPStatus int                    `json:"-"`
-	Details    map[string]interface{} `json:"details,omitempty"`
-	Err        error                  `json:"-"`
+	Code    string                 `json:"code"`
+	Message string                 `json:"message"`
+	Details map[string]interface{} `json:"details,omitempty"`
+
+	HTTPStatus int `json:"-"`
+
+	Op   string `json:"-"`
+	Kind Kind   `json:"-"`
+	File string `json:"-"`
+	Line int    `json:"-"`
+	Err  error  `json:"-"`
 }
 
 func (e *AppError) Error() string {
@@ -84,171 +132,234 @@ func (e *AppError) Error() string {
 	}
 	return fmt.Sprintf("%s: %s", e.Code, e.Message)
 }
+
 func (e *AppError) Unwrap() error {
 	return e.Err
 }
-func (e *AppError) WithDetails(details map[string]interface{}) *AppError {
-	e.Details = details
+
+func (e *AppError) WithOp(op string) *AppError {
+	e.Op = op
 	return e
 }
+
+func (e *AppError) WithKind(kind Kind) *AppError {
+	e.Kind = kind
+	return e
+}
+
 func (e *AppError) WithError(err error) *AppError {
 	e.Err = err
 	return e
 }
-func New(code, message string, httpStatus int) *AppError {
-	return &AppError{
-		Code:       code,
-		Message:    message,
-		HTTPStatus: httpStatus,
-	}
-}
-func Wrap(err error, code, message string, httpStatus int) *AppError {
-	return &AppError{
-		Code:       code,
-		Message:    message,
-		HTTPStatus: httpStatus,
-		Err:        err,
-	}
-}
-func ErrInternal(message string) *AppError {
-	return New(CodeInternal, message, http.StatusInternalServerError)
-}
-func ErrValidation(message string) *AppError {
-	return New(CodeValidation, message, http.StatusBadRequest)
-}
-func ErrNotFound(message string) *AppError {
-	return New(CodeNotFound, message, http.StatusNotFound)
-}
-func ErrConflict(message string) *AppError {
-	return New(CodeConflict, message, http.StatusConflict)
-}
-func ErrBadRequest(message string) *AppError {
-	return New(CodeBadRequest, message, http.StatusBadRequest)
-}
-func ErrUnauthorized(message string) *AppError {
-	return New(CodeUnauthorized, message, http.StatusUnauthorized)
-}
-func ErrForbidden(message string) *AppError {
-	return New(CodeForbidden, message, http.StatusForbidden)
-}
-func ErrTooManyRequests(message string) *AppError {
-	return New(CodeTooManyRequests, message, http.StatusTooManyRequests)
-}
-func ErrInvalidCredentials() *AppError {
-	return New(CodeInvalidCredentials, "Invalid email or password", http.StatusUnauthorized)
-}
-func ErrTokenExpired() *AppError {
-	return New(CodeTokenExpired, "Token has expired", http.StatusUnauthorized)
-}
-func ErrTokenInvalid() *AppError {
-	return New(CodeTokenInvalid, "Invalid token", http.StatusUnauthorized)
-}
-func ErrOTPInvalid() *AppError {
-	return New(CodeOTPInvalid, "Invalid OTP code", http.StatusBadRequest)
-}
-func ErrOTPExpired() *AppError {
-	return New(CodeOTPExpired, "OTP code has expired", http.StatusBadRequest)
-}
-func ErrPINInvalid() *AppError {
-	return New(CodePINInvalid, "Invalid PIN", http.StatusBadRequest)
-}
-func ErrPINLocked() *AppError {
-	return New(CodePINLocked, "PIN is locked due to too many failed attempts", http.StatusForbidden)
-}
-func ErrPINRequired() *AppError {
-	return New(CodePINRequired, "PIN verification required for this operation", http.StatusForbidden)
-}
-func ErrUserNotFound() *AppError {
-	return New(CodeUserNotFound, "User not found", http.StatusNotFound)
-}
-func ErrUserAlreadyExists() *AppError {
-	return New(CodeUserAlreadyExists, "User with this email already exists", http.StatusConflict)
-}
-func ErrUserNotApproved() *AppError {
-	return New(CodeUserNotApproved, "User registration is pending approval", http.StatusForbidden)
-}
-func ErrUserSuspended() *AppError {
-	return New(CodeUserSuspended, "User account is suspended", http.StatusForbidden)
-}
-func ErrProfileIncomplete() *AppError {
-	return New(CodeProfileIncomplete, "User profile is incomplete", http.StatusForbidden)
-}
-func ErrTenantNotFound() *AppError {
-	return New(CodeTenantNotFound, "Tenant not found", http.StatusNotFound)
-}
-func ErrTenantInactive() *AppError {
-	return New(CodeTenantInactive, "Tenant is inactive", http.StatusForbidden)
-}
-func ErrPermissionDenied() *AppError {
-	return New(CodePermissionDenied, "You do not have permission to perform this action", http.StatusForbidden)
-}
-func ErrRoleNotFound() *AppError {
-	return New(CodeRoleNotFound, "Role not found", http.StatusNotFound)
-}
-func ErrAccessForbidden(message string) *AppError {
-	return New(CodeAccessForbidden, message, http.StatusForbidden)
-}
-func ErrPlatformAdminRequired() *AppError {
-	return New(CodePlatformAdminRequired, "This operation requires platform administrator privileges", http.StatusForbidden)
-}
-func ErrEmployeeNotFound() *AppError {
-	return New(CodeEmployeeNotFound, "Employee not found", http.StatusNotFound)
-}
-func ErrEmployeeExists() *AppError {
-	return New(CodeEmployeeExists, "Employee with this NIK already exists", http.StatusConflict)
-}
-func ErrContributionNotFound() *AppError {
-	return New(CodeContributionNotFound, "Contribution not found", http.StatusNotFound)
-}
-func ErrAllocationNotFound() *AppError {
-	return New(CodeAllocationNotFound, "Allocation not found", http.StatusNotFound)
-}
-func ErrInvalidProportion() *AppError {
-	return New(CodeInvalidProportion, "Allocation proportions must sum to 100%", http.StatusBadRequest)
-}
-func ErrFileNotFound() *AppError {
-	return New(CodeFileNotFound, "File not found", http.StatusNotFound)
-}
-func ErrFileTooLarge(maxSize string) *AppError {
-	return New(CodeFileTooLarge, fmt.Sprintf("File exceeds maximum size of %s", maxSize), http.StatusBadRequest)
-}
-func ErrUnsupportedFormat(format string) *AppError {
-	return New(CodeUnsupportedFormat, fmt.Sprintf("Unsupported file format: %s", format), http.StatusBadRequest)
-}
-func ErrDatabase(message string) *AppError {
-	return New(CodeDatabaseError, message, http.StatusInternalServerError)
-}
-func ErrDuplicateEntry(field string) *AppError {
-	return New(CodeDuplicateEntry, fmt.Sprintf("Duplicate entry for %s", field), http.StatusConflict)
+
+func (e *AppError) WithDetails(details map[string]interface{}) *AppError {
+	e.Details = details
+	return e
 }
 
-// FieldError represents a validation error for a specific field.
+func newWithCaller(code, message string, httpStatus int, kind Kind, skip int) *AppError {
+	file, line := "unknown", 0
+	if _, f, l, ok := runtime.Caller(skip); ok {
+
+		if idx := strings.LastIndex(f, "/"); idx >= 0 {
+			f = f[idx+1:]
+		}
+		file, line = f, l
+	}
+	return &AppError{
+		Code:       code,
+		Message:    message,
+		HTTPStatus: httpStatus,
+		Kind:       kind,
+		File:       file,
+		Line:       line,
+	}
+}
+
+func New(code, message string, httpStatus int) *AppError {
+	return newWithCaller(code, message, httpStatus, KindUnexpected, 2)
+}
+
+func Wrap(err error, code, message string, httpStatus int) *AppError {
+	appErr := newWithCaller(code, message, httpStatus, KindUnexpected, 2)
+	appErr.Err = err
+	return appErr
+}
+
+func ErrInternal(message string) *AppError {
+	return newWithCaller(CodeInternal, message, http.StatusInternalServerError, KindUnexpected, 2)
+}
+
+func ErrBadRequest(message string) *AppError {
+	return newWithCaller(CodeBadRequest, message, http.StatusBadRequest, KindBadRequest, 2)
+}
+
+func ErrValidation(message string) *AppError {
+	return newWithCaller(CodeValidation, message, http.StatusBadRequest, KindValidation, 2)
+}
+
+func ErrNotFound(message string) *AppError {
+	return newWithCaller(CodeNotFound, message, http.StatusNotFound, KindNotFound, 2)
+}
+
+func ErrConflict(message string) *AppError {
+	return newWithCaller(CodeConflict, message, http.StatusConflict, KindDuplicate, 2)
+}
+
+func ErrUnauthorized(message string) *AppError {
+	return newWithCaller(CodeUnauthorized, message, http.StatusUnauthorized, KindUnauthorized, 2)
+}
+
+func ErrForbidden(message string) *AppError {
+	return newWithCaller(CodeForbidden, message, http.StatusForbidden, KindForbidden, 2)
+}
+
+func ErrTooManyRequests(message string) *AppError {
+	return newWithCaller(CodeTooManyRequests, message, http.StatusTooManyRequests, KindBadRequest, 2)
+}
+
+func ErrInvalidCredentials() *AppError {
+	return newWithCaller(CodeInvalidCredentials, "Invalid email or password", http.StatusUnauthorized, KindUnauthorized, 2)
+}
+
+func ErrTokenExpired() *AppError {
+	return newWithCaller(CodeTokenExpired, "Token has expired", http.StatusUnauthorized, KindUnauthorized, 2)
+}
+
+func ErrTokenInvalid() *AppError {
+	return newWithCaller(CodeTokenInvalid, "Invalid token", http.StatusUnauthorized, KindUnauthorized, 2)
+}
+
+func ErrOTPInvalid() *AppError {
+	return newWithCaller(CodeOTPInvalid, "Invalid OTP code", http.StatusBadRequest, KindValidation, 2)
+}
+
+func ErrOTPExpired() *AppError {
+	return newWithCaller(CodeOTPExpired, "OTP code has expired", http.StatusBadRequest, KindValidation, 2)
+}
+
+func ErrPINInvalid() *AppError {
+	return newWithCaller(CodePINInvalid, "Invalid PIN", http.StatusBadRequest, KindValidation, 2)
+}
+
+func ErrPINLocked() *AppError {
+	return newWithCaller(CodePINLocked, "PIN is locked due to too many failed attempts", http.StatusForbidden, KindForbidden, 2)
+}
+
+func ErrPINRequired() *AppError {
+	return newWithCaller(CodePINRequired, "PIN verification required for this operation", http.StatusForbidden, KindForbidden, 2)
+}
+
+func ErrUserNotFound() *AppError {
+	return newWithCaller(CodeUserNotFound, "User not found", http.StatusNotFound, KindNotFound, 2)
+}
+
+func ErrUserAlreadyExists() *AppError {
+	return newWithCaller(CodeUserAlreadyExists, "User with this email already exists", http.StatusConflict, KindDuplicate, 2)
+}
+
+func ErrUserNotApproved() *AppError {
+	return newWithCaller(CodeUserNotApproved, "User registration is pending approval", http.StatusForbidden, KindForbidden, 2)
+}
+
+func ErrUserSuspended() *AppError {
+	return newWithCaller(CodeUserSuspended, "User account is suspended", http.StatusForbidden, KindForbidden, 2)
+}
+
+func ErrProfileIncomplete() *AppError {
+	return newWithCaller(CodeProfileIncomplete, "User profile is incomplete", http.StatusForbidden, KindForbidden, 2)
+}
+
+func ErrTenantNotFound() *AppError {
+	return newWithCaller(CodeTenantNotFound, "Tenant not found", http.StatusNotFound, KindNotFound, 2)
+}
+
+func ErrTenantInactive() *AppError {
+	return newWithCaller(CodeTenantInactive, "Tenant is inactive", http.StatusForbidden, KindForbidden, 2)
+}
+
+func ErrPermissionDenied() *AppError {
+	return newWithCaller(CodePermissionDenied, "You do not have permission to perform this action", http.StatusForbidden, KindPermission, 2)
+}
+
+func ErrRoleNotFound() *AppError {
+	return newWithCaller(CodeRoleNotFound, "Role not found", http.StatusNotFound, KindNotFound, 2)
+}
+
+func ErrAccessForbidden(message string) *AppError {
+	return newWithCaller(CodeAccessForbidden, message, http.StatusForbidden, KindForbidden, 2)
+}
+
+func ErrPlatformAdminRequired() *AppError {
+	return newWithCaller(CodePlatformAdminRequired, "This operation requires platform administrator privileges", http.StatusForbidden, KindPermission, 2)
+}
+
+func ErrEmployeeNotFound() *AppError {
+	return newWithCaller(CodeEmployeeNotFound, "Employee not found", http.StatusNotFound, KindNotFound, 2)
+}
+
+func ErrEmployeeExists() *AppError {
+	return newWithCaller(CodeEmployeeExists, "Employee with this NIK already exists", http.StatusConflict, KindDuplicate, 2)
+}
+
+func ErrContributionNotFound() *AppError {
+	return newWithCaller(CodeContributionNotFound, "Contribution not found", http.StatusNotFound, KindNotFound, 2)
+}
+
+func ErrAllocationNotFound() *AppError {
+	return newWithCaller(CodeAllocationNotFound, "Allocation not found", http.StatusNotFound, KindNotFound, 2)
+}
+
+func ErrInvalidProportion() *AppError {
+	return newWithCaller(CodeInvalidProportion, "Allocation proportions must sum to 100%", http.StatusBadRequest, KindValidation, 2)
+}
+
+func ErrFileNotFound() *AppError {
+	return newWithCaller(CodeFileNotFound, "File not found", http.StatusNotFound, KindNotFound, 2)
+}
+
+func ErrFileTooLarge(maxSize string) *AppError {
+	return newWithCaller(CodeFileTooLarge, fmt.Sprintf("File exceeds maximum size of %s", maxSize), http.StatusBadRequest, KindValidation, 2)
+}
+
+func ErrUnsupportedFormat(format string) *AppError {
+	return newWithCaller(CodeUnsupportedFormat, fmt.Sprintf("Unsupported file format: %s", format), http.StatusBadRequest, KindValidation, 2)
+}
+
+func ErrDatabase(message string) *AppError {
+	return newWithCaller(CodeDatabaseError, message, http.StatusInternalServerError, KindConnection, 2)
+}
+
+func ErrDuplicateEntry(field string) *AppError {
+	return newWithCaller(CodeDuplicateEntry, fmt.Sprintf("Duplicate entry for %s", field), http.StatusConflict, KindDuplicate, 2)
+}
+
 type FieldError struct {
 	Field   string `json:"field"`
 	Message string `json:"message"`
 }
 
-// ErrValidationWithFields creates a validation error with field-level details.
 func ErrValidationWithFields(fields []FieldError) *AppError {
-	return &AppError{
-		Code:       CodeValidation,
-		Message:    "validation failed",
-		HTTPStatus: http.StatusBadRequest,
-		Details: map[string]interface{}{
-			"fields": fields,
-		},
+	err := newWithCaller(CodeValidation, "Validation failed", http.StatusBadRequest, KindValidation, 2)
+	err.Details = map[string]interface{}{
+		"fields": fields,
 	}
+	return err
 }
+
 func Is(err, target error) bool {
 	return errors.Is(err, target)
 }
+
 func As(err error, target interface{}) bool {
 	return errors.As(err, target)
 }
+
 func IsAppError(err error) bool {
 	var appErr *AppError
 	return errors.As(err, &appErr)
 }
+
 func GetAppError(err error) *AppError {
 	var appErr *AppError
 	if errors.As(err, &appErr) {
@@ -256,12 +367,14 @@ func GetAppError(err error) *AppError {
 	}
 	return nil
 }
+
 func GetHTTPStatus(err error) int {
 	if appErr := GetAppError(err); appErr != nil {
 		return appErr.HTTPStatus
 	}
 	return http.StatusInternalServerError
 }
+
 func GetCode(err error) string {
 	if appErr := GetAppError(err); appErr != nil {
 		return appErr.Code
