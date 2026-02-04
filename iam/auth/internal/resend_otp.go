@@ -5,7 +5,6 @@ import (
 	stderrors "errors"
 	"iam-service/entity"
 	"iam-service/iam/auth/authdto"
-	"iam-service/impl/postgres"
 	"iam-service/pkg/errors"
 	"time"
 
@@ -15,7 +14,7 @@ import (
 func (uc *usecase) ResendOTP(ctx context.Context, req *authdto.ResendOTPRequest) (*authdto.ResendOTPResponse, error) {
 	user, err := uc.UserRepo.GetByEmail(ctx, req.TenantID, req.Email)
 	if err != nil {
-		if stderrors.Is(err, postgres.ErrRecordNotFound) {
+		if stderrors.Is(err, errors.SentinelNotFound) {
 			return nil, errors.ErrUserNotFound()
 		}
 		return nil, errors.ErrInternal("failed to get user").WithError(err)

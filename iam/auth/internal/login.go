@@ -7,7 +7,6 @@ import (
 	stderrors "errors"
 	"iam-service/entity"
 	"iam-service/iam/auth/authdto"
-	"iam-service/impl/postgres"
 	"iam-service/pkg/errors"
 	jwtpkg "iam-service/pkg/jwt"
 	"time"
@@ -19,7 +18,7 @@ import (
 func (uc *usecase) Login(ctx context.Context, req *authdto.LoginRequest) (*authdto.LoginResponse, error) {
 	user, err := uc.UserRepo.GetByEmail(ctx, req.TenantID, req.Email)
 	if err != nil {
-		if stderrors.Is(err, postgres.ErrRecordNotFound) {
+		if stderrors.Is(err, errors.SentinelNotFound) {
 			return nil, errors.ErrInvalidCredentials()
 		}
 		return nil, errors.ErrInternal("failed to get user").WithError(err)
@@ -31,7 +30,7 @@ func (uc *usecase) Login(ctx context.Context, req *authdto.LoginRequest) (*authd
 
 	credentials, err := uc.UserCredentialsRepo.GetByUserID(ctx, user.UserID)
 	if err != nil {
-		if stderrors.Is(err, postgres.ErrRecordNotFound) {
+		if stderrors.Is(err, errors.SentinelNotFound) {
 			return nil, errors.ErrInvalidCredentials()
 		}
 		return nil, errors.ErrInternal("failed to get credentials").WithError(err)
@@ -51,7 +50,7 @@ func (uc *usecase) Login(ctx context.Context, req *authdto.LoginRequest) (*authd
 
 	profile, err := uc.UserProfileRepo.GetByUserID(ctx, user.UserID)
 	if err != nil {
-		if stderrors.Is(err, postgres.ErrRecordNotFound) {
+		if stderrors.Is(err, errors.SentinelNotFound) {
 			return nil, errors.ErrProfileIncomplete()
 		}
 		return nil, errors.ErrInternal("failed to get profile").WithError(err)
@@ -265,7 +264,7 @@ func (uc *usecase) resolvePermissionsFromRoles(ctx context.Context, roles []*ent
 func (uc *usecase) updateLastLogin(ctx context.Context, userID uuid.UUID) error {
 	security, err := uc.UserSecurityRepo.GetByUserID(ctx, userID)
 	if err != nil {
-		if stderrors.Is(err, postgres.ErrRecordNotFound) {
+		if stderrors.Is(err, errors.SentinelNotFound) {
 			return nil
 		}
 		return err
@@ -281,7 +280,7 @@ func (uc *usecase) updateLastLogin(ctx context.Context, userID uuid.UUID) error 
 func (uc *usecase) logFailedLogin(ctx context.Context, userID uuid.UUID) error {
 	security, err := uc.UserSecurityRepo.GetByUserID(ctx, userID)
 	if err != nil {
-		if stderrors.Is(err, postgres.ErrRecordNotFound) {
+		if stderrors.Is(err, errors.SentinelNotFound) {
 			return nil
 		}
 		return err

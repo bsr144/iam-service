@@ -6,7 +6,6 @@ import (
 	stderrors "errors"
 	"iam-service/entity"
 	"iam-service/iam/auth/authdto"
-	"iam-service/impl/postgres"
 	"iam-service/pkg/errors"
 	"time"
 
@@ -17,7 +16,7 @@ import (
 func (uc *usecase) ResetPassword(ctx context.Context, req *authdto.ResetPasswordRequest) (*authdto.ResetPasswordResponse, error) {
 	user, err := uc.UserRepo.GetByEmail(ctx, req.TenantID, req.Email)
 	if err != nil {
-		if stderrors.Is(err, postgres.ErrRecordNotFound) {
+		if stderrors.Is(err, errors.SentinelNotFound) {
 			return nil, errors.ErrInvalidCredentials()
 		}
 		return nil, errors.ErrInternal("failed to get user").WithError(err)
@@ -29,7 +28,7 @@ func (uc *usecase) ResetPassword(ctx context.Context, req *authdto.ResetPassword
 
 	verification, err := uc.EmailVerificationRepo.GetLatestByEmail(ctx, req.Email, entity.OTPTypePasswordReset)
 	if err != nil {
-		if stderrors.Is(err, postgres.ErrRecordNotFound) || stderrors.Is(err, gorm.ErrRecordNotFound) {
+		if stderrors.Is(err, errors.SentinelNotFound) {
 			return nil, errors.ErrOTPInvalid()
 		}
 		return nil, errors.ErrInternal("failed to get verification record").WithError(err)
@@ -54,7 +53,7 @@ func (uc *usecase) ResetPassword(ctx context.Context, req *authdto.ResetPassword
 
 	credentials, err := uc.UserCredentialsRepo.GetByUserID(ctx, user.UserID)
 	if err != nil {
-		if stderrors.Is(err, postgres.ErrRecordNotFound) {
+		if stderrors.Is(err, errors.SentinelNotFound) {
 			return nil, errors.ErrInternal("user credentials not found")
 		}
 		return nil, errors.ErrInternal("failed to get credentials").WithError(err)

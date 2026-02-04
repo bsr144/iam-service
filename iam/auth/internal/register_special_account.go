@@ -6,7 +6,6 @@ import (
 	stderrors "errors"
 	"iam-service/entity"
 	"iam-service/iam/auth/authdto"
-	"iam-service/impl/postgres"
 	"iam-service/pkg/errors"
 	"time"
 
@@ -99,7 +98,7 @@ func (uc *usecase) RegisterSpecialAccount(ctx context.Context, req *authdto.Regi
 
 		role, err := uc.RoleRepo.GetByCode(ctx, req.TenantID, req.UserType)
 		if err != nil {
-			if stderrors.Is(err, postgres.ErrRecordNotFound) {
+			if stderrors.Is(err, errors.SentinelNotFound) {
 				return errors.ErrRoleNotFound()
 			}
 			return err

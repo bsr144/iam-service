@@ -5,7 +5,6 @@ import (
 	stderrors "errors"
 	"iam-service/entity"
 	"iam-service/iam/auth/authdto"
-	"iam-service/impl/postgres"
 	"iam-service/pkg/errors"
 	"time"
 
@@ -26,7 +25,7 @@ func (uc *usecase) CompleteProfile(ctx context.Context, req *authdto.CompletePro
 
 	profile, err := uc.UserProfileRepo.GetByUserID(ctx, userID)
 	if err != nil {
-		if stderrors.Is(err, postgres.ErrRecordNotFound) {
+		if stderrors.Is(err, errors.SentinelNotFound) {
 			return nil, errors.ErrUserNotFound()
 		}
 		return nil, errors.ErrInternal("failed to get profile").WithError(err)
@@ -34,7 +33,7 @@ func (uc *usecase) CompleteProfile(ctx context.Context, req *authdto.CompletePro
 
 	user, err := uc.UserRepo.GetByID(ctx, userID)
 	if err != nil {
-		if stderrors.Is(err, postgres.ErrRecordNotFound) {
+		if stderrors.Is(err, errors.SentinelNotFound) {
 			return nil, errors.ErrUserNotFound()
 		}
 		return nil, errors.ErrInternal("failed to get user").WithError(err)
