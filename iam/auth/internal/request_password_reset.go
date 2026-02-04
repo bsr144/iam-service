@@ -2,12 +2,12 @@ package internal
 
 import (
 	"context"
-	stderrors "errors"
+	"strings"
+	"time"
+
 	"iam-service/entity"
 	"iam-service/iam/auth/authdto"
 	"iam-service/pkg/errors"
-	"strings"
-	"time"
 
 	"github.com/google/uuid"
 )
@@ -15,14 +15,14 @@ import (
 func (uc *usecase) RequestPasswordReset(ctx context.Context, req *authdto.RequestPasswordResetRequest) (*authdto.RequestPasswordResetResponse, error) {
 	user, err := uc.UserRepo.GetByEmail(ctx, req.TenantID, req.Email)
 	if err != nil {
-		if stderrors.Is(err, errors.SentinelNotFound) {
-			// Return success to prevent user enumeration
+		// Return success to prevent user enumeration
+		if errors.IsNotFound(err) {
 			return &authdto.RequestPasswordResetResponse{
 				OTPExpiresAt: time.Now().Add(time.Duration(OTPExpiryMinutes) * time.Minute),
 				EmailMasked:  maskEmail(req.Email),
 			}, nil
 		}
-		return nil, errors.ErrInternal("failed to get user").WithError(err)
+		return nil, err
 	}
 
 	if !user.IsActive {

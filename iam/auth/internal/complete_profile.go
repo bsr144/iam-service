@@ -2,11 +2,11 @@ package internal
 
 import (
 	"context"
-	stderrors "errors"
+	"time"
+
 	"iam-service/entity"
 	"iam-service/iam/auth/authdto"
 	"iam-service/pkg/errors"
-	"time"
 
 	"github.com/google/uuid"
 	"gorm.io/gorm"
@@ -25,18 +25,18 @@ func (uc *usecase) CompleteProfile(ctx context.Context, req *authdto.CompletePro
 
 	profile, err := uc.UserProfileRepo.GetByUserID(ctx, userID)
 	if err != nil {
-		if stderrors.Is(err, errors.SentinelNotFound) {
+		if errors.IsNotFound(err) {
 			return nil, errors.ErrUserNotFound()
 		}
-		return nil, errors.ErrInternal("failed to get profile").WithError(err)
+		return nil, err
 	}
 
 	user, err := uc.UserRepo.GetByID(ctx, userID)
 	if err != nil {
-		if stderrors.Is(err, errors.SentinelNotFound) {
+		if errors.IsNotFound(err) {
 			return nil, errors.ErrUserNotFound()
 		}
-		return nil, errors.ErrInternal("failed to get user").WithError(err)
+		return nil, err
 	}
 
 	now := time.Now()

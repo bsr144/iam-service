@@ -3,11 +3,11 @@ package internal
 import (
 	"context"
 	"encoding/json"
-	stderrors "errors"
+	"time"
+
 	"iam-service/entity"
 	"iam-service/iam/auth/authdto"
 	"iam-service/pkg/errors"
-	"time"
 
 	"github.com/google/uuid"
 	"golang.org/x/crypto/bcrypt"
@@ -98,7 +98,7 @@ func (uc *usecase) RegisterSpecialAccount(ctx context.Context, req *authdto.Regi
 
 		role, err := uc.RoleRepo.GetByCode(ctx, req.TenantID, req.UserType)
 		if err != nil {
-			if stderrors.Is(err, errors.SentinelNotFound) {
+			if errors.IsNotFound(err) {
 				return errors.ErrRoleNotFound()
 			}
 			return err

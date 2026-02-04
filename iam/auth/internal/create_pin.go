@@ -3,11 +3,11 @@ package internal
 import (
 	"context"
 	"encoding/json"
-	stderrors "errors"
-	"iam-service/iam/auth/authdto"
-	"iam-service/pkg/errors"
 	"regexp"
 	"time"
+
+	"iam-service/iam/auth/authdto"
+	"iam-service/pkg/errors"
 
 	"github.com/google/uuid"
 	"golang.org/x/crypto/bcrypt"
@@ -28,18 +28,18 @@ func (uc *usecase) SetupPIN(ctx context.Context, userID uuid.UUID, req *authdto.
 
 	_, err := uc.UserRepo.GetByID(ctx, userID)
 	if err != nil {
-		if stderrors.Is(err, errors.SentinelNotFound) {
+		if errors.IsNotFound(err) {
 			return nil, errors.ErrUserNotFound()
 		}
-		return nil, errors.ErrInternal("failed to get user").WithError(err)
+		return nil, err
 	}
 
 	credentials, err := uc.UserCredentialsRepo.GetByUserID(ctx, userID)
 	if err != nil {
-		if stderrors.Is(err, errors.SentinelNotFound) {
+		if errors.IsNotFound(err) {
 			return nil, errors.ErrInternal("user credentials not found")
 		}
-		return nil, errors.ErrInternal("failed to get credentials").WithError(err)
+		return nil, err
 	}
 
 	if credentials.PINHash != nil {

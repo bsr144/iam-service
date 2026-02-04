@@ -2,11 +2,11 @@ package internal
 
 import (
 	"context"
-	stderrors "errors"
+	"time"
+
 	"iam-service/entity"
 	"iam-service/iam/auth/authdto"
 	"iam-service/pkg/errors"
-	"time"
 
 	"github.com/google/uuid"
 )
@@ -14,10 +14,10 @@ import (
 func (uc *usecase) ResendOTP(ctx context.Context, req *authdto.ResendOTPRequest) (*authdto.ResendOTPResponse, error) {
 	user, err := uc.UserRepo.GetByEmail(ctx, req.TenantID, req.Email)
 	if err != nil {
-		if stderrors.Is(err, errors.SentinelNotFound) {
+		if errors.IsNotFound(err) {
 			return nil, errors.ErrUserNotFound()
 		}
-		return nil, errors.ErrInternal("failed to get user").WithError(err)
+		return nil, err
 	}
 
 	if user.EmailVerified {
