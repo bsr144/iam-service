@@ -97,8 +97,6 @@ func IsPlatformAdmin(c *fiber.Ctx) (bool, error) {
 	return claims.IsPlatformAdmin(), nil
 }
 
-// GetTenantIDFromHeader extracts tenant ID from X-Tenant-ID header.
-// Used for public endpoints where user is not authenticated.
 func GetTenantIDFromHeader(c *fiber.Ctx) (uuid.UUID, error) {
 	tenantIDStr := c.Get("X-Tenant-ID")
 	if tenantIDStr == "" {

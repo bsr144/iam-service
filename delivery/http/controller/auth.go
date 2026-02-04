@@ -266,13 +266,6 @@ func (rc *AuthController) ResetPassword(c *fiber.Ctx) error {
 	))
 }
 
-// =============================================================================
-// Email OTP Registration Flow
-// Design reference: .claude/doc/email-otp-signup-api.md
-// =============================================================================
-
-// InitiateRegistration starts a new registration session and sends OTP to email.
-// POST /api/iam/v1/registrations
 func (rc *AuthController) InitiateRegistration(c *fiber.Ctx) error {
 	tenantID, err := middleware.GetTenantIDFromHeader(c)
 	if err != nil {
@@ -302,8 +295,6 @@ func (rc *AuthController) InitiateRegistration(c *fiber.Ctx) error {
 	))
 }
 
-// VerifyRegistrationOTP verifies the OTP code sent to user's email.
-// POST /api/iam/v1/registrations/:id/verify-otp
 func (rc *AuthController) VerifyRegistrationOTP(c *fiber.Ctx) error {
 	tenantID, err := middleware.GetTenantIDFromHeader(c)
 	if err != nil {
@@ -335,8 +326,6 @@ func (rc *AuthController) VerifyRegistrationOTP(c *fiber.Ctx) error {
 	))
 }
 
-// ResendRegistrationOTP generates and sends a new OTP code.
-// POST /api/iam/v1/registrations/:id/resend-otp
 func (rc *AuthController) ResendRegistrationOTP(c *fiber.Ctx) error {
 	tenantID, err := middleware.GetTenantIDFromHeader(c)
 	if err != nil {
@@ -368,8 +357,6 @@ func (rc *AuthController) ResendRegistrationOTP(c *fiber.Ctx) error {
 	))
 }
 
-// GetRegistrationStatus returns the current status of a registration session.
-// GET /api/iam/v1/registrations/:id/status
 func (rc *AuthController) GetRegistrationStatus(c *fiber.Ctx) error {
 	tenantID, err := middleware.GetTenantIDFromHeader(c)
 	if err != nil {
@@ -397,8 +384,6 @@ func (rc *AuthController) GetRegistrationStatus(c *fiber.Ctx) error {
 	))
 }
 
-// CompleteRegistration sets password and creates the user account.
-// POST /api/iam/v1/registrations/:id/complete
 func (rc *AuthController) CompleteRegistration(c *fiber.Ctx) error {
 	tenantID, err := middleware.GetTenantIDFromHeader(c)
 	if err != nil {
@@ -410,7 +395,6 @@ func (rc *AuthController) CompleteRegistration(c *fiber.Ctx) error {
 		return errors.ErrBadRequest("Invalid registration ID format")
 	}
 
-	// Extract registration token from Authorization header
 	authHeader := c.Get("Authorization")
 	if authHeader == "" {
 		return errors.ErrUnauthorized("Authorization header is required")
