@@ -41,7 +41,7 @@ func NewServer(cfg *config.Config) *Server {
 		ReadTimeout:  cfg.Server.ReadTimeout,
 		WriteTimeout: cfg.Server.WriteTimeout,
 		IdleTimeout:  cfg.Server.IdleTimeout,
-		ErrorHandler: createErrorHandler(cfg),
+		ErrorHandler: createErrorHandler(cfg, zapLogger),
 	})
 
 	// Infrastructure
@@ -138,7 +138,7 @@ func (s *Server) Shutdown(ctx context.Context) error {
 	return s.app.ShutdownWithContext(ctx)
 }
 
-func createErrorHandler(cfg *config.Config) fiber.ErrorHandler {
+func createErrorHandler(cfg *config.Config, zapLogger *zap.Logger) fiber.ErrorHandler {
 	return func(c *fiber.Ctx, err error) error {
 		requestID := middleware.GetRequestID(c)
 		includeDebug := !cfg.IsProduction()
@@ -146,6 +146,30 @@ func createErrorHandler(cfg *config.Config) fiber.ErrorHandler {
 		// 1. Check for AppError (from pkg/errors)
 		var appErr *apperrors.AppError
 		if apperrors.As(err, &appErr) {
+			// Structured logging with context
+			logFields := []zap.Field{
+				zap.String("request_id", requestID),
+				zap.String("code", appErr.Code),
+				zap.String("kind", appErr.Kind.String()),
+				zap.String("file", appErr.File),
+				zap.Int("line", appErr.Line),
+				zap.String("path", c.Path()),
+				zap.String("method", c.Method()),
+			}
+			if appErr.Op != "" {
+				logFields = append(logFields, zap.String("op", appErr.Op))
+			}
+			if appErr.Err != nil {
+				logFields = append(logFields, zap.Error(appErr.Err))
+			}
+
+			// Log based on HTTP status
+			if appErr.HTTPStatus >= 500 {
+				zapLogger.Error(appErr.Message, logFields...)
+			} else if appErr.HTTPStatus >= 400 {
+				zapLogger.Warn(appErr.Message, logFields...)
+			}
+
 			resp := response.APIResponse{
 				Success:   false,
 				Error:     appErr.Code,
@@ -179,6 +203,13 @@ func createErrorHandler(cfg *config.Config) fiber.ErrorHandler {
 		// 2. Check for Fiber errors
 		var fiberErr *fiber.Error
 		if errors.As(err, &fiberErr) {
+			zapLogger.Warn("Fiber error",
+				zap.String("request_id", requestID),
+				zap.Int("status", fiberErr.Code),
+				zap.String("message", fiberErr.Message),
+				zap.String("path", c.Path()),
+				zap.String("method", c.Method()),
+			)
 			return c.Status(fiberErr.Code).JSON(response.APIResponse{
 				Success:   false,
 				Error:     "FIBER_ERROR",
@@ -188,6 +219,13 @@ func createErrorHandler(cfg *config.Config) fiber.ErrorHandler {
 		}
 
 		// 3. Fallback for unexpected errors
+		zapLogger.Error("Unexpected error",
+			zap.String("request_id", requestID),
+			zap.Error(err),
+			zap.String("path", c.Path()),
+			zap.String("method", c.Method()),
+		)
+
 		resp := response.APIResponse{
 			Success:   false,
 			Error:     "INTERNAL_SERVER_ERROR",
