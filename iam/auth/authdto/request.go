@@ -89,3 +89,24 @@ type ResetPasswordRequest struct {
 	OTPCode     string    `json:"otp_code" validate:"required,len=6,numeric"`
 	NewPassword string    `json:"new_password" validate:"required,min=8,max=128"`
 }
+
+type InitiateRegistrationRequest struct {
+	Email string `json:"email" validate:"required,email,max=255"`
+}
+
+type VerifyRegistrationOTPRequest struct {
+	Email   string `json:"email" validate:"required,email"`
+	OTPCode string `json:"otp_code" validate:"required,len=6,numeric"`
+}
+
+type ResendRegistrationOTPRequest struct {
+	Email string `json:"email" validate:"required,email"`
+}
+
+type CompleteRegistrationRequest struct {
+	Password             string  `json:"password" validate:"required,min=8,max=128"`
+	PasswordConfirmation string  `json:"password_confirmation" validate:"required,eqfield=Password"`
+	FirstName            string  `json:"first_name" validate:"required,min=1,max=100"`
+	LastName             string  `json:"last_name" validate:"required,min=1,max=100"`
+	PhoneNumber          *string `json:"phone_number,omitempty" validate:"omitempty,e164"`
+}

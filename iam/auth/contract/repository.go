@@ -2,6 +2,7 @@ package contract
 
 import (
 	"context"
+	"time"
 
 	"iam-service/entity"
 	usercontract "iam-service/iam/user/contract"
@@ -71,4 +72,22 @@ type RefreshTokenRepository interface {
 type PINVerificationLogRepository interface {
 	Create(ctx context.Context, log *entity.PINVerificationLog) error
 	CountRecentFailures(ctx context.Context, userID uuid.UUID, since int) (int, error)
+}
+
+type RegistrationSessionStore interface {
+	CreateRegistrationSession(ctx context.Context, session *entity.RegistrationSession, ttl time.Duration) error
+	GetRegistrationSession(ctx context.Context, tenantID, sessionID uuid.UUID) (*entity.RegistrationSession, error)
+	UpdateRegistrationSession(ctx context.Context, session *entity.RegistrationSession, ttl time.Duration) error
+	DeleteRegistrationSession(ctx context.Context, tenantID, sessionID uuid.UUID) error
+
+	IncrementRegistrationAttempts(ctx context.Context, tenantID, sessionID uuid.UUID) (int, error)
+	UpdateRegistrationOTP(ctx context.Context, tenantID, sessionID uuid.UUID, otpHash string, expiresAt time.Time) error
+	MarkRegistrationVerified(ctx context.Context, tenantID, sessionID uuid.UUID, tokenHash string) error
+
+	LockRegistrationEmail(ctx context.Context, tenantID uuid.UUID, email string, ttl time.Duration) (bool, error)
+	UnlockRegistrationEmail(ctx context.Context, tenantID uuid.UUID, email string) error
+	IsRegistrationEmailLocked(ctx context.Context, tenantID uuid.UUID, email string) (bool, error)
+
+	IncrementRegistrationRateLimit(ctx context.Context, tenantID uuid.UUID, email string, ttl time.Duration) (int64, error)
+	GetRegistrationRateLimitCount(ctx context.Context, tenantID uuid.UUID, email string) (int64, error)
 }
