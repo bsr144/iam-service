@@ -19,6 +19,7 @@ type usecase struct {
 	UserActivationTrackingRepo contract.UserActivationTrackingRepository
 	RoleRepo                   contract.RoleRepository
 	EmailService               contract.EmailService
+	Redis                      contract.RegistrationSessionStore
 }
 
 func NewUsecase(
@@ -33,6 +34,7 @@ func NewUsecase(
 	userActivationTrackingRepo contract.UserActivationTrackingRepository,
 	roleRepository contract.RoleRepository,
 	emailService contract.EmailService,
+	redis contract.RegistrationSessionStore,
 ) *usecase {
 	return &usecase{
 		DB:                         db,
@@ -46,5 +48,6 @@ func NewUsecase(
 		UserActivationTrackingRepo: userActivationTrackingRepo,
 		RoleRepo:                   roleRepository,
 		EmailService:               emailService,
+		Redis:                      redis,
 	}
 }

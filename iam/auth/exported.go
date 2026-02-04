@@ -23,6 +23,14 @@ type Usecase interface {
 	ResendOTP(ctx context.Context, req *authdto.ResendOTPRequest) (*authdto.ResendOTPResponse, error)
 	RequestPasswordReset(ctx context.Context, req *authdto.RequestPasswordResetRequest) (*authdto.RequestPasswordResetResponse, error)
 	ResetPassword(ctx context.Context, req *authdto.ResetPasswordRequest) (*authdto.ResetPasswordResponse, error)
+
+	// Email OTP Registration flow
+	// Design reference: .claude/doc/email-otp-signup-api.md
+	InitiateRegistration(ctx context.Context, tenantID uuid.UUID, req *authdto.InitiateRegistrationRequest, ipAddress, userAgent string) (*authdto.InitiateRegistrationResponse, error)
+	VerifyRegistrationOTP(ctx context.Context, tenantID, registrationID uuid.UUID, req *authdto.VerifyRegistrationOTPRequest) (*authdto.VerifyRegistrationOTPResponse, error)
+	ResendRegistrationOTP(ctx context.Context, tenantID, registrationID uuid.UUID, req *authdto.ResendRegistrationOTPRequest) (*authdto.ResendRegistrationOTPResponse, error)
+	CompleteRegistration(ctx context.Context, tenantID, registrationID uuid.UUID, registrationToken string, req *authdto.CompleteRegistrationRequest, ipAddress, userAgent string) (*authdto.CompleteRegistrationResponse, error)
+	GetRegistrationStatus(ctx context.Context, tenantID, registrationID uuid.UUID, email string) (*authdto.RegistrationStatusResponse, error)
 }
 
 func NewUsecase(
@@ -37,6 +45,7 @@ func NewUsecase(
 	userActivationTrackingRepo contract.UserActivationTrackingRepository,
 	roleRepo contract.RoleRepository,
 	emailService contract.EmailService,
+	redis contract.RegistrationSessionStore,
 ) Usecase {
 	return internal.NewUsecase(
 		db,
@@ -50,5 +59,6 @@ func NewUsecase(
 		userActivationTrackingRepo,
 		roleRepo,
 		emailService,
+		redis,
 	)
 }
