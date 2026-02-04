@@ -2,11 +2,11 @@ package postgres
 
 import (
 	"context"
-	"errors"
 	"time"
 
 	"iam-service/entity"
 	"iam-service/iam/auth/contract"
+	"iam-service/pkg/errors"
 
 	"github.com/google/uuid"
 	"gorm.io/gorm"
@@ -21,17 +21,17 @@ func NewEmailVerificationRepository(db *gorm.DB) contract.EmailVerificationRepos
 }
 
 func (r *emailVerificationRepository) Create(ctx context.Context, verification *entity.EmailVerification) error {
-	return r.db.WithContext(ctx).Create(verification).Error
+	if err := r.db.WithContext(ctx).Create(verification).Error; err != nil {
+		return errors.TranslatePostgres(err)
+	}
+	return nil
 }
 
 func (r *emailVerificationRepository) GetByID(ctx context.Context, id uuid.UUID) (*entity.EmailVerification, error) {
 	var verification entity.EmailVerification
 	err := r.db.WithContext(ctx).Where("email_verification_id = ?", id).First(&verification).Error
 	if err != nil {
-		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return nil, ErrRecordNotFound
-		}
-		return nil, err
+		return nil, errors.TranslatePostgres(err)
 	}
 	return &verification, nil
 }
@@ -43,10 +43,7 @@ func (r *emailVerificationRepository) GetLatestByEmail(ctx context.Context, emai
 		Order("created_at DESC").
 		First(&verification).Error
 	if err != nil {
-		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return nil, ErrRecordNotFound
-		}
-		return nil, err
+		return nil, errors.TranslatePostgres(err)
 	}
 	return &verification, nil
 }
@@ -58,20 +55,20 @@ func (r *emailVerificationRepository) GetLatestByUserID(ctx context.Context, use
 		Order("created_at DESC").
 		First(&verification).Error
 	if err != nil {
-		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return nil, ErrRecordNotFound
-		}
-		return nil, err
+		return nil, errors.TranslatePostgres(err)
 	}
 	return &verification, nil
 }
 
 func (r *emailVerificationRepository) MarkAsVerified(ctx context.Context, id uuid.UUID) error {
 	now := time.Now()
-	return r.db.WithContext(ctx).
+	if err := r.db.WithContext(ctx).
 		Model(&entity.EmailVerification{}).
 		Where("email_verification_id = ?", id).
-		Update("verified_at", now).Error
+		Update("verified_at", now).Error; err != nil {
+		return errors.TranslatePostgres(err)
+	}
+	return nil
 }
 
 func (r *emailVerificationRepository) CountActiveOTPsByEmail(ctx context.Context, email string, otpType entity.OTPType) (int, error) {
@@ -81,13 +78,16 @@ func (r *emailVerificationRepository) CountActiveOTPsByEmail(ctx context.Context
 		Where("email = ? AND otp_type = ? AND verified_at IS NULL AND expires_at > ?", email, otpType, time.Now()).
 		Count(&count).Error
 	if err != nil {
-		return 0, err
+		return 0, errors.TranslatePostgres(err)
 	}
 	return int(count), nil
 }
 
 func (r *emailVerificationRepository) DeleteExpiredByEmail(ctx context.Context, email string) error {
-	return r.db.WithContext(ctx).
+	if err := r.db.WithContext(ctx).
 		Where("email = ? AND expires_at < ?", email, time.Now()).
-		Delete(&entity.EmailVerification{}).Error
+		Delete(&entity.EmailVerification{}).Error; err != nil {
+		return errors.TranslatePostgres(err)
+	}
+	return nil
 }

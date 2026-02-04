@@ -6,6 +6,7 @@ import (
 
 	"iam-service/entity"
 	"iam-service/iam/auth/contract"
+	"iam-service/pkg/errors"
 
 	"github.com/google/uuid"
 	"gorm.io/gorm"
@@ -20,7 +21,10 @@ func NewPINVerificationLogRepository(db *gorm.DB) contract.PINVerificationLogRep
 }
 
 func (r *pinVerificationLogRepository) Create(ctx context.Context, log *entity.PINVerificationLog) error {
-	return r.db.WithContext(ctx).Create(log).Error
+	if err := r.db.WithContext(ctx).Create(log).Error; err != nil {
+		return errors.TranslatePostgres(err)
+	}
+	return nil
 }
 
 func (r *pinVerificationLogRepository) CountRecentFailures(ctx context.Context, userID uuid.UUID, since int) (int, error) {
@@ -31,7 +35,7 @@ func (r *pinVerificationLogRepository) CountRecentFailures(ctx context.Context, 
 		Where("user_id = ? AND result = false AND created_at > ?", userID, sinceTime).
 		Count(&count).Error
 	if err != nil {
-		return 0, err
+		return 0, errors.TranslatePostgres(err)
 	}
 	return int(count), nil
 }

@@ -2,12 +2,12 @@ package postgres
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"time"
 
 	"iam-service/entity"
 	"iam-service/iam/user/contract"
+	"iam-service/pkg/errors"
 
 	"github.com/google/uuid"
 	"gorm.io/gorm"
@@ -22,17 +22,17 @@ func NewUserRepository(db *gorm.DB) *userRepository {
 }
 
 func (r *userRepository) Create(ctx context.Context, user *entity.User) error {
-	return r.db.WithContext(ctx).Create(user).Error
+	if err := r.db.WithContext(ctx).Create(user).Error; err != nil {
+		return errors.TranslatePostgres(err)
+	}
+	return nil
 }
 
 func (r *userRepository) GetByID(ctx context.Context, id uuid.UUID) (*entity.User, error) {
 	var user entity.User
 	err := r.db.WithContext(ctx).Where("user_id = ?", id).First(&user).Error
 	if err != nil {
-		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return nil, ErrRecordNotFound
-		}
-		return nil, err
+		return nil, errors.TranslatePostgres(err)
 	}
 	return &user, nil
 }
@@ -41,10 +41,7 @@ func (r *userRepository) GetByEmail(ctx context.Context, tenantID uuid.UUID, ema
 	var user entity.User
 	err := r.db.WithContext(ctx).Where("tenant_id = ? AND email = ?", tenantID, email).First(&user).Error
 	if err != nil {
-		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return nil, ErrRecordNotFound
-		}
-		return nil, err
+		return nil, errors.TranslatePostgres(err)
 	}
 	return &user, nil
 }
@@ -53,16 +50,16 @@ func (r *userRepository) GetByEmailAnyTenant(ctx context.Context, email string) 
 	var user entity.User
 	err := r.db.WithContext(ctx).Where("email = ?", email).First(&user).Error
 	if err != nil {
-		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return nil, ErrRecordNotFound
-		}
-		return nil, err
+		return nil, errors.TranslatePostgres(err)
 	}
 	return &user, nil
 }
 
 func (r *userRepository) Update(ctx context.Context, user *entity.User) error {
-	return r.db.WithContext(ctx).Save(user).Error
+	if err := r.db.WithContext(ctx).Save(user).Error; err != nil {
+		return errors.TranslatePostgres(err)
+	}
+	return nil
 }
 
 func (r *userRepository) EmailExistsInTenant(ctx context.Context, tenantID uuid.UUID, email string) (bool, error) {
@@ -71,7 +68,7 @@ func (r *userRepository) EmailExistsInTenant(ctx context.Context, tenantID uuid.
 		Where("tenant_id = ? AND email = ?", tenantID, email).
 		Count(&count).Error
 	if err != nil {
-		return false, err
+		return false, errors.TranslatePostgres(err)
 	}
 	return count > 0, nil
 }
@@ -86,10 +83,10 @@ func (r *userRepository) Delete(ctx context.Context, id uuid.UUID) error {
 			"updated_at": now,
 		})
 	if result.Error != nil {
-		return result.Error
+		return errors.TranslatePostgres(result.Error)
 	}
 	if result.RowsAffected == 0 {
-		return gorm.ErrRecordNotFound
+		return errors.SentinelNotFound
 	}
 	return nil
 }
@@ -128,7 +125,7 @@ func (r *userRepository) List(ctx context.Context, filter *contract.UserListFilt
 	}
 
 	if err := query.Count(&total).Error; err != nil {
-		return nil, 0, err
+		return nil, 0, errors.TranslatePostgres(err)
 	}
 
 	validSortColumns := map[string]string{
@@ -154,7 +151,7 @@ func (r *userRepository) List(ctx context.Context, filter *contract.UserListFilt
 		Limit(filter.PerPage).
 		Find(&users).Error
 	if err != nil {
-		return nil, 0, err
+		return nil, 0, errors.TranslatePostgres(err)
 	}
 
 	return users, total, nil
@@ -168,7 +165,7 @@ func (r *userRepository) GetPendingApprovalUsers(ctx context.Context, tenantID u
 		Order("created_at DESC").
 		Find(&users).Error
 	if err != nil {
-		return nil, err
+		return nil, errors.TranslatePostgres(err)
 	}
 	return users, nil
 }

@@ -2,9 +2,9 @@ package postgres
 
 import (
 	"context"
-	"errors"
 
 	"iam-service/entity"
+	"iam-service/pkg/errors"
 
 	"github.com/google/uuid"
 	"gorm.io/gorm"
@@ -19,17 +19,17 @@ func NewRoleRepository(db *gorm.DB) *roleRepository {
 }
 
 func (r *roleRepository) Create(ctx context.Context, role *entity.Role) error {
-	return r.db.WithContext(ctx).Create(role).Error
+	if err := r.db.WithContext(ctx).Create(role).Error; err != nil {
+		return errors.TranslatePostgres(err)
+	}
+	return nil
 }
 
 func (r *roleRepository) GetByID(ctx context.Context, id uuid.UUID) (*entity.Role, error) {
 	var role entity.Role
 	err := r.db.WithContext(ctx).Where("role_id = ?", id).First(&role).Error
 	if err != nil {
-		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return nil, ErrRecordNotFound
-		}
-		return nil, err
+		return nil, errors.TranslatePostgres(err)
 	}
 	return &role, nil
 }
@@ -38,10 +38,7 @@ func (r *roleRepository) GetByName(ctx context.Context, tenantID uuid.UUID, name
 	var role entity.Role
 	err := r.db.WithContext(ctx).Where("tenant_id = ? AND name = ?", tenantID, name).First(&role).Error
 	if err != nil {
-		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return nil, ErrRecordNotFound
-		}
-		return nil, err
+		return nil, errors.TranslatePostgres(err)
 	}
 	return &role, nil
 }
@@ -50,10 +47,7 @@ func (r *roleRepository) GetByEmail(ctx context.Context, tenantID uuid.UUID, ema
 	var role entity.Role
 	err := r.db.WithContext(ctx).Where("tenant_id = ? AND email = ?", tenantID, email).First(&role).Error
 	if err != nil {
-		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return nil, ErrRecordNotFound
-		}
-		return nil, err
+		return nil, errors.TranslatePostgres(err)
 	}
 	return &role, nil
 }
@@ -62,14 +56,14 @@ func (r *roleRepository) GetByCode(ctx context.Context, tenantID uuid.UUID, code
 	var role entity.Role
 	err := r.db.WithContext(ctx).Where("tenant_id = ? AND code = ?", tenantID, code).First(&role).Error
 	if err != nil {
-		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return nil, ErrRecordNotFound
-		}
-		return nil, err
+		return nil, errors.TranslatePostgres(err)
 	}
 	return &role, nil
 }
 
 func (r *roleRepository) Update(ctx context.Context, role *entity.Role) error {
-	return r.db.WithContext(ctx).Save(role).Error
+	if err := r.db.WithContext(ctx).Save(role).Error; err != nil {
+		return errors.TranslatePostgres(err)
+	}
+	return nil
 }

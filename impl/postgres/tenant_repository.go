@@ -2,10 +2,10 @@ package postgres
 
 import (
 	"context"
-	"errors"
 
 	"iam-service/entity"
 	"iam-service/iam/auth/contract"
+	"iam-service/pkg/errors"
 
 	"github.com/google/uuid"
 	"gorm.io/gorm"
@@ -23,10 +23,7 @@ func (r *tenantRepository) GetByID(ctx context.Context, id uuid.UUID) (*entity.T
 	var tenant entity.Tenant
 	err := r.db.WithContext(ctx).Where("tenant_id = ?", id).First(&tenant).Error
 	if err != nil {
-		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return nil, ErrRecordNotFound
-		}
-		return nil, err
+		return nil, errors.TranslatePostgres(err)
 	}
 	return &tenant, nil
 }
@@ -35,10 +32,7 @@ func (r *tenantRepository) GetBySlug(ctx context.Context, slug string) (*entity.
 	var tenant entity.Tenant
 	err := r.db.WithContext(ctx).Where("slug = ?", slug).First(&tenant).Error
 	if err != nil {
-		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return nil, ErrRecordNotFound
-		}
-		return nil, err
+		return nil, errors.TranslatePostgres(err)
 	}
 	return &tenant, nil
 }
@@ -49,7 +43,7 @@ func (r *tenantRepository) Exists(ctx context.Context, id uuid.UUID) (bool, erro
 		Where("tenant_id = ? AND status = ?", id, entity.TenantStatusActive).
 		Count(&count).Error
 	if err != nil {
-		return false, err
+		return false, errors.TranslatePostgres(err)
 	}
 	return count > 0, nil
 }
