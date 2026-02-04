@@ -3,8 +3,9 @@ package hashivault
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
+
+	pkgerrors "iam-service/pkg/errors"
 )
 
 type SecretData struct {
@@ -50,7 +51,7 @@ func (v *SecureVault) ReadSecret(ctx context.Context, path string) (map[string]i
 	}
 
 	if secret == nil || secret.Data == nil {
-		return nil, ErrSecretNotFound
+		return nil, pkgerrors.SentinelSecretNotFound
 	}
 
 	return secret.Data, nil
@@ -63,7 +64,7 @@ func (v *SecureVault) ReadSecretVersion(ctx context.Context, path string, versio
 	}
 
 	if secret == nil || secret.Data == nil {
-		return nil, ErrSecretNotFound
+		return nil, pkgerrors.SentinelSecretNotFound
 	}
 
 	return secret.Data, nil
@@ -76,7 +77,7 @@ func (v *SecureVault) ReadSecretWithMetadata(ctx context.Context, path string) (
 	}
 
 	if secret == nil {
-		return nil, ErrSecretNotFound
+		return nil, pkgerrors.SentinelSecretNotFound
 	}
 
 	metadata := SecretMetadata{
@@ -250,7 +251,3 @@ func convertToStringMap(m map[string]interface{}) map[string]string {
 	}
 	return result
 }
-
-var (
-	ErrSecretNotFound = errors.New("secret not found")
-)

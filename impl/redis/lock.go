@@ -8,6 +8,8 @@ import (
 	"fmt"
 	"time"
 
+	pkgerrors "iam-service/pkg/errors"
+
 	"github.com/redis/go-redis/v9"
 )
 
@@ -47,7 +49,7 @@ func (r *Redis) AcquireLock(ctx context.Context, name string, expiry time.Durati
 	}
 
 	if !acquired {
-		return nil, ErrLockNotAcquired
+		return nil, pkgerrors.SentinelLockNotAcquired
 	}
 
 	lock.acquired = true
@@ -60,7 +62,7 @@ func (r *Redis) AcquireLockWithRetry(ctx context.Context, name string, expiry ti
 		if err == nil {
 			return lock, nil
 		}
-		if !errors.Is(err, ErrLockNotAcquired) {
+		if !errors.Is(err, pkgerrors.SentinelLockNotAcquired) {
 			return nil, err
 		}
 
@@ -71,7 +73,7 @@ func (r *Redis) AcquireLockWithRetry(ctx context.Context, name string, expiry ti
 			continue
 		}
 	}
-	return nil, ErrLockNotAcquired
+	return nil, pkgerrors.SentinelLockNotAcquired
 }
 
 func (r *Redis) AcquireLockWithWait(ctx context.Context, name string, expiry time.Duration, pollInterval time.Duration) (*Lock, error) {
@@ -80,7 +82,7 @@ func (r *Redis) AcquireLockWithWait(ctx context.Context, name string, expiry tim
 		if err == nil {
 			return lock, nil
 		}
-		if !errors.Is(err, ErrLockNotAcquired) {
+		if !errors.Is(err, pkgerrors.SentinelLockNotAcquired) {
 			return nil, err
 		}
 
@@ -95,7 +97,7 @@ func (r *Redis) AcquireLockWithWait(ctx context.Context, name string, expiry tim
 
 func (lock *Lock) Release(ctx context.Context) error {
 	if !lock.acquired {
-		return ErrLockNotHeld
+		return pkgerrors.SentinelLockNotHeld
 	}
 
 	script := redis.NewScript(`
@@ -113,7 +115,7 @@ func (lock *Lock) Release(ctx context.Context) error {
 	}
 
 	if result == 0 {
-		return ErrLockNotHeld
+		return pkgerrors.SentinelLockNotHeld
 	}
 
 	lock.acquired = false
@@ -122,7 +124,7 @@ func (lock *Lock) Release(ctx context.Context) error {
 
 func (lock *Lock) Extend(ctx context.Context, expiry time.Duration) error {
 	if !lock.acquired {
-		return ErrLockNotHeld
+		return pkgerrors.SentinelLockNotHeld
 	}
 
 	script := redis.NewScript(`
@@ -141,7 +143,7 @@ func (lock *Lock) Extend(ctx context.Context, expiry time.Duration) error {
 
 	if result == 0 {
 		lock.acquired = false
-		return ErrLockNotHeld
+		return pkgerrors.SentinelLockNotHeld
 	}
 
 	lock.expiry = expiry
@@ -240,7 +242,7 @@ func (s *Semaphore) Acquire(ctx context.Context, expiry time.Duration) (string, 
 	}
 
 	if result == 0 {
-		return "", ErrSemaphoreFull
+		return "", pkgerrors.SentinelSemaphoreFull
 	}
 
 	return token, nil
@@ -253,7 +255,7 @@ func (s *Semaphore) Release(ctx context.Context, token string) error {
 		return fmt.Errorf("failed to release semaphore: %w", err)
 	}
 	if removed == 0 {
-		return ErrSemaphoreTokenNotFound
+		return pkgerrors.SentinelSemaphoreTokenNotFound
 	}
 	return nil
 }

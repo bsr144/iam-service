@@ -7,6 +7,8 @@ import (
 	"fmt"
 	"time"
 
+	pkgerrors "iam-service/pkg/errors"
+
 	"github.com/google/uuid"
 	"github.com/redis/go-redis/v9"
 )
@@ -61,7 +63,7 @@ func (r *Redis) Dequeue(ctx context.Context, queueName string, timeout time.Dura
 	data, err := r.client.BRPopLPush(ctx, queueKey(queueName), processingKey(queueName), timeout).Bytes()
 	if err != nil {
 		if errors.Is(err, redis.Nil) {
-			return nil, ErrQueueEmpty
+			return nil, pkgerrors.SentinelQueueEmpty
 		}
 		return nil, fmt.Errorf("failed to dequeue: %w", err)
 	}
@@ -236,9 +238,5 @@ func (r *Redis) RetryDeadLetter(ctx context.Context, queueName string, jobID str
 			return r.client.LRem(ctx, deadLetterKey(queueName), 1, d).Err()
 		}
 	}
-	return ErrJobNotFound
+	return pkgerrors.SentinelJobNotFound
 }
-
-var ErrQueueEmpty = errors.New("queue is empty")
-
-var ErrJobNotFound = errors.New("job not found")

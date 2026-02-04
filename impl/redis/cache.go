@@ -3,11 +3,10 @@ package redis
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"time"
 
-	"github.com/redis/go-redis/v9"
+	pkgerrors "iam-service/pkg/errors"
 )
 
 func (c *Redis) Set(ctx context.Context, key string, value any, expiration time.Duration) error {
@@ -25,8 +24,8 @@ func (c *Redis) SetString(ctx context.Context, key, value string, expiration tim
 func (c *Redis) Get(ctx context.Context, key string, target any) error {
 	data, err := c.client.Get(ctx, key).Bytes()
 	if err != nil {
-		if errors.Is(err, redis.Nil) {
-			return ErrCacheMiss
+		if translated := pkgerrors.TranslateRedis(err); translated != err {
+			return translated
 		}
 		return fmt.Errorf("failed to get value: %w", err)
 	}
@@ -36,8 +35,8 @@ func (c *Redis) Get(ctx context.Context, key string, target any) error {
 func (c *Redis) GetString(ctx context.Context, key string) (string, error) {
 	val, err := c.client.Get(ctx, key).Result()
 	if err != nil {
-		if errors.Is(err, redis.Nil) {
-			return "", ErrCacheMiss
+		if translated := pkgerrors.TranslateRedis(err); translated != err {
+			return "", translated
 		}
 		return "", fmt.Errorf("failed to get value: %w", err)
 	}
@@ -99,7 +98,7 @@ func (c *Redis) GetOrSet(ctx context.Context, key string, target any, expiration
 	if err == nil {
 		return nil
 	}
-	if !errors.Is(err, ErrCacheMiss) {
+	if err != pkgerrors.SentinelCacheMiss {
 		return err
 	}
 
@@ -145,8 +144,8 @@ func (c *Redis) HSet(ctx context.Context, key, field string, value any) error {
 func (c *Redis) HGet(ctx context.Context, key, field string, target any) error {
 	data, err := c.client.HGet(ctx, key, field).Bytes()
 	if err != nil {
-		if errors.Is(err, redis.Nil) {
-			return ErrCacheMiss
+		if translated := pkgerrors.TranslateRedis(err); translated != err {
+			return translated
 		}
 		return fmt.Errorf("failed to get hash field: %w", err)
 	}
@@ -164,5 +163,3 @@ func (c *Redis) HGetAll(ctx context.Context, key string) (map[string]string, err
 func (c *Redis) HDel(ctx context.Context, key string, fields ...string) error {
 	return c.client.HDel(ctx, key, fields...).Err()
 }
-
-var ErrCacheMiss = errors.New("cache miss")

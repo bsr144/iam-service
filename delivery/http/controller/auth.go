@@ -12,7 +12,6 @@ import (
 	"github.com/gofiber/fiber/v2"
 )
 
-// convertValidationErrors converts validator.ValidationErrors to []errors.FieldError
 func convertValidationErrors(errs validator.ValidationErrors) []errors.FieldError {
 	result := make([]errors.FieldError, len(errs))
 	for i, err := range errs {
