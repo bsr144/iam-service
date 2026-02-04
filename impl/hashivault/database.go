@@ -3,6 +3,7 @@ package hashivault
 import (
 	"context"
 	"fmt"
+	"iam-service/pkg/errors"
 	"time"
 )
 
@@ -28,11 +29,11 @@ func (v *SecureVault) GenerateDatabaseCredentials(ctx context.Context, role stri
 	path := fmt.Sprintf("database/creds/%s", role)
 	secret, err := v.client.Logical().ReadWithContext(ctx, path)
 	if err != nil {
-		return nil, fmt.Errorf("failed to generate database credentials: %w", err)
+		return nil, errors.ErrInternal("failed to generate database credentials").WithError(err)
 	}
 
 	if secret == nil || secret.Data == nil {
-		return nil, fmt.Errorf("empty response from vault")
+		return nil, errors.ErrNotFound("vault returned empty response")
 	}
 
 	creds := &DatabaseCredentials{
@@ -55,11 +56,11 @@ func (v *SecureVault) GenerateStaticDatabaseCredentials(ctx context.Context, rol
 	path := fmt.Sprintf("database/static-creds/%s", role)
 	secret, err := v.client.Logical().ReadWithContext(ctx, path)
 	if err != nil {
-		return nil, fmt.Errorf("failed to get static database credentials: %w", err)
+		return nil, errors.ErrInternal("failed to get static database credentials").WithError(err)
 	}
 
 	if secret == nil || secret.Data == nil {
-		return nil, fmt.Errorf("empty response from vault")
+		return nil, errors.ErrNotFound("vault returned empty response")
 	}
 
 	creds := &DatabaseCredentials{}
@@ -85,7 +86,7 @@ func (v *SecureVault) RotateStaticDatabaseCredentials(ctx context.Context, role 
 	path := fmt.Sprintf("database/rotate-role/%s", role)
 	_, err := v.client.Logical().WriteWithContext(ctx, path, nil)
 	if err != nil {
-		return fmt.Errorf("failed to rotate static credentials: %w", err)
+		return errors.ErrInternal("failed to rotate static credentials").WithError(err)
 	}
 	return nil
 }
@@ -111,7 +112,7 @@ func (v *SecureVault) CreateDatabaseRole(ctx context.Context, name string, role 
 	path := fmt.Sprintf("database/roles/%s", name)
 	_, err := v.client.Logical().WriteWithContext(ctx, path, data)
 	if err != nil {
-		return fmt.Errorf("failed to create database role: %w", err)
+		return errors.ErrInternal("failed to create database role").WithError(err)
 	}
 
 	return nil
@@ -121,11 +122,11 @@ func (v *SecureVault) ReadDatabaseRole(ctx context.Context, name string) (*Datab
 	path := fmt.Sprintf("database/roles/%s", name)
 	secret, err := v.client.Logical().ReadWithContext(ctx, path)
 	if err != nil {
-		return nil, fmt.Errorf("failed to read database role: %w", err)
+		return nil, errors.ErrInternal("failed to read database role").WithError(err)
 	}
 
 	if secret == nil || secret.Data == nil {
-		return nil, fmt.Errorf("role not found")
+		return nil, errors.ErrNotFound("database role not found")
 	}
 
 	role := &DatabaseRole{}
@@ -171,7 +172,7 @@ func (v *SecureVault) DeleteDatabaseRole(ctx context.Context, name string) error
 	path := fmt.Sprintf("database/roles/%s", name)
 	_, err := v.client.Logical().DeleteWithContext(ctx, path)
 	if err != nil {
-		return fmt.Errorf("failed to delete database role: %w", err)
+		return errors.ErrInternal("failed to delete database role").WithError(err)
 	}
 	return nil
 }
@@ -179,7 +180,7 @@ func (v *SecureVault) DeleteDatabaseRole(ctx context.Context, name string) error
 func (v *SecureVault) ListDatabaseRoles(ctx context.Context) ([]string, error) {
 	secret, err := v.client.Logical().ListWithContext(ctx, "database/roles")
 	if err != nil {
-		return nil, fmt.Errorf("failed to list database roles: %w", err)
+		return nil, errors.ErrInternal("failed to list database roles").WithError(err)
 	}
 
 	if secret == nil || secret.Data == nil {
@@ -193,7 +194,7 @@ func (v *SecureVault) ListDatabaseRoles(ctx context.Context) ([]string, error) {
 
 	keysSlice, ok := keysInterface.([]interface{})
 	if !ok {
-		return nil, fmt.Errorf("unexpected keys format")
+		return nil, errors.ErrInternal("unexpected keys format")
 	}
 
 	keys := make([]string, 0, len(keysSlice))
@@ -218,7 +219,7 @@ func (v *SecureVault) ConfigureDatabaseConnection(ctx context.Context, name, plu
 	path := fmt.Sprintf("database/config/%s", name)
 	_, err := v.client.Logical().WriteWithContext(ctx, path, data)
 	if err != nil {
-		return fmt.Errorf("failed to configure database connection: %w", err)
+		return errors.ErrInternal("failed to configure database connection").WithError(err)
 	}
 
 	return nil
@@ -228,11 +229,11 @@ func (v *SecureVault) ReadDatabaseConnection(ctx context.Context, name string) (
 	path := fmt.Sprintf("database/config/%s", name)
 	secret, err := v.client.Logical().ReadWithContext(ctx, path)
 	if err != nil {
-		return nil, fmt.Errorf("failed to read database connection: %w", err)
+		return nil, errors.ErrInternal("failed to read database connection").WithError(err)
 	}
 
 	if secret == nil || secret.Data == nil {
-		return nil, fmt.Errorf("connection not found")
+		return nil, errors.ErrNotFound("database connection not found")
 	}
 
 	return secret.Data, nil
@@ -242,7 +243,7 @@ func (v *SecureVault) DeleteDatabaseConnection(ctx context.Context, name string)
 	path := fmt.Sprintf("database/config/%s", name)
 	_, err := v.client.Logical().DeleteWithContext(ctx, path)
 	if err != nil {
-		return fmt.Errorf("failed to delete database connection: %w", err)
+		return errors.ErrInternal("failed to delete database connection").WithError(err)
 	}
 	return nil
 }
@@ -251,7 +252,7 @@ func (v *SecureVault) ResetDatabaseConnection(ctx context.Context, name string) 
 	path := fmt.Sprintf("database/reset/%s", name)
 	_, err := v.client.Logical().WriteWithContext(ctx, path, nil)
 	if err != nil {
-		return fmt.Errorf("failed to reset database connection: %w", err)
+		return errors.ErrInternal("failed to reset database connection").WithError(err)
 	}
 	return nil
 }
@@ -260,7 +261,7 @@ func (v *SecureVault) RotateDatabaseRootCredentials(ctx context.Context, name st
 	path := fmt.Sprintf("database/rotate-root/%s", name)
 	_, err := v.client.Logical().WriteWithContext(ctx, path, nil)
 	if err != nil {
-		return fmt.Errorf("failed to rotate root credentials: %w", err)
+		return errors.ErrInternal("failed to rotate root credentials").WithError(err)
 	}
 	return nil
 }

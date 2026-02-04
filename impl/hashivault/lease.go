@@ -3,6 +3,7 @@ package hashivault
 import (
 	"context"
 	"fmt"
+	"iam-service/pkg/errors"
 	"time"
 )
 
@@ -25,11 +26,11 @@ func (v *SecureVault) RenewLease(ctx context.Context, leaseID string, increment 
 
 	secret, err := v.client.Logical().WriteWithContext(ctx, "sys/leases/renew", data)
 	if err != nil {
-		return nil, fmt.Errorf("failed to renew lease: %w", err)
+		return nil, errors.ErrInternal("failed to renew lease").WithError(err)
 	}
 
 	if secret == nil {
-		return nil, fmt.Errorf("empty response from vault")
+		return nil, errors.ErrNotFound("vault returned empty response")
 	}
 
 	return &LeaseInfo{
@@ -46,7 +47,7 @@ func (v *SecureVault) RevokeLease(ctx context.Context, leaseID string) error {
 
 	_, err := v.client.Logical().WriteWithContext(ctx, "sys/leases/revoke", data)
 	if err != nil {
-		return fmt.Errorf("failed to revoke lease: %w", err)
+		return errors.ErrInternal("failed to revoke lease").WithError(err)
 	}
 
 	return nil
@@ -59,7 +60,7 @@ func (v *SecureVault) RevokeLeaseWithPrefix(ctx context.Context, prefix string) 
 
 	_, err := v.client.Logical().WriteWithContext(ctx, "sys/leases/revoke-prefix", data)
 	if err != nil {
-		return fmt.Errorf("failed to revoke leases with prefix: %w", err)
+		return errors.ErrInternal("failed to revoke leases with prefix").WithError(err)
 	}
 
 	return nil
@@ -72,7 +73,7 @@ func (v *SecureVault) ForceRevokeLeaseWithPrefix(ctx context.Context, prefix str
 
 	_, err := v.client.Logical().WriteWithContext(ctx, "sys/leases/revoke-force", data)
 	if err != nil {
-		return fmt.Errorf("failed to force revoke leases with prefix: %w", err)
+		return errors.ErrInternal("failed to force revoke leases with prefix").WithError(err)
 	}
 
 	return nil
@@ -85,11 +86,11 @@ func (v *SecureVault) LookupLease(ctx context.Context, leaseID string) (*LeaseIn
 
 	secret, err := v.client.Logical().WriteWithContext(ctx, "sys/leases/lookup", data)
 	if err != nil {
-		return nil, fmt.Errorf("failed to lookup lease: %w", err)
+		return nil, errors.ErrInternal("failed to lookup lease").WithError(err)
 	}
 
 	if secret == nil || secret.Data == nil {
-		return nil, fmt.Errorf("empty response from vault")
+		return nil, errors.ErrNotFound("vault returned empty response")
 	}
 
 	info := &LeaseInfo{}
@@ -123,7 +124,7 @@ func (v *SecureVault) ListLeases(ctx context.Context, prefix string) ([]string, 
 	path := fmt.Sprintf("sys/leases/lookup/%s", prefix)
 	secret, err := v.client.Logical().ListWithContext(ctx, path)
 	if err != nil {
-		return nil, fmt.Errorf("failed to list leases: %w", err)
+		return nil, errors.ErrInternal("failed to list leases").WithError(err)
 	}
 
 	if secret == nil || secret.Data == nil {
@@ -137,7 +138,7 @@ func (v *SecureVault) ListLeases(ctx context.Context, prefix string) ([]string, 
 
 	keysSlice, ok := keysInterface.([]interface{})
 	if !ok {
-		return nil, fmt.Errorf("unexpected keys format")
+		return nil, errors.ErrInternal("unexpected keys format")
 	}
 
 	keys := make([]string, 0, len(keysSlice))
@@ -153,7 +154,7 @@ func (v *SecureVault) ListLeases(ctx context.Context, prefix string) ([]string, 
 func (v *SecureVault) TidyLeases(ctx context.Context) error {
 	_, err := v.client.Logical().WriteWithContext(ctx, "sys/leases/tidy", nil)
 	if err != nil {
-		return fmt.Errorf("failed to tidy leases: %w", err)
+		return errors.ErrInternal("failed to tidy leases").WithError(err)
 	}
 	return nil
 }
