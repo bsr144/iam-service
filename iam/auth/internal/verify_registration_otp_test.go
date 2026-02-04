@@ -23,7 +23,6 @@ func TestVerifyRegistrationOTP(t *testing.T) {
 	email := "test@example.com"
 	validOTP := "123456"
 
-	// Generate valid OTP hash
 	otpHash, _ := bcrypt.GenerateFromPassword([]byte(validOTP), bcrypt.DefaultCost)
 
 	tests := []struct {
@@ -90,7 +89,7 @@ func TestVerifyRegistrationOTP(t *testing.T) {
 					Status:       entity.RegistrationSessionStatusPendingVerification,
 					OTPHash:      string(otpHash),
 					OTPExpiresAt: time.Now().Add(10 * time.Minute),
-					ExpiresAt:    time.Now().Add(-1 * time.Minute), // Expired
+					ExpiresAt:    time.Now().Add(-1 * time.Minute),
 				}
 				redis.On("GetRegistrationSession", mock.Anything, tenantID, registrationID).Return(session, nil)
 			},
@@ -127,7 +126,7 @@ func TestVerifyRegistrationOTP(t *testing.T) {
 					Email:        email,
 					Status:       entity.RegistrationSessionStatusPendingVerification,
 					OTPHash:      string(otpHash),
-					OTPExpiresAt: time.Now().Add(-1 * time.Minute), // OTP expired
+					OTPExpiresAt: time.Now().Add(-1 * time.Minute),
 					ExpiresAt:    time.Now().Add(10 * time.Minute),
 				}
 				redis.On("GetRegistrationSession", mock.Anything, tenantID, registrationID).Return(session, nil)
@@ -180,11 +179,10 @@ func TestVerifyRegistrationOTP(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			// Setup mocks
+
 			redis := new(MockRegistrationSessionStore)
 			tt.setupMocks(redis)
 
-			// Create usecase
 			uc := &usecase{
 				Config: &config.Config{
 					JWT: config.JWTConfig{
@@ -194,11 +192,9 @@ func TestVerifyRegistrationOTP(t *testing.T) {
 				Redis: redis,
 			}
 
-			// Execute
 			ctx := context.Background()
 			resp, err := uc.VerifyRegistrationOTP(ctx, tenantID, registrationID, tt.req)
 
-			// Assert
 			if tt.expectedError != "" {
 				require.Error(t, err)
 				assert.Contains(t, err.Error(), tt.expectedError)

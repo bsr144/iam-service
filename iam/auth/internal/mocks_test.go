@@ -11,7 +11,6 @@ import (
 	"github.com/stretchr/testify/mock"
 )
 
-// MockTenantRepository is a mock implementation of TenantRepository
 type MockTenantRepository struct {
 	mock.Mock
 }
@@ -37,7 +36,6 @@ func (m *MockTenantRepository) Exists(ctx context.Context, id uuid.UUID) (bool, 
 	return args.Bool(0), args.Error(1)
 }
 
-// MockUserRepository is a mock implementation of UserRepository
 type MockUserRepository struct {
 	mock.Mock
 }
@@ -99,7 +97,6 @@ func (m *MockUserRepository) GetPendingApprovalUsers(ctx context.Context, tenant
 	return args.Get(0).([]*entity.User), args.Error(1)
 }
 
-// MockRegistrationSessionStore is a mock implementation of RegistrationSessionStore
 type MockRegistrationSessionStore struct {
 	mock.Mock
 }
@@ -167,7 +164,6 @@ func (m *MockRegistrationSessionStore) GetRegistrationRateLimitCount(ctx context
 	return args.Get(0).(int64), args.Error(1)
 }
 
-// MockEmailService is a mock implementation of EmailService
 type MockEmailService struct {
 	mock.Mock
 }

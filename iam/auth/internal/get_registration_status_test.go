@@ -46,7 +46,7 @@ func TestGetRegistrationStatus(t *testing.T) {
 				redis.On("GetRegistrationSession", mock.Anything, tenantID, registrationID).Return(session, nil)
 			},
 			checkResponse: func(t *testing.T, session *entity.RegistrationSession) {
-				// Verify masked email format
+
 			},
 		},
 		{
@@ -96,21 +96,18 @@ func TestGetRegistrationStatus(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			// Setup mocks
+
 			redis := new(MockRegistrationSessionStore)
 			tt.setupMocks(redis)
 
-			// Create usecase
 			uc := &usecase{
 				Config: &config.Config{},
 				Redis:  redis,
 			}
 
-			// Execute
 			ctx := context.Background()
 			resp, err := uc.GetRegistrationStatus(ctx, tenantID, registrationID, tt.email)
 
-			// Assert
 			if tt.expectedError != "" {
 				require.Error(t, err)
 				assert.Contains(t, err.Error(), tt.expectedError)
@@ -125,7 +122,7 @@ func TestGetRegistrationStatus(t *testing.T) {
 				require.NotNil(t, resp)
 				assert.Equal(t, registrationID.String(), resp.RegistrationID)
 				assert.NotEmpty(t, resp.Status)
-				// Verify email is masked (starts with first char, then ***, then @)
+
 				assert.Contains(t, resp.Email, "***@")
 				assert.True(t, resp.OTPAttemptsRemaining >= 0)
 				assert.True(t, resp.ResendsRemaining >= 0)

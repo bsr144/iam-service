@@ -88,7 +88,6 @@ func TestInitiateRegistration(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			// Setup mocks
 			tenantRepo := new(MockTenantRepository)
 			userRepo := new(MockUserRepository)
 			redis := new(MockRegistrationSessionStore)
@@ -96,7 +95,6 @@ func TestInitiateRegistration(t *testing.T) {
 
 			tt.setupMocks(tenantRepo, userRepo, redis, emailSvc)
 
-			// Create usecase
 			uc := &usecase{
 				Config:       &config.Config{},
 				TenantRepo:   tenantRepo,
@@ -105,11 +103,9 @@ func TestInitiateRegistration(t *testing.T) {
 				EmailService: emailSvc,
 			}
 
-			// Execute
 			ctx := context.Background()
 			resp, err := uc.InitiateRegistration(ctx, tenantID, tt.req, ipAddress, userAgent)
 
-			// Assert
 			if tt.expectedError != "" {
 				require.Error(t, err)
 				assert.Contains(t, err.Error(), tt.expectedError)
@@ -128,7 +124,6 @@ func TestInitiateRegistration(t *testing.T) {
 				assert.True(t, resp.ExpiresAt.After(time.Now()))
 			}
 
-			// Verify mocks
 			tenantRepo.AssertExpectations(t)
 			userRepo.AssertExpectations(t)
 			redis.AssertExpectations(t)

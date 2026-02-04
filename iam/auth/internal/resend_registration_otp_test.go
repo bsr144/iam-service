@@ -82,7 +82,7 @@ func TestResendRegistrationOTP(t *testing.T) {
 					TenantID:  tenantID,
 					Email:     email,
 					Status:    entity.RegistrationSessionStatusPendingVerification,
-					ExpiresAt: time.Now().Add(-1 * time.Minute), // Expired
+					ExpiresAt: time.Now().Add(-1 * time.Minute),
 				}
 				redis.On("GetRegistrationSession", mock.Anything, tenantID, registrationID).Return(session, nil)
 			},
@@ -129,7 +129,7 @@ func TestResendRegistrationOTP(t *testing.T) {
 			name: "error - resend cooldown",
 			req:  &authdto.ResendRegistrationOTPRequest{Email: email},
 			setupMocks: func(redis *MockRegistrationSessionStore, emailSvc *MockEmailService) {
-				lastResent := time.Now().Add(-30 * time.Second) // 30 seconds ago
+				lastResent := time.Now().Add(-30 * time.Second)
 				session := &entity.RegistrationSession{
 					ID:                    registrationID,
 					TenantID:              tenantID,
@@ -150,23 +150,19 @@ func TestResendRegistrationOTP(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			// Setup mocks
 			redis := new(MockRegistrationSessionStore)
 			emailSvc := new(MockEmailService)
 			tt.setupMocks(redis, emailSvc)
 
-			// Create usecase
 			uc := &usecase{
 				Config:       &config.Config{},
 				Redis:        redis,
 				EmailService: emailSvc,
 			}
 
-			// Execute
 			ctx := context.Background()
 			resp, err := uc.ResendRegistrationOTP(ctx, tenantID, registrationID, tt.req)
 
-			// Assert
 			if tt.expectedError != "" {
 				require.Error(t, err)
 				assert.Contains(t, err.Error(), tt.expectedError)

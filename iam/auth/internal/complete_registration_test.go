@@ -27,7 +27,6 @@ func TestCompleteRegistration(t *testing.T) {
 	userAgent := "Mozilla/5.0"
 	jwtSecret := "test-secret-key-for-testing-purposes"
 
-	// Helper to generate valid registration token
 	generateValidToken := func() (string, string) {
 		claims := jwt.MapClaims{
 			"registration_id": registrationID.String(),
@@ -67,7 +66,7 @@ func TestCompleteRegistration(t *testing.T) {
 				return "invalid-token"
 			},
 			setupMocks: func(redis *MockRegistrationSessionStore, userRepo *MockUserRepository, emailSvc *MockEmailService, tokenHash string) {
-				// No mocks needed - fails at token validation
+
 			},
 			expectedError: "invalid",
 			expectedCode:  errors.CodeUnauthorized,
@@ -81,7 +80,7 @@ func TestCompleteRegistration(t *testing.T) {
 					"tenant_id":       tenantID.String(),
 					"email":           email,
 					"purpose":         RegistrationCompleteTokenPurpose,
-					"exp":             time.Now().Add(-1 * time.Minute).Unix(), // Expired
+					"exp":             time.Now().Add(-1 * time.Minute).Unix(),
 					"iat":             time.Now().Add(-16 * time.Minute).Unix(),
 					"jti":             uuid.New().String(),
 				}
@@ -90,7 +89,7 @@ func TestCompleteRegistration(t *testing.T) {
 				return tokenString
 			},
 			setupMocks: func(redis *MockRegistrationSessionStore, userRepo *MockUserRepository, emailSvc *MockEmailService, tokenHash string) {
-				// No mocks needed - fails at token validation
+
 			},
 			expectedError: "invalid or expired",
 			expectedCode:  errors.CodeUnauthorized,
@@ -103,7 +102,7 @@ func TestCompleteRegistration(t *testing.T) {
 					"registration_id": registrationID.String(),
 					"tenant_id":       tenantID.String(),
 					"email":           email,
-					"purpose":         "wrong_purpose", // Wrong purpose
+					"purpose":         "wrong_purpose",
 					"exp":             time.Now().Add(15 * time.Minute).Unix(),
 					"iat":             time.Now().Unix(),
 					"jti":             uuid.New().String(),
@@ -113,7 +112,7 @@ func TestCompleteRegistration(t *testing.T) {
 				return tokenString
 			},
 			setupMocks: func(redis *MockRegistrationSessionStore, userRepo *MockUserRepository, emailSvc *MockEmailService, tokenHash string) {
-				// No mocks needed - fails at token validation
+
 			},
 			expectedError: "not a registration completion token",
 			expectedCode:  errors.CodeUnauthorized,
@@ -144,7 +143,7 @@ func TestCompleteRegistration(t *testing.T) {
 					TenantID:  tenantID,
 					Email:     email,
 					Status:    entity.RegistrationSessionStatusVerified,
-					ExpiresAt: time.Now().Add(-1 * time.Minute), // Expired
+					ExpiresAt: time.Now().Add(-1 * time.Minute),
 				}
 				redis.On("GetRegistrationSession", mock.Anything, tenantID, registrationID).Return(session, nil)
 			},
@@ -163,7 +162,7 @@ func TestCompleteRegistration(t *testing.T) {
 					ID:        registrationID,
 					TenantID:  tenantID,
 					Email:     email,
-					Status:    entity.RegistrationSessionStatusPendingVerification, // Not verified
+					Status:    entity.RegistrationSessionStatusPendingVerification,
 					ExpiresAt: time.Now().Add(10 * time.Minute),
 				}
 				redis.On("GetRegistrationSession", mock.Anything, tenantID, registrationID).Return(session, nil)
@@ -185,7 +184,7 @@ func TestCompleteRegistration(t *testing.T) {
 					TenantID:              tenantID,
 					Email:                 email,
 					Status:                entity.RegistrationSessionStatusVerified,
-					RegistrationTokenHash: &wrongHash, // Different hash
+					RegistrationTokenHash: &wrongHash,
 					ExpiresAt:             time.Now().Add(10 * time.Minute),
 				}
 				redis.On("GetRegistrationSession", mock.Anything, tenantID, registrationID).Return(session, nil)
@@ -203,7 +202,7 @@ func TestCompleteRegistration(t *testing.T) {
 			},
 			setupToken: func() string {
 				tokenString, tokenHash := generateValidToken()
-				// Store tokenHash for mock setup
+
 				_ = tokenHash
 				return tokenString
 			},
@@ -238,7 +237,7 @@ func TestCompleteRegistration(t *testing.T) {
 					ExpiresAt:             time.Now().Add(10 * time.Minute),
 				}
 				redis.On("GetRegistrationSession", mock.Anything, tenantID, registrationID).Return(session, nil)
-				userRepo.On("EmailExistsInTenant", mock.Anything, tenantID, email).Return(true, nil) // Already exists
+				userRepo.On("EmailExistsInTenant", mock.Anything, tenantID, email).Return(true, nil)
 			},
 			expectedError: "already been registered",
 			expectedCode:  errors.CodeConflict,
@@ -247,19 +246,17 @@ func TestCompleteRegistration(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			// Setup mocks
+
 			redis := new(MockRegistrationSessionStore)
 			userRepo := new(MockUserRepository)
 			emailSvc := new(MockEmailService)
 
-			// Generate token and get hash for mock setup
 			token := tt.setupToken()
 			hash := sha256.Sum256([]byte(token))
 			tokenHash := hex.EncodeToString(hash[:])
 
 			tt.setupMocks(redis, userRepo, emailSvc, tokenHash)
 
-			// Create usecase
 			uc := &usecase{
 				Config: &config.Config{
 					JWT: config.JWTConfig{
@@ -271,11 +268,9 @@ func TestCompleteRegistration(t *testing.T) {
 				EmailService: emailSvc,
 			}
 
-			// Execute
 			ctx := context.Background()
 			resp, err := uc.CompleteRegistration(ctx, tenantID, registrationID, token, tt.req, ipAddress, userAgent)
 
-			// Assert
 			if tt.expectedError != "" {
 				require.Error(t, err)
 				assert.Contains(t, err.Error(), tt.expectedError)
