@@ -24,8 +24,6 @@ type Usecase interface {
 	RequestPasswordReset(ctx context.Context, req *authdto.RequestPasswordResetRequest) (*authdto.RequestPasswordResetResponse, error)
 	ResetPassword(ctx context.Context, req *authdto.ResetPasswordRequest) (*authdto.ResetPasswordResponse, error)
 
-	// Email OTP Registration flow
-	// Design reference: .claude/doc/email-otp-signup-api.md
 	InitiateRegistration(ctx context.Context, tenantID uuid.UUID, req *authdto.InitiateRegistrationRequest, ipAddress, userAgent string) (*authdto.InitiateRegistrationResponse, error)
 	VerifyRegistrationOTP(ctx context.Context, tenantID, registrationID uuid.UUID, req *authdto.VerifyRegistrationOTPRequest) (*authdto.VerifyRegistrationOTPResponse, error)
 	ResendRegistrationOTP(ctx context.Context, tenantID, registrationID uuid.UUID, req *authdto.ResendRegistrationOTPRequest) (*authdto.ResendRegistrationOTPResponse, error)

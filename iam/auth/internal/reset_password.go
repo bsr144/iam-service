@@ -16,7 +16,6 @@ import (
 func (uc *usecase) ResetPassword(ctx context.Context, req *authdto.ResetPasswordRequest) (*authdto.ResetPasswordResponse, error) {
 	user, err := uc.UserRepo.GetByEmail(ctx, req.TenantID, req.Email)
 	if err != nil {
-		// Return generic error to prevent user enumeration
 		if errors.IsNotFound(err) {
 			return nil, errors.ErrInvalidCredentials()
 		}

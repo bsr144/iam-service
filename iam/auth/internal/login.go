@@ -18,7 +18,6 @@ import (
 func (uc *usecase) Login(ctx context.Context, req *authdto.LoginRequest) (*authdto.LoginResponse, error) {
 	user, err := uc.UserRepo.GetByEmail(ctx, req.TenantID, req.Email)
 	if err != nil {
-		// Return generic error to prevent user enumeration
 		if errors.IsNotFound(err) {
 			return nil, errors.ErrInvalidCredentials()
 		}
@@ -31,7 +30,7 @@ func (uc *usecase) Login(ctx context.Context, req *authdto.LoginRequest) (*authd
 
 	credentials, err := uc.UserCredentialsRepo.GetByUserID(ctx, user.UserID)
 	if err != nil {
-		// Return generic error to prevent user enumeration
+
 		if errors.IsNotFound(err) {
 			return nil, errors.ErrInvalidCredentials()
 		}

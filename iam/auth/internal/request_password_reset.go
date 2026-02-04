@@ -15,7 +15,6 @@ import (
 func (uc *usecase) RequestPasswordReset(ctx context.Context, req *authdto.RequestPasswordResetRequest) (*authdto.RequestPasswordResetResponse, error) {
 	user, err := uc.UserRepo.GetByEmail(ctx, req.TenantID, req.Email)
 	if err != nil {
-		// Return success to prevent user enumeration
 		if errors.IsNotFound(err) {
 			return &authdto.RequestPasswordResetResponse{
 				OTPExpiresAt: time.Now().Add(time.Duration(OTPExpiryMinutes) * time.Minute),
