@@ -48,7 +48,6 @@ type User struct {
 	IsServiceAccount bool       `json:"is_service_account" gorm:"column:is_service_account;default:false" db:"is_service_account"`
 	IsActive         bool       `json:"is_active" gorm:"column:is_active;default:true" db:"is_active"`
 
-	// Registration tracking (audit trail)
 	RegistrationID          *uuid.UUID `json:"registration_id,omitempty" gorm:"column:registration_id" db:"registration_id"`
 	RegistrationCompletedAt *time.Time `json:"registration_completed_at,omitempty" gorm:"column:registration_completed_at" db:"registration_completed_at"`
 
