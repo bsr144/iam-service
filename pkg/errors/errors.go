@@ -381,3 +381,11 @@ func GetCode(err error) string {
 	}
 	return CodeInternal
 }
+
+// IsNotFound returns true if the error is a not-found error (any not-found code).
+func IsNotFound(err error) bool {
+	if appErr := GetAppError(err); appErr != nil {
+		return appErr.Kind == KindNotFound
+	}
+	return false
+}
