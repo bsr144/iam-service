@@ -1,4 +1,17 @@
 -- ============================================================================
+-- UNIQUE INDEXES: Business Rules (using expressions)
+-- ============================================================================
+
+-- Unique code per category+tenant (treats NULL tenant as global)
+CREATE UNIQUE INDEX uq_masterdata_items_category_tenant_code
+    ON masterdata_items(
+        category_id,
+        COALESCE(tenant_id, '00000000-0000-0000-0000-000000000000'::uuid),
+        code
+    )
+    WHERE deleted_at IS NULL;
+
+-- ============================================================================
 -- INDEXES: Foreign Key Columns
 -- ============================================================================
 

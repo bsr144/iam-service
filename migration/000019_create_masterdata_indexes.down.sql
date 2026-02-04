@@ -1,3 +1,4 @@
+DROP INDEX IF EXISTS uq_masterdata_items_category_tenant_code;
 DROP INDEX IF EXISTS idx_masterdata_items_default;
 DROP INDEX IF EXISTS idx_masterdata_items_effective;
 DROP INDEX IF EXISTS idx_masterdata_items_name_trgm;

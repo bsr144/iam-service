@@ -46,11 +46,6 @@ CREATE TABLE masterdata_items (
         REFERENCES masterdata_categories(id) ON DELETE RESTRICT,
     CONSTRAINT fk_masterdata_items_parent FOREIGN KEY (parent_item_id)
         REFERENCES masterdata_items(id) ON DELETE RESTRICT,
-    CONSTRAINT uq_masterdata_items_category_tenant_code UNIQUE (
-        category_id,
-        COALESCE(tenant_id, '00000000-0000-0000-0000-000000000000'::uuid),
-        code
-    ),
     CONSTRAINT chk_masterdata_items_status CHECK (status IN ('ACTIVE', 'INACTIVE')),
     CONSTRAINT chk_masterdata_items_no_self_ref CHECK (id != parent_item_id),
     CONSTRAINT chk_masterdata_items_effective_dates CHECK (
