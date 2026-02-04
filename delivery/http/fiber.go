@@ -16,6 +16,7 @@ import (
 	"iam-service/iam/user"
 	"iam-service/impl/mailer"
 	"iam-service/impl/postgres"
+	implredis "iam-service/impl/redis"
 	"iam-service/infrastructure"
 	apperrors "iam-service/pkg/errors"
 	"iam-service/pkg/logger"
@@ -44,13 +45,17 @@ func NewServer(cfg *config.Config) *Server {
 		ErrorHandler: createErrorHandler(cfg, zapLogger),
 	})
 
-	// Infrastructure
 	postgresDB, err := infrastructure.NewPostgres(cfg.Infra.Postgres, zapLogger)
 	if err != nil {
 		log.Fatal("failed to connect to postgres:", err)
 	}
 
-	// Repositories
+	redisClient, err := infrastructure.NewRedis(cfg.Infra.Redis)
+	if err != nil {
+		log.Fatal("failed to connect to redis:", err)
+	}
+	redisWrapper := implredis.NewRedis(redisClient)
+
 	authUserRepo := postgres.NewUserRepository(postgresDB)
 	userProfileRepo := postgres.NewUserProfileRepository(postgresDB)
 	userCredentialsRepo := postgres.NewUserCredentialsRepository(postgresDB)
@@ -60,10 +65,8 @@ func NewServer(cfg *config.Config) *Server {
 	userActivationTrackingRepo := postgres.NewUserActivationTrackingRepository(postgresDB)
 	roleRepo := postgres.NewRoleRepository(postgresDB)
 
-	// External services
 	emailService := mailer.NewEmailService()
 
-	// Usecases
 	healthUsecase := health.NewUsecase()
 	authUsecase := auth.NewUsecase(
 		postgresDB,
@@ -77,6 +80,7 @@ func NewServer(cfg *config.Config) *Server {
 		userActivationTrackingRepo,
 		roleRepo,
 		emailService,
+		redisWrapper,
 	)
 	roleUsecase := role.NewUsecase(
 		postgresDB,
@@ -96,7 +100,6 @@ func NewServer(cfg *config.Config) *Server {
 		userActivationTrackingRepo,
 	)
 
-	// Controllers
 	healthController := controller.NewHealthController(cfg, healthUsecase)
 	authController := controller.NewRegistrationController(cfg, authUsecase)
 	roleController := controller.NewRoleController(cfg, roleUsecase)
@@ -108,11 +111,9 @@ func NewServer(cfg *config.Config) *Server {
 		logger: zapLogger,
 	}
 
-	// Setup middleware
 	mw := middleware.New(cfg, zapLogger)
 	mw.Setup(app)
 
-	// Setup routes
 	api := app.Group("/api")
 	v1 := api.Group("/v1")
 
@@ -143,10 +144,9 @@ func createErrorHandler(cfg *config.Config, zapLogger *zap.Logger) fiber.ErrorHa
 		requestID := middleware.GetRequestID(c)
 		includeDebug := !cfg.IsProduction()
 
-		// 1. Check for AppError (from pkg/errors)
 		var appErr *apperrors.AppError
 		if apperrors.As(err, &appErr) {
-			// Structured logging with context
+
 			logFields := []zap.Field{
 				zap.String("request_id", requestID),
 				zap.String("code", appErr.Code),
@@ -163,7 +163,6 @@ func createErrorHandler(cfg *config.Config, zapLogger *zap.Logger) fiber.ErrorHa
 				logFields = append(logFields, zap.Error(appErr.Err))
 			}
 
-			// Log based on HTTP status
 			if appErr.HTTPStatus >= 500 {
 				zapLogger.Error(appErr.Message, logFields...)
 			} else if appErr.HTTPStatus >= 400 {
@@ -177,7 +176,6 @@ func createErrorHandler(cfg *config.Config, zapLogger *zap.Logger) fiber.ErrorHa
 				RequestID: requestID,
 			}
 
-			// Add validation field errors if present
 			if appErr.Code == apperrors.CodeValidation && appErr.Details != nil {
 				if fieldErrors, ok := appErr.Details["fields"].([]apperrors.FieldError); ok {
 					resp.Errors = make([]response.FieldError, len(fieldErrors))
@@ -190,7 +188,6 @@ func createErrorHandler(cfg *config.Config, zapLogger *zap.Logger) fiber.ErrorHa
 				}
 			}
 
-			// Add debug info in non-production environments
 			if includeDebug && appErr.Err != nil {
 				resp.Debug = &response.DebugInfo{
 					Cause: appErr.Err.Error(),
@@ -200,7 +197,6 @@ func createErrorHandler(cfg *config.Config, zapLogger *zap.Logger) fiber.ErrorHa
 			return c.Status(appErr.HTTPStatus).JSON(resp)
 		}
 
-		// 2. Check for Fiber errors
 		var fiberErr *fiber.Error
 		if errors.As(err, &fiberErr) {
 			zapLogger.Warn("Fiber error",
@@ -218,7 +214,6 @@ func createErrorHandler(cfg *config.Config, zapLogger *zap.Logger) fiber.ErrorHa
 			})
 		}
 
-		// 3. Fallback for unexpected errors
 		zapLogger.Error("Unexpected error",
 			zap.String("request_id", requestID),
 			zap.Error(err),

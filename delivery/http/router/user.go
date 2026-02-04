@@ -12,11 +12,9 @@ func SetupUserRoutes(api fiber.Router, cfg *config.Config, userController *contr
 	users := api.Group("/users")
 	users.Use(middleware.JWTAuth(cfg))
 
-	// Self endpoints (any authenticated user)
 	users.Get("/me", userController.GetMe)
 	users.Put("/me", userController.UpdateMe)
 
-	// Admin endpoints
 	adminUsers := users.Group("")
 	adminUsers.Use(middleware.RequirePlatformAdmin())
 
