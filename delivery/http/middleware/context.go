@@ -83,6 +83,11 @@ func GetUserAgent(c *fiber.Ctx) string {
 }
 
 func GetRequestID(c *fiber.Ctx) string {
+	// Try response header first (set by requestid middleware)
+	if id := c.GetRespHeader("X-Request-ID"); id != "" {
+		return id
+	}
+	// Fall back to request header
 	return c.Get("X-Request-ID")
 }
 

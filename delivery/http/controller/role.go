@@ -11,6 +11,29 @@ import (
 	"github.com/gofiber/fiber/v2"
 )
 
+// convertRoleValidationErrors converts validator.ValidationErrors to []errors.FieldError
+func convertRoleValidationErrors(errs validator.ValidationErrors) []errors.FieldError {
+	result := make([]errors.FieldError, len(errs))
+	for i, err := range errs {
+		field := err.Field()
+		var message string
+		switch err.Tag() {
+		case "required":
+			message = field + " is required"
+		case "email":
+			message = field + " must be a valid email address"
+		case "min":
+			message = field + " must be at least " + err.Param() + " characters"
+		case "max":
+			message = field + " must be at most " + err.Param() + " characters"
+		default:
+			message = field + " is invalid"
+		}
+		result[i] = errors.FieldError{Field: field, Message: message}
+	}
+	return result
+}
+
 type RoleController struct {
 	config      *config.Config
 	roleUsecase role.Usecase
@@ -28,24 +51,16 @@ func NewRoleController(cfg *config.Config, roleUsecase role.Usecase) *RoleContro
 func (rc *RoleController) Create(c *fiber.Ctx) error {
 	var req roledto.CreateRequest
 	if err := c.BodyParser(&req); err != nil {
-		return c.Status(fiber.StatusBadRequest).JSON(response.ErrorResponse(
-			errors.CodeBadRequest,
-			"Invalid request body",
-		))
+		return errors.ErrBadRequest("Invalid request body")
 	}
 
 	if err := rc.validate.Struct(&req); err != nil {
-		validationErrors := err.(validator.ValidationErrors)
-		return c.Status(fiber.StatusBadRequest).JSON(response.ErrorResponseWithDetails(
-			errors.CodeValidation,
-			"Validation failed",
-			formatValidationErrors(validationErrors),
-		))
+		return errors.ErrValidationWithFields(convertRoleValidationErrors(err.(validator.ValidationErrors)))
 	}
 
 	resp, err := rc.roleUsecase.Create(c.Context(), &req)
 	if err != nil {
-		return handleError(c, err)
+		return err
 	}
 
 	return c.Status(fiber.StatusCreated).JSON(response.SuccessResponse(

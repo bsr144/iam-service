@@ -28,7 +28,7 @@ func (r *userCredentialsRepository) GetByUserID(ctx context.Context, userID uuid
 	err := r.db.WithContext(ctx).Where("user_id = ?", userID).First(&credentials).Error
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return nil, nil
+			return nil, ErrRecordNotFound
 		}
 		return nil, err
 	}

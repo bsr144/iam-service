@@ -3,8 +3,10 @@ package internal
 import (
 	"context"
 	"encoding/json"
+	stderrors "errors"
 	"iam-service/entity"
 	"iam-service/iam/user/userdto"
+	"iam-service/impl/postgres"
 	"iam-service/pkg/errors"
 	"time"
 
@@ -24,10 +26,10 @@ func (uc *usecase) Create(ctx context.Context, req *userdto.CreateRequest) (*use
 
 	role, err := uc.RoleRepo.GetByCode(ctx, req.TenantID, req.RoleCode)
 	if err != nil {
+		if stderrors.Is(err, postgres.ErrRecordNotFound) {
+			return nil, errors.ErrRoleNotFound()
+		}
 		return nil, errors.ErrInternal("failed to get role").WithError(err)
-	}
-	if role == nil {
-		return nil, errors.ErrRoleNotFound()
 	}
 
 	if !role.IsSystem {

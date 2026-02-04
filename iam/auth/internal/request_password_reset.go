@@ -2,8 +2,10 @@ package internal
 
 import (
 	"context"
+	stderrors "errors"
 	"iam-service/entity"
 	"iam-service/iam/auth/authdto"
+	"iam-service/impl/postgres"
 	"iam-service/pkg/errors"
 	"strings"
 	"time"
@@ -14,14 +16,14 @@ import (
 func (uc *usecase) RequestPasswordReset(ctx context.Context, req *authdto.RequestPasswordResetRequest) (*authdto.RequestPasswordResetResponse, error) {
 	user, err := uc.UserRepo.GetByEmail(ctx, req.TenantID, req.Email)
 	if err != nil {
+		if stderrors.Is(err, postgres.ErrRecordNotFound) {
+			// Return success to prevent user enumeration
+			return &authdto.RequestPasswordResetResponse{
+				OTPExpiresAt: time.Now().Add(time.Duration(OTPExpiryMinutes) * time.Minute),
+				EmailMasked:  maskEmail(req.Email),
+			}, nil
+		}
 		return nil, errors.ErrInternal("failed to get user").WithError(err)
-	}
-
-	if user == nil {
-		return &authdto.RequestPasswordResetResponse{
-			OTPExpiresAt: time.Now().Add(time.Duration(OTPExpiryMinutes) * time.Minute),
-			EmailMasked:  maskEmail(req.Email),
-		}, nil
 	}
 
 	if !user.IsActive {

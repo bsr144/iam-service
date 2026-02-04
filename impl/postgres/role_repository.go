@@ -27,7 +27,7 @@ func (r *roleRepository) GetByID(ctx context.Context, id uuid.UUID) (*entity.Rol
 	err := r.db.WithContext(ctx).Where("role_id = ?", id).First(&role).Error
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return nil, nil
+			return nil, ErrRecordNotFound
 		}
 		return nil, err
 	}
@@ -39,7 +39,7 @@ func (r *roleRepository) GetByName(ctx context.Context, tenantID uuid.UUID, name
 	err := r.db.WithContext(ctx).Where("tenant_id = ? AND name = ?", tenantID, name).First(&role).Error
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return nil, nil
+			return nil, ErrRecordNotFound
 		}
 		return nil, err
 	}
@@ -51,7 +51,7 @@ func (r *roleRepository) GetByEmail(ctx context.Context, tenantID uuid.UUID, ema
 	err := r.db.WithContext(ctx).Where("tenant_id = ? AND email = ?", tenantID, email).First(&role).Error
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return nil, nil
+			return nil, ErrRecordNotFound
 		}
 		return nil, err
 	}
@@ -63,7 +63,7 @@ func (r *roleRepository) GetByCode(ctx context.Context, tenantID uuid.UUID, code
 	err := r.db.WithContext(ctx).Where("tenant_id = ? AND code = ?", tenantID, code).First(&role).Error
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return nil, nil
+			return nil, ErrRecordNotFound
 		}
 		return nil, err
 	}

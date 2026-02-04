@@ -28,7 +28,7 @@ func (r *userActivationTrackingRepository) GetByUserID(ctx context.Context, user
 	err := r.db.WithContext(ctx).Where("user_id = ?", userID).First(&tracking).Error
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return nil, nil
+			return nil, ErrRecordNotFound
 		}
 		return nil, err
 	}

@@ -2,8 +2,10 @@ package internal
 
 import (
 	"context"
+	stderrors "errors"
 	"iam-service/entity"
 	"iam-service/iam/auth/authdto"
+	"iam-service/impl/postgres"
 	"iam-service/pkg/errors"
 	"time"
 
@@ -14,18 +16,18 @@ import (
 func (uc *usecase) VerifyOTP(ctx context.Context, req *authdto.VerifyOTPRequest) (*authdto.VerifyOTPResponse, error) {
 	user, err := uc.UserRepo.GetByEmail(ctx, req.TenantID, req.Email)
 	if err != nil {
+		if stderrors.Is(err, postgres.ErrRecordNotFound) {
+			return nil, errors.ErrUserNotFound()
+		}
 		return nil, errors.ErrInternal("failed to get user").WithError(err)
-	}
-	if user == nil {
-		return nil, errors.ErrUserNotFound()
 	}
 
 	verification, err := uc.EmailVerificationRepo.GetLatestByEmail(ctx, req.Email, entity.OTPTypeRegistration)
 	if err != nil {
+		if stderrors.Is(err, postgres.ErrRecordNotFound) {
+			return nil, errors.ErrOTPInvalid()
+		}
 		return nil, errors.ErrInternal("failed to get verification").WithError(err)
-	}
-	if verification == nil {
-		return nil, errors.ErrOTPInvalid()
 	}
 
 	if verification.IsExpired() {

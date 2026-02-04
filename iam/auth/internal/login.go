@@ -4,8 +4,10 @@ import (
 	"context"
 	"crypto/sha256"
 	"encoding/hex"
+	stderrors "errors"
 	"iam-service/entity"
 	"iam-service/iam/auth/authdto"
+	"iam-service/impl/postgres"
 	"iam-service/pkg/errors"
 	jwtpkg "iam-service/pkg/jwt"
 	"time"
@@ -17,10 +19,10 @@ import (
 func (uc *usecase) Login(ctx context.Context, req *authdto.LoginRequest) (*authdto.LoginResponse, error) {
 	user, err := uc.UserRepo.GetByEmail(ctx, req.TenantID, req.Email)
 	if err != nil {
+		if stderrors.Is(err, postgres.ErrRecordNotFound) {
+			return nil, errors.ErrInvalidCredentials()
+		}
 		return nil, errors.ErrInternal("failed to get user").WithError(err)
-	}
-	if user == nil {
-		return nil, errors.ErrInvalidCredentials()
 	}
 
 	if !user.IsActive {
@@ -29,9 +31,12 @@ func (uc *usecase) Login(ctx context.Context, req *authdto.LoginRequest) (*authd
 
 	credentials, err := uc.UserCredentialsRepo.GetByUserID(ctx, user.UserID)
 	if err != nil {
+		if stderrors.Is(err, postgres.ErrRecordNotFound) {
+			return nil, errors.ErrInvalidCredentials()
+		}
 		return nil, errors.ErrInternal("failed to get credentials").WithError(err)
 	}
-	if credentials == nil || credentials.PasswordHash == nil {
+	if credentials.PasswordHash == nil {
 		return nil, errors.ErrInvalidCredentials()
 	}
 
@@ -46,10 +51,10 @@ func (uc *usecase) Login(ctx context.Context, req *authdto.LoginRequest) (*authd
 
 	profile, err := uc.UserProfileRepo.GetByUserID(ctx, user.UserID)
 	if err != nil {
+		if stderrors.Is(err, postgres.ErrRecordNotFound) {
+			return nil, errors.ErrProfileIncomplete()
+		}
 		return nil, errors.ErrInternal("failed to get profile").WithError(err)
-	}
-	if profile == nil {
-		return nil, errors.ErrProfileIncomplete()
 	}
 
 	var productID *uuid.UUID
@@ -259,7 +264,10 @@ func (uc *usecase) resolvePermissionsFromRoles(ctx context.Context, roles []*ent
 
 func (uc *usecase) updateLastLogin(ctx context.Context, userID uuid.UUID) error {
 	security, err := uc.UserSecurityRepo.GetByUserID(ctx, userID)
-	if err != nil || security == nil {
+	if err != nil {
+		if stderrors.Is(err, postgres.ErrRecordNotFound) {
+			return nil
+		}
 		return err
 	}
 
@@ -272,7 +280,10 @@ func (uc *usecase) updateLastLogin(ctx context.Context, userID uuid.UUID) error 
 
 func (uc *usecase) logFailedLogin(ctx context.Context, userID uuid.UUID) error {
 	security, err := uc.UserSecurityRepo.GetByUserID(ctx, userID)
-	if err != nil || security == nil {
+	if err != nil {
+		if stderrors.Is(err, postgres.ErrRecordNotFound) {
+			return nil
+		}
 		return err
 	}
 

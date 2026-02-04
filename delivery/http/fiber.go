@@ -3,9 +3,11 @@ package rest
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"iam-service/config"
 	"iam-service/delivery/http/controller"
+	"iam-service/delivery/http/dto/response"
 	"iam-service/delivery/http/middleware"
 	"iam-service/delivery/http/router"
 	"iam-service/iam/auth"
@@ -15,6 +17,7 @@ import (
 	"iam-service/impl/mailer"
 	"iam-service/impl/postgres"
 	"iam-service/infrastructure"
+	apperrors "iam-service/pkg/errors"
 	"iam-service/pkg/logger"
 	"log"
 
@@ -38,7 +41,7 @@ func NewServer(cfg *config.Config) *Server {
 		ReadTimeout:  cfg.Server.ReadTimeout,
 		WriteTimeout: cfg.Server.WriteTimeout,
 		IdleTimeout:  cfg.Server.IdleTimeout,
-		ErrorHandler: defaultErrorHandler,
+		ErrorHandler: createErrorHandler(cfg),
 	})
 
 	// Infrastructure
@@ -135,15 +138,69 @@ func (s *Server) Shutdown(ctx context.Context) error {
 	return s.app.ShutdownWithContext(ctx)
 }
 
-func defaultErrorHandler(c *fiber.Ctx, err error) error {
-	code := fiber.StatusInternalServerError
+func createErrorHandler(cfg *config.Config) fiber.ErrorHandler {
+	return func(c *fiber.Ctx, err error) error {
+		requestID := middleware.GetRequestID(c)
+		includeDebug := !cfg.IsProduction()
 
-	if e, ok := err.(*fiber.Error); ok {
-		code = e.Code
+		// 1. Check for AppError (from pkg/errors)
+		var appErr *apperrors.AppError
+		if apperrors.As(err, &appErr) {
+			resp := response.APIResponse{
+				Success:   false,
+				Error:     appErr.Code,
+				Message:   appErr.Message,
+				RequestID: requestID,
+			}
+
+			// Add validation field errors if present
+			if appErr.Code == apperrors.CodeValidation && appErr.Details != nil {
+				if fieldErrors, ok := appErr.Details["fields"].([]apperrors.FieldError); ok {
+					resp.Errors = make([]response.FieldError, len(fieldErrors))
+					for i, fe := range fieldErrors {
+						resp.Errors[i] = response.FieldError{
+							Field:   fe.Field,
+							Message: fe.Message,
+						}
+					}
+				}
+			}
+
+			// Add debug info in non-production environments
+			if includeDebug && appErr.Err != nil {
+				resp.Debug = &response.DebugInfo{
+					Cause: appErr.Err.Error(),
+				}
+			}
+
+			return c.Status(appErr.HTTPStatus).JSON(resp)
+		}
+
+		// 2. Check for Fiber errors
+		var fiberErr *fiber.Error
+		if errors.As(err, &fiberErr) {
+			return c.Status(fiberErr.Code).JSON(response.APIResponse{
+				Success:   false,
+				Error:     "FIBER_ERROR",
+				Message:   fiberErr.Message,
+				RequestID: requestID,
+			})
+		}
+
+		// 3. Fallback for unexpected errors
+		resp := response.APIResponse{
+			Success:   false,
+			Error:     "INTERNAL_SERVER_ERROR",
+			Message:   "an unexpected error occurred",
+			RequestID: requestID,
+		}
+
+		if includeDebug {
+			resp.Debug = &response.DebugInfo{
+				Cause: err.Error(),
+			}
+		}
+
+		return c.Status(fiber.StatusInternalServerError).JSON(resp)
 	}
-
-	return c.Status(code).JSON(fiber.Map{
-		"success": false,
-		"error":   err.Error(),
-	})
 }

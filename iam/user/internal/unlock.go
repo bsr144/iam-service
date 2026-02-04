@@ -2,27 +2,29 @@ package internal
 
 import (
 	"context"
+	stderrors "errors"
 	"iam-service/iam/user/userdto"
+	"iam-service/impl/postgres"
 	"iam-service/pkg/errors"
 
 	"github.com/google/uuid"
 )
 
 func (uc *usecase) Unlock(ctx context.Context, id uuid.UUID) (*userdto.UnlockResponse, error) {
-	user, err := uc.UserRepo.GetByID(ctx, id)
+	_, err := uc.UserRepo.GetByID(ctx, id)
 	if err != nil {
+		if stderrors.Is(err, postgres.ErrRecordNotFound) {
+			return nil, errors.ErrUserNotFound()
+		}
 		return nil, errors.ErrInternal("failed to get user").WithError(err)
-	}
-	if user == nil {
-		return nil, errors.ErrUserNotFound()
 	}
 
 	security, err := uc.UserSecurityRepo.GetByUserID(ctx, id)
 	if err != nil {
+		if stderrors.Is(err, postgres.ErrRecordNotFound) {
+			return nil, errors.ErrInternal("user security not found")
+		}
 		return nil, errors.ErrInternal("failed to get user security").WithError(err)
-	}
-	if security == nil {
-		return nil, errors.ErrInternal("user security not found")
 	}
 
 	if security.LockedUntil == nil {

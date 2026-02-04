@@ -12,6 +12,29 @@ import (
 	"github.com/gofiber/fiber/v2"
 )
 
+// convertValidationErrors converts validator.ValidationErrors to []errors.FieldError
+func convertValidationErrors(errs validator.ValidationErrors) []errors.FieldError {
+	result := make([]errors.FieldError, len(errs))
+	for i, err := range errs {
+		field := err.Field()
+		var message string
+		switch err.Tag() {
+		case "required":
+			message = field + " is required"
+		case "email":
+			message = field + " must be a valid email address"
+		case "min":
+			message = field + " must be at least " + err.Param() + " characters"
+		case "max":
+			message = field + " must be at most " + err.Param() + " characters"
+		default:
+			message = field + " is invalid"
+		}
+		result[i] = errors.FieldError{Field: field, Message: message}
+	}
+	return result
+}
+
 type AuthController struct {
 	config      *config.Config
 	authUsecase auth.Usecase
@@ -29,24 +52,16 @@ func NewRegistrationController(cfg *config.Config, authUsecase auth.Usecase) *Au
 func (rc *AuthController) Register(c *fiber.Ctx) error {
 	var req authdto.RegisterRequest
 	if err := c.BodyParser(&req); err != nil {
-		return c.Status(fiber.StatusBadRequest).JSON(response.ErrorResponse(
-			errors.CodeBadRequest,
-			"Invalid request body",
-		))
+		return errors.ErrBadRequest("Invalid request body")
 	}
 
 	if err := rc.validate.Struct(&req); err != nil {
-		validationErrors := err.(validator.ValidationErrors)
-		return c.Status(fiber.StatusBadRequest).JSON(response.ErrorResponseWithDetails(
-			errors.CodeValidation,
-			"Validation failed",
-			formatValidationErrors(validationErrors),
-		))
+		return errors.ErrValidationWithFields(convertValidationErrors(err.(validator.ValidationErrors)))
 	}
 
 	resp, err := rc.authUsecase.Register(c.Context(), &req)
 	if err != nil {
-		return handleError(c, err)
+		return err
 	}
 
 	return c.Status(fiber.StatusCreated).JSON(response.SuccessResponse(
@@ -58,24 +73,16 @@ func (rc *AuthController) Register(c *fiber.Ctx) error {
 func (rc *AuthController) RegisterSpecialAccount(c *fiber.Ctx) error {
 	var req authdto.RegisterSpecialAccountRequest
 	if err := c.BodyParser(&req); err != nil {
-		return c.Status(fiber.StatusBadRequest).JSON(response.ErrorResponse(
-			errors.CodeBadRequest,
-			"Invalid request body",
-		))
+		return errors.ErrBadRequest("Invalid request body")
 	}
 
 	if err := rc.validate.Struct(&req); err != nil {
-		validationErrors := err.(validator.ValidationErrors)
-		return c.Status(fiber.StatusBadRequest).JSON(response.ErrorResponseWithDetails(
-			errors.CodeValidation,
-			"Validation failed",
-			formatValidationErrors(validationErrors),
-		))
+		return errors.ErrValidationWithFields(convertValidationErrors(err.(validator.ValidationErrors)))
 	}
 
 	resp, err := rc.authUsecase.RegisterSpecialAccount(c.Context(), &req)
 	if err != nil {
-		return handleError(c, err)
+		return err
 	}
 
 	return c.Status(fiber.StatusCreated).JSON(response.SuccessResponse(
@@ -87,24 +94,16 @@ func (rc *AuthController) RegisterSpecialAccount(c *fiber.Ctx) error {
 func (rc *AuthController) Login(c *fiber.Ctx) error {
 	var req authdto.LoginRequest
 	if err := c.BodyParser(&req); err != nil {
-		return c.Status(fiber.StatusBadRequest).JSON(response.ErrorResponse(
-			errors.CodeBadRequest,
-			"Invalid request body",
-		))
+		return errors.ErrBadRequest("Invalid request body")
 	}
 
 	if err := rc.validate.Struct(&req); err != nil {
-		validationErrors := err.(validator.ValidationErrors)
-		return c.Status(fiber.StatusBadRequest).JSON(response.ErrorResponseWithDetails(
-			errors.CodeValidation,
-			"Validation failed",
-			formatValidationErrors(validationErrors),
-		))
+		return errors.ErrValidationWithFields(convertValidationErrors(err.(validator.ValidationErrors)))
 	}
 
 	resp, err := rc.authUsecase.Login(c.Context(), &req)
 	if err != nil {
-		return handleError(c, err)
+		return err
 	}
 
 	return c.Status(fiber.StatusOK).JSON(response.SuccessResponse(
@@ -116,24 +115,16 @@ func (rc *AuthController) Login(c *fiber.Ctx) error {
 func (rc *AuthController) VerifyOTP(c *fiber.Ctx) error {
 	var req authdto.VerifyOTPRequest
 	if err := c.BodyParser(&req); err != nil {
-		return c.Status(fiber.StatusBadRequest).JSON(response.ErrorResponse(
-			errors.CodeBadRequest,
-			"Invalid request body",
-		))
+		return errors.ErrBadRequest("Invalid request body")
 	}
 
 	if err := rc.validate.Struct(&req); err != nil {
-		validationErrors := err.(validator.ValidationErrors)
-		return c.Status(fiber.StatusBadRequest).JSON(response.ErrorResponseWithDetails(
-			errors.CodeValidation,
-			"Validation failed",
-			formatValidationErrors(validationErrors),
-		))
+		return errors.ErrValidationWithFields(convertValidationErrors(err.(validator.ValidationErrors)))
 	}
 
 	resp, err := rc.authUsecase.VerifyOTP(c.Context(), &req)
 	if err != nil {
-		return handleError(c, err)
+		return err
 	}
 
 	return c.Status(fiber.StatusOK).JSON(response.SuccessResponse(
@@ -145,24 +136,16 @@ func (rc *AuthController) VerifyOTP(c *fiber.Ctx) error {
 func (rc *AuthController) CompleteProfile(c *fiber.Ctx) error {
 	var req authdto.CompleteProfileRequest
 	if err := c.BodyParser(&req); err != nil {
-		return c.Status(fiber.StatusBadRequest).JSON(response.ErrorResponse(
-			errors.CodeBadRequest,
-			"Invalid request body",
-		))
+		return errors.ErrBadRequest("Invalid request body")
 	}
 
 	if err := rc.validate.Struct(&req); err != nil {
-		validationErrors := err.(validator.ValidationErrors)
-		return c.Status(fiber.StatusBadRequest).JSON(response.ErrorResponseWithDetails(
-			errors.CodeValidation,
-			"Validation failed",
-			formatValidationErrors(validationErrors),
-		))
+		return errors.ErrValidationWithFields(convertValidationErrors(err.(validator.ValidationErrors)))
 	}
 
 	resp, err := rc.authUsecase.CompleteProfile(c.Context(), &req)
 	if err != nil {
-		return handleError(c, err)
+		return err
 	}
 
 	return c.Status(fiber.StatusOK).JSON(response.SuccessResponse(
@@ -174,24 +157,16 @@ func (rc *AuthController) CompleteProfile(c *fiber.Ctx) error {
 func (rc *AuthController) ResendOTP(c *fiber.Ctx) error {
 	var req authdto.ResendOTPRequest
 	if err := c.BodyParser(&req); err != nil {
-		return c.Status(fiber.StatusBadRequest).JSON(response.ErrorResponse(
-			errors.CodeBadRequest,
-			"Invalid request body",
-		))
+		return errors.ErrBadRequest("Invalid request body")
 	}
 
 	if err := rc.validate.Struct(&req); err != nil {
-		validationErrors := err.(validator.ValidationErrors)
-		return c.Status(fiber.StatusBadRequest).JSON(response.ErrorResponseWithDetails(
-			errors.CodeValidation,
-			"Validation failed",
-			formatValidationErrors(validationErrors),
-		))
+		return errors.ErrValidationWithFields(convertValidationErrors(err.(validator.ValidationErrors)))
 	}
 
 	resp, err := rc.authUsecase.ResendOTP(c.Context(), &req)
 	if err != nil {
-		return handleError(c, err)
+		return err
 	}
 
 	return c.Status(fiber.StatusOK).JSON(response.SuccessResponse(
@@ -203,24 +178,16 @@ func (rc *AuthController) ResendOTP(c *fiber.Ctx) error {
 func (rc *AuthController) Logout(c *fiber.Ctx) error {
 	var req authdto.LogoutRequest
 	if err := c.BodyParser(&req); err != nil {
-		return c.Status(fiber.StatusBadRequest).JSON(response.ErrorResponse(
-			errors.CodeBadRequest,
-			"Invalid request body",
-		))
+		return errors.ErrBadRequest("Invalid request body")
 	}
 
 	if err := rc.validate.Struct(&req); err != nil {
-		validationErrors := err.(validator.ValidationErrors)
-		return c.Status(fiber.StatusBadRequest).JSON(response.ErrorResponseWithDetails(
-			errors.CodeValidation,
-			"Validation failed",
-			formatValidationErrors(validationErrors),
-		))
+		return errors.ErrValidationWithFields(convertValidationErrors(err.(validator.ValidationErrors)))
 	}
 
 	err := rc.authUsecase.Logout(req.RefreshToken)
 	if err != nil {
-		return handleError(c, err)
+		return err
 	}
 
 	return c.Status(fiber.StatusOK).JSON(response.SuccessResponse(
@@ -232,29 +199,21 @@ func (rc *AuthController) Logout(c *fiber.Ctx) error {
 func (rc *AuthController) SetupPIN(c *fiber.Ctx) error {
 	var req authdto.SetupPINRequest
 	if err := c.BodyParser(&req); err != nil {
-		return c.Status(fiber.StatusBadRequest).JSON(response.ErrorResponse(
-			errors.CodeBadRequest,
-			"Invalid request body",
-		))
+		return errors.ErrBadRequest("Invalid request body")
 	}
 
 	if err := rc.validate.Struct(&req); err != nil {
-		validationErrors := err.(validator.ValidationErrors)
-		return c.Status(fiber.StatusBadRequest).JSON(response.ErrorResponseWithDetails(
-			errors.CodeValidation,
-			"Validation failed",
-			formatValidationErrors(validationErrors),
-		))
+		return errors.ErrValidationWithFields(convertValidationErrors(err.(validator.ValidationErrors)))
 	}
 
 	userID, err := middleware.GetUserID(c)
 	if err != nil {
-		return handleError(c, err)
+		return err
 	}
 
 	resp, err := rc.authUsecase.SetupPIN(c.Context(), userID, &req)
 	if err != nil {
-		return handleError(c, err)
+		return err
 	}
 
 	return c.Status(fiber.StatusOK).JSON(response.SuccessResponse(
@@ -266,24 +225,16 @@ func (rc *AuthController) SetupPIN(c *fiber.Ctx) error {
 func (rc *AuthController) RequestPasswordReset(c *fiber.Ctx) error {
 	var req authdto.RequestPasswordResetRequest
 	if err := c.BodyParser(&req); err != nil {
-		return c.Status(fiber.StatusBadRequest).JSON(response.ErrorResponse(
-			errors.CodeBadRequest,
-			"Invalid request body",
-		))
+		return errors.ErrBadRequest("Invalid request body")
 	}
 
 	if err := rc.validate.Struct(&req); err != nil {
-		validationErrors := err.(validator.ValidationErrors)
-		return c.Status(fiber.StatusBadRequest).JSON(response.ErrorResponseWithDetails(
-			errors.CodeValidation,
-			"Validation failed",
-			formatValidationErrors(validationErrors),
-		))
+		return errors.ErrValidationWithFields(convertValidationErrors(err.(validator.ValidationErrors)))
 	}
 
 	resp, err := rc.authUsecase.RequestPasswordReset(c.Context(), &req)
 	if err != nil {
-		return handleError(c, err)
+		return err
 	}
 
 	return c.Status(fiber.StatusOK).JSON(response.SuccessResponse(
@@ -295,63 +246,20 @@ func (rc *AuthController) RequestPasswordReset(c *fiber.Ctx) error {
 func (rc *AuthController) ResetPassword(c *fiber.Ctx) error {
 	var req authdto.ResetPasswordRequest
 	if err := c.BodyParser(&req); err != nil {
-		return c.Status(fiber.StatusBadRequest).JSON(response.ErrorResponse(
-			errors.CodeBadRequest,
-			"Invalid request body",
-		))
+		return errors.ErrBadRequest("Invalid request body")
 	}
 
 	if err := rc.validate.Struct(&req); err != nil {
-		validationErrors := err.(validator.ValidationErrors)
-		return c.Status(fiber.StatusBadRequest).JSON(response.ErrorResponseWithDetails(
-			errors.CodeValidation,
-			"Validation failed",
-			formatValidationErrors(validationErrors),
-		))
+		return errors.ErrValidationWithFields(convertValidationErrors(err.(validator.ValidationErrors)))
 	}
 
 	resp, err := rc.authUsecase.ResetPassword(c.Context(), &req)
 	if err != nil {
-		return handleError(c, err)
+		return err
 	}
 
 	return c.Status(fiber.StatusOK).JSON(response.SuccessResponse(
 		resp.Message,
 		resp,
 	))
-}
-
-func handleError(c *fiber.Ctx, err error) error {
-	appErr := errors.GetAppError(err)
-	if appErr != nil {
-		return c.Status(appErr.HTTPStatus).JSON(response.ErrorResponse(
-			appErr.Code,
-			appErr.Message,
-		))
-	}
-
-	return c.Status(fiber.StatusInternalServerError).JSON(response.ErrorResponse(
-		errors.CodeInternal,
-		"An unexpected error occurred",
-	))
-}
-
-func formatValidationErrors(errs validator.ValidationErrors) map[string]string {
-	result := make(map[string]string)
-	for _, err := range errs {
-		field := err.Field()
-		switch err.Tag() {
-		case "required":
-			result[field] = field + " is required"
-		case "email":
-			result[field] = field + " must be a valid email address"
-		case "min":
-			result[field] = field + " must be at least " + err.Param() + " characters"
-		case "max":
-			result[field] = field + " must be at most " + err.Param() + " characters"
-		default:
-			result[field] = field + " is invalid"
-		}
-	}
-	return result
 }

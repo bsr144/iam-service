@@ -3,8 +3,10 @@ package internal
 import (
 	"context"
 	"encoding/json"
+	stderrors "errors"
 	"iam-service/entity"
 	"iam-service/iam/auth/authdto"
+	"iam-service/impl/postgres"
 	"iam-service/pkg/errors"
 	"time"
 
@@ -97,11 +99,10 @@ func (uc *usecase) RegisterSpecialAccount(ctx context.Context, req *authdto.Regi
 
 		role, err := uc.RoleRepo.GetByCode(ctx, req.TenantID, req.UserType)
 		if err != nil {
+			if stderrors.Is(err, postgres.ErrRecordNotFound) {
+				return errors.ErrRoleNotFound()
+			}
 			return err
-		}
-
-		if role == nil {
-			return errors.ErrRoleNotFound()
 		}
 
 		userRoleID, err := uuid.NewV7()

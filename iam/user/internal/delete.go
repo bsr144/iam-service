@@ -2,6 +2,8 @@ package internal
 
 import (
 	"context"
+	stderrors "errors"
+	"iam-service/impl/postgres"
 	"iam-service/pkg/errors"
 
 	"github.com/google/uuid"
@@ -9,16 +11,16 @@ import (
 )
 
 func (uc *usecase) Delete(ctx context.Context, id uuid.UUID) error {
-	user, err := uc.UserRepo.GetByID(ctx, id)
+	_, err := uc.UserRepo.GetByID(ctx, id)
 	if err != nil {
+		if stderrors.Is(err, postgres.ErrRecordNotFound) {
+			return errors.ErrUserNotFound()
+		}
 		return errors.ErrInternal("failed to get user").WithError(err)
-	}
-	if user == nil {
-		return errors.ErrUserNotFound()
 	}
 
 	if err := uc.UserRepo.Delete(ctx, id); err != nil {
-		if err == gorm.ErrRecordNotFound {
+		if stderrors.Is(err, gorm.ErrRecordNotFound) {
 			return errors.ErrUserNotFound()
 		}
 		return errors.ErrInternal("failed to delete user").WithError(err)

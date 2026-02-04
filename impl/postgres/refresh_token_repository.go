@@ -29,7 +29,7 @@ func (r *refreshTokenRepository) GetByTokenHash(ctx context.Context, tokenHash s
 	err := r.db.WithContext(ctx).Where("token_hash = ?", tokenHash).First(&token).Error
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return nil, nil
+			return nil, ErrRecordNotFound
 		}
 		return nil, err
 	}

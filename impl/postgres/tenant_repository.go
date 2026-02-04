@@ -24,7 +24,7 @@ func (r *tenantRepository) GetByID(ctx context.Context, id uuid.UUID) (*entity.T
 	err := r.db.WithContext(ctx).Where("tenant_id = ?", id).First(&tenant).Error
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return nil, nil
+			return nil, ErrRecordNotFound
 		}
 		return nil, err
 	}
@@ -36,7 +36,7 @@ func (r *tenantRepository) GetBySlug(ctx context.Context, slug string) (*entity.
 	err := r.db.WithContext(ctx).Where("slug = ?", slug).First(&tenant).Error
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return nil, nil
+			return nil, ErrRecordNotFound
 		}
 		return nil, err
 	}

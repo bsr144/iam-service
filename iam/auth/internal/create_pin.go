@@ -3,7 +3,9 @@ package internal
 import (
 	"context"
 	"encoding/json"
+	stderrors "errors"
 	"iam-service/iam/auth/authdto"
+	"iam-service/impl/postgres"
 	"iam-service/pkg/errors"
 	"regexp"
 	"time"
@@ -25,20 +27,20 @@ func (uc *usecase) SetupPIN(ctx context.Context, userID uuid.UUID, req *authdto.
 		return nil, err
 	}
 
-	user, err := uc.UserRepo.GetByID(ctx, userID)
+	_, err := uc.UserRepo.GetByID(ctx, userID)
 	if err != nil {
+		if stderrors.Is(err, postgres.ErrRecordNotFound) {
+			return nil, errors.ErrUserNotFound()
+		}
 		return nil, errors.ErrInternal("failed to get user").WithError(err)
-	}
-	if user == nil {
-		return nil, errors.ErrUserNotFound()
 	}
 
 	credentials, err := uc.UserCredentialsRepo.GetByUserID(ctx, userID)
 	if err != nil {
+		if stderrors.Is(err, postgres.ErrRecordNotFound) {
+			return nil, errors.ErrInternal("user credentials not found")
+		}
 		return nil, errors.ErrInternal("failed to get credentials").WithError(err)
-	}
-	if credentials == nil {
-		return nil, errors.ErrInternal("user credentials not found")
 	}
 
 	if credentials.PINHash != nil {
@@ -71,7 +73,7 @@ func (uc *usecase) SetupPIN(ctx context.Context, userID uuid.UUID, req *authdto.
 	}
 
 	tracking, err := uc.UserActivationTrackingRepo.GetByUserID(ctx, userID)
-	if err == nil && tracking != nil {
+	if err == nil {
 		if err := tracking.MarkPINSet(); err == nil {
 			_ = uc.UserActivationTrackingRepo.Update(ctx, tracking)
 		}

@@ -221,6 +221,24 @@ func ErrDatabase(message string) *AppError {
 func ErrDuplicateEntry(field string) *AppError {
 	return New(CodeDuplicateEntry, fmt.Sprintf("Duplicate entry for %s", field), http.StatusConflict)
 }
+
+// FieldError represents a validation error for a specific field.
+type FieldError struct {
+	Field   string `json:"field"`
+	Message string `json:"message"`
+}
+
+// ErrValidationWithFields creates a validation error with field-level details.
+func ErrValidationWithFields(fields []FieldError) *AppError {
+	return &AppError{
+		Code:       CodeValidation,
+		Message:    "validation failed",
+		HTTPStatus: http.StatusBadRequest,
+		Details: map[string]interface{}{
+			"fields": fields,
+		},
+	}
+}
 func Is(err, target error) bool {
 	return errors.Is(err, target)
 }

@@ -30,7 +30,7 @@ func (r *userRepository) GetByID(ctx context.Context, id uuid.UUID) (*entity.Use
 	err := r.db.WithContext(ctx).Where("user_id = ?", id).First(&user).Error
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return nil, nil
+			return nil, ErrRecordNotFound
 		}
 		return nil, err
 	}
@@ -42,7 +42,7 @@ func (r *userRepository) GetByEmail(ctx context.Context, tenantID uuid.UUID, ema
 	err := r.db.WithContext(ctx).Where("tenant_id = ? AND email = ?", tenantID, email).First(&user).Error
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return nil, nil
+			return nil, ErrRecordNotFound
 		}
 		return nil, err
 	}
@@ -54,7 +54,7 @@ func (r *userRepository) GetByEmailAnyTenant(ctx context.Context, email string) 
 	err := r.db.WithContext(ctx).Where("email = ?", email).First(&user).Error
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return nil, nil
+			return nil, ErrRecordNotFound
 		}
 		return nil, err
 	}

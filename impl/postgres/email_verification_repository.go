@@ -29,7 +29,7 @@ func (r *emailVerificationRepository) GetByID(ctx context.Context, id uuid.UUID)
 	err := r.db.WithContext(ctx).Where("email_verification_id = ?", id).First(&verification).Error
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return nil, nil
+			return nil, ErrRecordNotFound
 		}
 		return nil, err
 	}
@@ -44,7 +44,7 @@ func (r *emailVerificationRepository) GetLatestByEmail(ctx context.Context, emai
 		First(&verification).Error
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return nil, nil
+			return nil, ErrRecordNotFound
 		}
 		return nil, err
 	}
@@ -59,7 +59,7 @@ func (r *emailVerificationRepository) GetLatestByUserID(ctx context.Context, use
 		First(&verification).Error
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return nil, nil
+			return nil, ErrRecordNotFound
 		}
 		return nil, err
 	}
