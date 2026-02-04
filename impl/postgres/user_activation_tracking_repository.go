@@ -5,7 +5,6 @@ import (
 
 	"iam-service/entity"
 	"iam-service/iam/auth/contract"
-	"iam-service/pkg/errors"
 
 	"github.com/google/uuid"
 	"gorm.io/gorm"
@@ -21,7 +20,7 @@ func NewUserActivationTrackingRepository(db *gorm.DB) contract.UserActivationTra
 
 func (r *userActivationTrackingRepository) Create(ctx context.Context, tracking *entity.UserActivationTracking) error {
 	if err := r.db.WithContext(ctx).Create(tracking).Error; err != nil {
-		return errors.TranslatePostgres(err)
+		return translateError(err, "user activation tracking")
 	}
 	return nil
 }
@@ -30,14 +29,14 @@ func (r *userActivationTrackingRepository) GetByUserID(ctx context.Context, user
 	var tracking entity.UserActivationTracking
 	err := r.db.WithContext(ctx).Where("user_id = ?", userID).First(&tracking).Error
 	if err != nil {
-		return nil, errors.TranslatePostgres(err)
+		return nil, translateError(err, "user activation tracking")
 	}
 	return &tracking, nil
 }
 
 func (r *userActivationTrackingRepository) Update(ctx context.Context, tracking *entity.UserActivationTracking) error {
 	if err := r.db.WithContext(ctx).Save(tracking).Error; err != nil {
-		return errors.TranslatePostgres(err)
+		return translateError(err, "user activation tracking")
 	}
 	return nil
 }

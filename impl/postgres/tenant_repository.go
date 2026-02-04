@@ -5,7 +5,6 @@ import (
 
 	"iam-service/entity"
 	"iam-service/iam/auth/contract"
-	"iam-service/pkg/errors"
 
 	"github.com/google/uuid"
 	"gorm.io/gorm"
@@ -23,7 +22,7 @@ func (r *tenantRepository) GetByID(ctx context.Context, id uuid.UUID) (*entity.T
 	var tenant entity.Tenant
 	err := r.db.WithContext(ctx).Where("tenant_id = ?", id).First(&tenant).Error
 	if err != nil {
-		return nil, errors.TranslatePostgres(err)
+		return nil, translateError(err, "tenant")
 	}
 	return &tenant, nil
 }
@@ -32,7 +31,7 @@ func (r *tenantRepository) GetBySlug(ctx context.Context, slug string) (*entity.
 	var tenant entity.Tenant
 	err := r.db.WithContext(ctx).Where("slug = ?", slug).First(&tenant).Error
 	if err != nil {
-		return nil, errors.TranslatePostgres(err)
+		return nil, translateError(err, "tenant")
 	}
 	return &tenant, nil
 }
@@ -43,7 +42,7 @@ func (r *tenantRepository) Exists(ctx context.Context, id uuid.UUID) (bool, erro
 		Where("tenant_id = ? AND status = ?", id, entity.TenantStatusActive).
 		Count(&count).Error
 	if err != nil {
-		return false, errors.TranslatePostgres(err)
+		return false, translateError(err, "tenant")
 	}
 	return count > 0, nil
 }

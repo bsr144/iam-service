@@ -6,7 +6,6 @@ import (
 
 	"iam-service/entity"
 	"iam-service/iam/auth/contract"
-	"iam-service/pkg/errors"
 
 	"github.com/google/uuid"
 	"gorm.io/gorm"
@@ -22,7 +21,7 @@ func NewRefreshTokenRepository(db *gorm.DB) contract.RefreshTokenRepository {
 
 func (r *refreshTokenRepository) Create(ctx context.Context, token *entity.RefreshToken) error {
 	if err := r.db.WithContext(ctx).Create(token).Error; err != nil {
-		return errors.TranslatePostgres(err)
+		return translateError(err, "refresh token")
 	}
 	return nil
 }
@@ -31,7 +30,7 @@ func (r *refreshTokenRepository) GetByTokenHash(ctx context.Context, tokenHash s
 	var token entity.RefreshToken
 	err := r.db.WithContext(ctx).Where("token_hash = ?", tokenHash).First(&token).Error
 	if err != nil {
-		return nil, errors.TranslatePostgres(err)
+		return nil, translateError(err, "refresh token")
 	}
 	return &token, nil
 }
@@ -45,7 +44,7 @@ func (r *refreshTokenRepository) Revoke(ctx context.Context, id uuid.UUID, reaso
 			"revoked_at":     now,
 			"revoked_reason": reason,
 		}).Error; err != nil {
-		return errors.TranslatePostgres(err)
+		return translateError(err, "refresh token")
 	}
 	return nil
 }
@@ -59,7 +58,7 @@ func (r *refreshTokenRepository) RevokeAllByUserID(ctx context.Context, userID u
 			"revoked_at":     now,
 			"revoked_reason": reason,
 		}).Error; err != nil {
-		return errors.TranslatePostgres(err)
+		return translateError(err, "refresh token")
 	}
 	return nil
 }
@@ -73,7 +72,7 @@ func (r *refreshTokenRepository) RevokeByFamily(ctx context.Context, tokenFamily
 			"revoked_at":     now,
 			"revoked_reason": reason,
 		}).Error; err != nil {
-		return errors.TranslatePostgres(err)
+		return translateError(err, "refresh token")
 	}
 	return nil
 }

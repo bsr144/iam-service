@@ -23,7 +23,7 @@ func NewUserRepository(db *gorm.DB) *userRepository {
 
 func (r *userRepository) Create(ctx context.Context, user *entity.User) error {
 	if err := r.db.WithContext(ctx).Create(user).Error; err != nil {
-		return errors.TranslatePostgres(err)
+		return translateError(err, "user")
 	}
 	return nil
 }
@@ -32,7 +32,7 @@ func (r *userRepository) GetByID(ctx context.Context, id uuid.UUID) (*entity.Use
 	var user entity.User
 	err := r.db.WithContext(ctx).Where("user_id = ?", id).First(&user).Error
 	if err != nil {
-		return nil, errors.TranslatePostgres(err)
+		return nil, translateError(err, "user")
 	}
 	return &user, nil
 }
@@ -41,7 +41,7 @@ func (r *userRepository) GetByEmail(ctx context.Context, tenantID uuid.UUID, ema
 	var user entity.User
 	err := r.db.WithContext(ctx).Where("tenant_id = ? AND email = ?", tenantID, email).First(&user).Error
 	if err != nil {
-		return nil, errors.TranslatePostgres(err)
+		return nil, translateError(err, "user")
 	}
 	return &user, nil
 }
@@ -50,14 +50,14 @@ func (r *userRepository) GetByEmailAnyTenant(ctx context.Context, email string) 
 	var user entity.User
 	err := r.db.WithContext(ctx).Where("email = ?", email).First(&user).Error
 	if err != nil {
-		return nil, errors.TranslatePostgres(err)
+		return nil, translateError(err, "user")
 	}
 	return &user, nil
 }
 
 func (r *userRepository) Update(ctx context.Context, user *entity.User) error {
 	if err := r.db.WithContext(ctx).Save(user).Error; err != nil {
-		return errors.TranslatePostgres(err)
+		return translateError(err, "user")
 	}
 	return nil
 }
@@ -68,7 +68,7 @@ func (r *userRepository) EmailExistsInTenant(ctx context.Context, tenantID uuid.
 		Where("tenant_id = ? AND email = ?", tenantID, email).
 		Count(&count).Error
 	if err != nil {
-		return false, errors.TranslatePostgres(err)
+		return false, translateError(err, "user")
 	}
 	return count > 0, nil
 }
@@ -83,10 +83,10 @@ func (r *userRepository) Delete(ctx context.Context, id uuid.UUID) error {
 			"updated_at": now,
 		})
 	if result.Error != nil {
-		return errors.TranslatePostgres(result.Error)
+		return translateError(result.Error, "user")
 	}
 	if result.RowsAffected == 0 {
-		return errors.SentinelNotFound
+		return errors.ErrNotFound("user not found")
 	}
 	return nil
 }
@@ -125,7 +125,7 @@ func (r *userRepository) List(ctx context.Context, filter *contract.UserListFilt
 	}
 
 	if err := query.Count(&total).Error; err != nil {
-		return nil, 0, errors.TranslatePostgres(err)
+		return nil, 0, translateError(err, "user")
 	}
 
 	validSortColumns := map[string]string{
@@ -151,7 +151,7 @@ func (r *userRepository) List(ctx context.Context, filter *contract.UserListFilt
 		Limit(filter.PerPage).
 		Find(&users).Error
 	if err != nil {
-		return nil, 0, errors.TranslatePostgres(err)
+		return nil, 0, translateError(err, "user")
 	}
 
 	return users, total, nil
@@ -165,7 +165,7 @@ func (r *userRepository) GetPendingApprovalUsers(ctx context.Context, tenantID u
 		Order("created_at DESC").
 		Find(&users).Error
 	if err != nil {
-		return nil, errors.TranslatePostgres(err)
+		return nil, translateError(err, "user")
 	}
 	return users, nil
 }
