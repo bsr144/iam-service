@@ -98,7 +98,7 @@ func (c *Redis) GetOrSet(ctx context.Context, key string, target any, expiration
 	if err == nil {
 		return nil
 	}
-	// Check if it's a not-found error (cache miss)
+
 	if errors.GetCode(err) != errors.CodeNotFound {
 		return err
 	}
