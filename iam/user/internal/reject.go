@@ -4,7 +4,6 @@ import (
 	"context"
 	stderrors "errors"
 	"iam-service/iam/user/userdto"
-	"iam-service/impl/postgres"
 	"iam-service/pkg/errors"
 
 	"github.com/google/uuid"
@@ -14,7 +13,7 @@ import (
 func (uc *usecase) Reject(ctx context.Context, id uuid.UUID, approverID uuid.UUID, req *userdto.RejectRequest) (*userdto.RejectResponse, error) {
 	user, err := uc.UserRepo.GetByID(ctx, id)
 	if err != nil {
-		if stderrors.Is(err, postgres.ErrRecordNotFound) {
+		if stderrors.Is(err, errors.SentinelNotFound) {
 			return nil, errors.ErrUserNotFound()
 		}
 		return nil, errors.ErrInternal("failed to get user").WithError(err)
@@ -22,7 +21,7 @@ func (uc *usecase) Reject(ctx context.Context, id uuid.UUID, approverID uuid.UUI
 
 	tracking, err := uc.UserActivationTrackingRepo.GetByUserID(ctx, id)
 	if err != nil {
-		if stderrors.Is(err, postgres.ErrRecordNotFound) {
+		if stderrors.Is(err, errors.SentinelNotFound) {
 			return nil, errors.ErrBadRequest("user activation tracking not found")
 		}
 		return nil, errors.ErrInternal("failed to get activation tracking").WithError(err)

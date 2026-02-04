@@ -4,7 +4,6 @@ import (
 	"context"
 	stderrors "errors"
 	"iam-service/iam/user/userdto"
-	"iam-service/impl/postgres"
 	"iam-service/pkg/errors"
 
 	"github.com/google/uuid"
@@ -13,7 +12,7 @@ import (
 func (uc *usecase) ResetPIN(ctx context.Context, id uuid.UUID) (*userdto.ResetPINResponse, error) {
 	_, err := uc.UserRepo.GetByID(ctx, id)
 	if err != nil {
-		if stderrors.Is(err, postgres.ErrRecordNotFound) {
+		if stderrors.Is(err, errors.SentinelNotFound) {
 			return nil, errors.ErrUserNotFound()
 		}
 		return nil, errors.ErrInternal("failed to get user").WithError(err)
@@ -21,7 +20,7 @@ func (uc *usecase) ResetPIN(ctx context.Context, id uuid.UUID) (*userdto.ResetPI
 
 	credentials, err := uc.UserCredentialsRepo.GetByUserID(ctx, id)
 	if err != nil {
-		if stderrors.Is(err, postgres.ErrRecordNotFound) {
+		if stderrors.Is(err, errors.SentinelNotFound) {
 			return nil, errors.ErrInternal("user credentials not found")
 		}
 		return nil, errors.ErrInternal("failed to get user credentials").WithError(err)

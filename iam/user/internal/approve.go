@@ -5,7 +5,6 @@ import (
 	stderrors "errors"
 	"iam-service/entity"
 	"iam-service/iam/user/userdto"
-	"iam-service/impl/postgres"
 	"iam-service/pkg/errors"
 	"time"
 
@@ -16,7 +15,7 @@ import (
 func (uc *usecase) Approve(ctx context.Context, id uuid.UUID, approverID uuid.UUID) (*userdto.ApproveResponse, error) {
 	user, err := uc.UserRepo.GetByID(ctx, id)
 	if err != nil {
-		if stderrors.Is(err, postgres.ErrRecordNotFound) {
+		if stderrors.Is(err, errors.SentinelNotFound) {
 			return nil, errors.ErrUserNotFound()
 		}
 		return nil, errors.ErrInternal("failed to get user").WithError(err)
@@ -24,7 +23,7 @@ func (uc *usecase) Approve(ctx context.Context, id uuid.UUID, approverID uuid.UU
 
 	tracking, err := uc.UserActivationTrackingRepo.GetByUserID(ctx, id)
 	if err != nil {
-		if stderrors.Is(err, postgres.ErrRecordNotFound) {
+		if stderrors.Is(err, errors.SentinelNotFound) {
 			return nil, errors.ErrBadRequest("user activation tracking not found")
 		}
 		return nil, errors.ErrInternal("failed to get activation tracking").WithError(err)
@@ -74,7 +73,7 @@ func (uc *usecase) Approve(ctx context.Context, id uuid.UUID, approverID uuid.UU
 func (uc *usecase) AwaitingAdminApproval(ctx context.Context, userID uuid.UUID) (*entity.UserActivationTracking, error) {
 	tracking, err := uc.UserActivationTrackingRepo.GetByUserID(ctx, userID)
 	if err != nil {
-		if stderrors.Is(err, postgres.ErrRecordNotFound) {
+		if stderrors.Is(err, errors.SentinelNotFound) {
 			return nil, nil
 		}
 		return nil, err

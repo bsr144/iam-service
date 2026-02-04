@@ -4,7 +4,6 @@ import (
 	"context"
 	stderrors "errors"
 	"iam-service/iam/user/userdto"
-	"iam-service/impl/postgres"
 	"iam-service/pkg/errors"
 
 	"github.com/google/uuid"
@@ -13,7 +12,7 @@ import (
 func (uc *usecase) UpdateMe(ctx context.Context, userID uuid.UUID, req *userdto.UpdateMeRequest) (*userdto.UserDetailResponse, error) {
 	user, err := uc.UserRepo.GetByID(ctx, userID)
 	if err != nil {
-		if stderrors.Is(err, postgres.ErrRecordNotFound) {
+		if stderrors.Is(err, errors.SentinelNotFound) {
 			return nil, errors.ErrUserNotFound()
 		}
 		return nil, errors.ErrInternal("failed to get user").WithError(err)
@@ -21,7 +20,7 @@ func (uc *usecase) UpdateMe(ctx context.Context, userID uuid.UUID, req *userdto.
 
 	profile, err := uc.UserProfileRepo.GetByUserID(ctx, userID)
 	if err != nil {
-		if stderrors.Is(err, postgres.ErrRecordNotFound) {
+		if stderrors.Is(err, errors.SentinelNotFound) {
 			return nil, errors.ErrInternal("user profile not found")
 		}
 		return nil, errors.ErrInternal("failed to get user profile").WithError(err)
@@ -51,12 +50,12 @@ func (uc *usecase) UpdateMe(ctx context.Context, userID uuid.UUID, req *userdto.
 	}
 
 	credentials, err := uc.UserCredentialsRepo.GetByUserID(ctx, userID)
-	if err != nil && !stderrors.Is(err, postgres.ErrRecordNotFound) {
+	if err != nil && !stderrors.Is(err, errors.SentinelNotFound) {
 		return nil, errors.ErrInternal("failed to get user credentials").WithError(err)
 	}
 
 	security, err := uc.UserSecurityRepo.GetByUserID(ctx, userID)
-	if err != nil && !stderrors.Is(err, postgres.ErrRecordNotFound) {
+	if err != nil && !stderrors.Is(err, errors.SentinelNotFound) {
 		return nil, errors.ErrInternal("failed to get user security").WithError(err)
 	}
 
