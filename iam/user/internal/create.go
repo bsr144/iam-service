@@ -3,11 +3,11 @@ package internal
 import (
 	"context"
 	"encoding/json"
-	stderrors "errors"
+	"time"
+
 	"iam-service/entity"
 	"iam-service/iam/user/userdto"
 	"iam-service/pkg/errors"
-	"time"
 
 	"github.com/google/uuid"
 	"golang.org/x/crypto/bcrypt"
@@ -17,7 +17,7 @@ import (
 func (uc *usecase) Create(ctx context.Context, req *userdto.CreateRequest) (*userdto.CreateResponse, error) {
 	tenantExists, err := uc.TenantRepo.Exists(ctx, req.TenantID)
 	if err != nil {
-		return nil, errors.ErrInternal("failed to verify tenant").WithError(err)
+		return nil, err
 	}
 	if !tenantExists {
 		return nil, errors.ErrTenantNotFound()
@@ -25,10 +25,10 @@ func (uc *usecase) Create(ctx context.Context, req *userdto.CreateRequest) (*use
 
 	role, err := uc.RoleRepo.GetByCode(ctx, req.TenantID, req.RoleCode)
 	if err != nil {
-		if stderrors.Is(err, errors.SentinelNotFound) {
+		if errors.IsNotFound(err) {
 			return nil, errors.ErrRoleNotFound()
 		}
-		return nil, errors.ErrInternal("failed to get role").WithError(err)
+		return nil, err
 	}
 
 	if !role.IsSystem {

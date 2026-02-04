@@ -2,7 +2,7 @@ package internal
 
 import (
 	"context"
-	stderrors "errors"
+
 	"iam-service/iam/user/userdto"
 	"iam-service/pkg/errors"
 
@@ -12,18 +12,18 @@ import (
 func (uc *usecase) Unlock(ctx context.Context, id uuid.UUID) (*userdto.UnlockResponse, error) {
 	_, err := uc.UserRepo.GetByID(ctx, id)
 	if err != nil {
-		if stderrors.Is(err, errors.SentinelNotFound) {
+		if errors.IsNotFound(err) {
 			return nil, errors.ErrUserNotFound()
 		}
-		return nil, errors.ErrInternal("failed to get user").WithError(err)
+		return nil, err
 	}
 
 	security, err := uc.UserSecurityRepo.GetByUserID(ctx, id)
 	if err != nil {
-		if stderrors.Is(err, errors.SentinelNotFound) {
+		if errors.IsNotFound(err) {
 			return nil, errors.ErrInternal("user security not found")
 		}
-		return nil, errors.ErrInternal("failed to get user security").WithError(err)
+		return nil, err
 	}
 
 	if security.LockedUntil == nil {

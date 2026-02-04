@@ -2,7 +2,7 @@ package internal
 
 import (
 	"context"
-	stderrors "errors"
+
 	"iam-service/iam/user/userdto"
 	"iam-service/pkg/errors"
 
@@ -13,18 +13,18 @@ import (
 func (uc *usecase) Reject(ctx context.Context, id uuid.UUID, approverID uuid.UUID, req *userdto.RejectRequest) (*userdto.RejectResponse, error) {
 	user, err := uc.UserRepo.GetByID(ctx, id)
 	if err != nil {
-		if stderrors.Is(err, errors.SentinelNotFound) {
+		if errors.IsNotFound(err) {
 			return nil, errors.ErrUserNotFound()
 		}
-		return nil, errors.ErrInternal("failed to get user").WithError(err)
+		return nil, err
 	}
 
 	tracking, err := uc.UserActivationTrackingRepo.GetByUserID(ctx, id)
 	if err != nil {
-		if stderrors.Is(err, errors.SentinelNotFound) {
+		if errors.IsNotFound(err) {
 			return nil, errors.ErrBadRequest("user activation tracking not found")
 		}
-		return nil, errors.ErrInternal("failed to get activation tracking").WithError(err)
+		return nil, err
 	}
 
 	if tracking.IsActivated() {
