@@ -1,7 +1,3 @@
--- ============================================================================
--- SEED: Gender (FHIR R4 AdministrativeGender)
--- http://hl7.org/fhir/R4/valueset-administrative-gender.html
--- ============================================================================
 INSERT INTO masterdata_items (category_id, code, name, description, sort_order, is_system, status, metadata)
 SELECT id, v.code, v.name, v.description, v.sort_order, TRUE, 'ACTIVE', v.metadata::jsonb
 FROM masterdata_categories c
@@ -13,10 +9,6 @@ CROSS JOIN (VALUES
 ) AS v(code, name, description, sort_order, metadata)
 WHERE c.code = 'GENDER';
 
--- ============================================================================
--- SEED: Marital Status (FHIR R4 / HL7 v3-MaritalStatus)
--- http://hl7.org/fhir/R4/valueset-marital-status.html
--- ============================================================================
 INSERT INTO masterdata_items (category_id, code, name, description, sort_order, is_system, status, metadata)
 SELECT id, v.code, v.name, v.description, v.sort_order, TRUE, 'ACTIVE', v.metadata::jsonb
 FROM masterdata_categories c
@@ -36,11 +28,6 @@ CROSS JOIN (VALUES
 ) AS v(code, name, description, sort_order, metadata)
 WHERE c.code = 'MARITAL_STATUS';
 
--- ============================================================================
--- SEED: Religion (HL7 v3-ReligiousAffiliation)
--- http://terminology.hl7.org/CodeSystem/v3-ReligiousAffiliation
--- Subset of common religions
--- ============================================================================
 INSERT INTO masterdata_items (category_id, code, name, description, sort_order, is_system, status, metadata)
 SELECT id, v.code, v.name, v.description, v.sort_order, TRUE, 'ACTIVE', v.metadata::jsonb
 FROM masterdata_categories c
@@ -64,10 +51,6 @@ CROSS JOIN (VALUES
 ) AS v(code, name, description, sort_order, metadata)
 WHERE c.code = 'RELIGION';
 
--- ============================================================================
--- SEED: Education Level (UNESCO ISCED 2011)
--- https://uis.unesco.org/sites/default/files/documents/international-standard-classification-of-education-isced-2011-en.pdf
--- ============================================================================
 INSERT INTO masterdata_items (category_id, code, name, description, sort_order, is_system, status, metadata)
 SELECT id, v.code, v.name, v.description, v.sort_order, TRUE, 'ACTIVE', v.metadata::jsonb
 FROM masterdata_categories c
@@ -85,10 +68,6 @@ CROSS JOIN (VALUES
 ) AS v(code, name, description, sort_order, metadata)
 WHERE c.code = 'EDUCATION_LEVEL';
 
--- ============================================================================
--- SEED: Blood Type (ABO + Rh System)
--- Standard medical blood typing
--- ============================================================================
 INSERT INTO masterdata_items (category_id, code, name, description, sort_order, is_system, status, metadata)
 SELECT id, v.code, v.name, v.description, v.sort_order, TRUE, 'ACTIVE', v.metadata::jsonb
 FROM masterdata_categories c
@@ -104,10 +83,6 @@ CROSS JOIN (VALUES
 ) AS v(code, name, description, sort_order, metadata)
 WHERE c.code = 'BLOOD_TYPE';
 
--- ============================================================================
--- SEED: Identity Document Type (ISO/ICAO Standards)
--- ICAO Doc 9303 for travel documents, ISO standards for others
--- ============================================================================
 INSERT INTO masterdata_items (category_id, code, name, description, sort_order, is_system, status, metadata)
 SELECT id, v.code, v.name, v.description, v.sort_order, TRUE, 'ACTIVE', v.metadata::jsonb
 FROM masterdata_categories c
