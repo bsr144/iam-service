@@ -24,4 +24,13 @@ func SetupAuthRoutes(api fiber.Router, cfg *config.Config, authController *contr
 	authProtected := auth.Group("")
 	authProtected.Use(middleware.JWTAuth(cfg))
 	authProtected.Post("/setup-pin", authController.SetupPIN)
+
+	// Email OTP Registration Flow
+	// Design reference: .claude/doc/email-otp-signup-api.md
+	registrations := api.Group("/registrations")
+	registrations.Post("", authController.InitiateRegistration)
+	registrations.Post("/:id/verify-otp", authController.VerifyRegistrationOTP)
+	registrations.Post("/:id/resend-otp", authController.ResendRegistrationOTP)
+	registrations.Get("/:id/status", authController.GetRegistrationStatus)
+	registrations.Post("/:id/complete", authController.CompleteRegistration)
 }

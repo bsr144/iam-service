@@ -1,6 +1,8 @@
 package controller
 
 import (
+	"strings"
+
 	"iam-service/config"
 	"iam-service/delivery/http/dto/response"
 	"iam-service/delivery/http/middleware"
@@ -10,6 +12,7 @@ import (
 
 	"github.com/go-playground/validator/v10"
 	"github.com/gofiber/fiber/v2"
+	"github.com/google/uuid"
 )
 
 func convertValidationErrors(errs validator.ValidationErrors) []errors.FieldError {
@@ -258,6 +261,184 @@ func (rc *AuthController) ResetPassword(c *fiber.Ctx) error {
 	}
 
 	return c.Status(fiber.StatusOK).JSON(response.SuccessResponse(
+		resp.Message,
+		resp,
+	))
+}
+
+// =============================================================================
+// Email OTP Registration Flow
+// Design reference: .claude/doc/email-otp-signup-api.md
+// =============================================================================
+
+// InitiateRegistration starts a new registration session and sends OTP to email.
+// POST /api/iam/v1/registrations
+func (rc *AuthController) InitiateRegistration(c *fiber.Ctx) error {
+	tenantID, err := middleware.GetTenantIDFromHeader(c)
+	if err != nil {
+		return err
+	}
+
+	var req authdto.InitiateRegistrationRequest
+	if err := c.BodyParser(&req); err != nil {
+		return errors.ErrBadRequest("Invalid request body")
+	}
+
+	if err := rc.validate.Struct(&req); err != nil {
+		return errors.ErrValidationWithFields(convertValidationErrors(err.(validator.ValidationErrors)))
+	}
+
+	ipAddress := middleware.GetClientIP(c).String()
+	userAgent := middleware.GetUserAgent(c)
+
+	resp, err := rc.authUsecase.InitiateRegistration(c.Context(), tenantID, &req, ipAddress, userAgent)
+	if err != nil {
+		return err
+	}
+
+	return c.Status(fiber.StatusCreated).JSON(response.SuccessResponse(
+		resp.Message,
+		resp,
+	))
+}
+
+// VerifyRegistrationOTP verifies the OTP code sent to user's email.
+// POST /api/iam/v1/registrations/:id/verify-otp
+func (rc *AuthController) VerifyRegistrationOTP(c *fiber.Ctx) error {
+	tenantID, err := middleware.GetTenantIDFromHeader(c)
+	if err != nil {
+		return err
+	}
+
+	registrationID, err := uuid.Parse(c.Params("id"))
+	if err != nil {
+		return errors.ErrBadRequest("Invalid registration ID format")
+	}
+
+	var req authdto.VerifyRegistrationOTPRequest
+	if err := c.BodyParser(&req); err != nil {
+		return errors.ErrBadRequest("Invalid request body")
+	}
+
+	if err := rc.validate.Struct(&req); err != nil {
+		return errors.ErrValidationWithFields(convertValidationErrors(err.(validator.ValidationErrors)))
+	}
+
+	resp, err := rc.authUsecase.VerifyRegistrationOTP(c.Context(), tenantID, registrationID, &req)
+	if err != nil {
+		return err
+	}
+
+	return c.Status(fiber.StatusOK).JSON(response.SuccessResponse(
+		resp.Message,
+		resp,
+	))
+}
+
+// ResendRegistrationOTP generates and sends a new OTP code.
+// POST /api/iam/v1/registrations/:id/resend-otp
+func (rc *AuthController) ResendRegistrationOTP(c *fiber.Ctx) error {
+	tenantID, err := middleware.GetTenantIDFromHeader(c)
+	if err != nil {
+		return err
+	}
+
+	registrationID, err := uuid.Parse(c.Params("id"))
+	if err != nil {
+		return errors.ErrBadRequest("Invalid registration ID format")
+	}
+
+	var req authdto.ResendRegistrationOTPRequest
+	if err := c.BodyParser(&req); err != nil {
+		return errors.ErrBadRequest("Invalid request body")
+	}
+
+	if err := rc.validate.Struct(&req); err != nil {
+		return errors.ErrValidationWithFields(convertValidationErrors(err.(validator.ValidationErrors)))
+	}
+
+	resp, err := rc.authUsecase.ResendRegistrationOTP(c.Context(), tenantID, registrationID, &req)
+	if err != nil {
+		return err
+	}
+
+	return c.Status(fiber.StatusOK).JSON(response.SuccessResponse(
+		resp.Message,
+		resp,
+	))
+}
+
+// GetRegistrationStatus returns the current status of a registration session.
+// GET /api/iam/v1/registrations/:id/status
+func (rc *AuthController) GetRegistrationStatus(c *fiber.Ctx) error {
+	tenantID, err := middleware.GetTenantIDFromHeader(c)
+	if err != nil {
+		return err
+	}
+
+	registrationID, err := uuid.Parse(c.Params("id"))
+	if err != nil {
+		return errors.ErrBadRequest("Invalid registration ID format")
+	}
+
+	email := c.Query("email")
+	if email == "" {
+		return errors.ErrBadRequest("email query parameter is required")
+	}
+
+	resp, err := rc.authUsecase.GetRegistrationStatus(c.Context(), tenantID, registrationID, email)
+	if err != nil {
+		return err
+	}
+
+	return c.Status(fiber.StatusOK).JSON(response.SuccessResponse(
+		"Registration status retrieved",
+		resp,
+	))
+}
+
+// CompleteRegistration sets password and creates the user account.
+// POST /api/iam/v1/registrations/:id/complete
+func (rc *AuthController) CompleteRegistration(c *fiber.Ctx) error {
+	tenantID, err := middleware.GetTenantIDFromHeader(c)
+	if err != nil {
+		return err
+	}
+
+	registrationID, err := uuid.Parse(c.Params("id"))
+	if err != nil {
+		return errors.ErrBadRequest("Invalid registration ID format")
+	}
+
+	// Extract registration token from Authorization header
+	authHeader := c.Get("Authorization")
+	if authHeader == "" {
+		return errors.ErrUnauthorized("Authorization header is required")
+	}
+
+	registrationToken := strings.TrimPrefix(authHeader, "Bearer ")
+	if registrationToken == authHeader {
+		return errors.ErrUnauthorized("Invalid authorization format. Use: Bearer <token>")
+	}
+
+	var req authdto.CompleteRegistrationRequest
+	if err := c.BodyParser(&req); err != nil {
+		return errors.ErrBadRequest("Invalid request body")
+	}
+
+	if err := rc.validate.Struct(&req); err != nil {
+		return errors.ErrValidationWithFields(convertValidationErrors(err.(validator.ValidationErrors)))
+	}
+
+	ipAddress := middleware.GetClientIP(c).String()
+	userAgent := middleware.GetUserAgent(c)
+
+	resp, err := rc.authUsecase.CompleteRegistration(c.Context(), tenantID, registrationID, registrationToken, &req, ipAddress, userAgent)
+	if err != nil {
+		return err
+	}
+
+	return c.Status(fiber.StatusCreated).JSON(response.SuccessResponse(
 		resp.Message,
 		resp,
 	))
