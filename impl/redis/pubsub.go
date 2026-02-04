@@ -3,15 +3,15 @@ package redis
 import (
 	"context"
 	"encoding/json"
-	"fmt"
+	"iam-service/pkg/errors"
 
-	"github.com/redis/go-redis/v9"
+	goredis "github.com/redis/go-redis/v9"
 )
 
 func (r *Redis) Publish(ctx context.Context, channel string, payload any) error {
 	data, err := json.Marshal(payload)
 	if err != nil {
-		return fmt.Errorf("failed to marshal payload: %w", err)
+		return errors.ErrInternal("failed to marshal payload").WithError(err)
 	}
 	return r.client.Publish(ctx, channel, data).Err()
 }
@@ -34,14 +34,14 @@ func (r *Redis) PSubscribe(ctx context.Context, patterns ...string) *Subscriptio
 	}
 }
 
-func (s *Subscription) Channel() <-chan *redis.Message {
+func (s *Subscription) Channel() <-chan *goredis.Message {
 	return s.pubsub.Channel()
 }
 
 func (s *Subscription) Receive(ctx context.Context) (*Message, error) {
 	msg, err := s.pubsub.ReceiveMessage(ctx)
 	if err != nil {
-		return nil, fmt.Errorf("failed to receive message: %w", err)
+		return nil, errors.ErrInternal("failed to receive message").WithError(err)
 	}
 
 	return &Message{

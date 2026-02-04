@@ -4,13 +4,11 @@ import (
 	"context"
 	"crypto/rand"
 	"encoding/hex"
-	"errors"
 	"fmt"
+	"iam-service/pkg/errors"
 	"time"
 
-	pkgerrors "iam-service/pkg/errors"
-
-	"github.com/redis/go-redis/v9"
+	goredis "github.com/redis/go-redis/v9"
 )
 
 type Lock struct {
@@ -32,7 +30,7 @@ func generateToken() (string, error) {
 func (r *Redis) AcquireLock(ctx context.Context, name string, expiry time.Duration) (*Lock, error) {
 	token, err := generateToken()
 	if err != nil {
-		return nil, fmt.Errorf("failed to generate lock token: %w", err)
+		return nil, errors.ErrInternal("failed to generate lock token").WithError(err)
 	}
 
 	lock := &Lock{
@@ -45,11 +43,11 @@ func (r *Redis) AcquireLock(ctx context.Context, name string, expiry time.Durati
 	lockKey := fmt.Sprintf(LockPrefix, name)
 	acquired, err := r.client.SetNX(ctx, lockKey, token, expiry).Result()
 	if err != nil {
-		return nil, fmt.Errorf("failed to acquire lock: %w", err)
+		return nil, errors.ErrInternal("failed to acquire lock").WithError(err)
 	}
 
 	if !acquired {
-		return nil, pkgerrors.SentinelLockNotAcquired
+		return nil, errors.SentinelLockNotAcquired
 	}
 
 	lock.acquired = true
@@ -62,7 +60,7 @@ func (r *Redis) AcquireLockWithRetry(ctx context.Context, name string, expiry ti
 		if err == nil {
 			return lock, nil
 		}
-		if !errors.Is(err, pkgerrors.SentinelLockNotAcquired) {
+		if err != errors.SentinelLockNotAcquired {
 			return nil, err
 		}
 
@@ -73,7 +71,7 @@ func (r *Redis) AcquireLockWithRetry(ctx context.Context, name string, expiry ti
 			continue
 		}
 	}
-	return nil, pkgerrors.SentinelLockNotAcquired
+	return nil, errors.SentinelLockNotAcquired
 }
 
 func (r *Redis) AcquireLockWithWait(ctx context.Context, name string, expiry time.Duration, pollInterval time.Duration) (*Lock, error) {
@@ -82,7 +80,7 @@ func (r *Redis) AcquireLockWithWait(ctx context.Context, name string, expiry tim
 		if err == nil {
 			return lock, nil
 		}
-		if !errors.Is(err, pkgerrors.SentinelLockNotAcquired) {
+		if err != errors.SentinelLockNotAcquired {
 			return nil, err
 		}
 
@@ -97,10 +95,10 @@ func (r *Redis) AcquireLockWithWait(ctx context.Context, name string, expiry tim
 
 func (lock *Lock) Release(ctx context.Context) error {
 	if !lock.acquired {
-		return pkgerrors.SentinelLockNotHeld
+		return errors.SentinelLockNotHeld
 	}
 
-	script := redis.NewScript(`
+	script := goredis.NewScript(`
 		if redis.call("get", KEYS[1]) == ARGV[1] then
 			return redis.call("del", KEYS[1])
 		else
@@ -111,11 +109,11 @@ func (lock *Lock) Release(ctx context.Context) error {
 	lockKey := fmt.Sprintf(LockPrefix, lock.name)
 	result, err := script.Run(ctx, lock.redis.client, []string{lockKey}, lock.token).Int64()
 	if err != nil {
-		return fmt.Errorf("failed to release lock: %w", err)
+		return errors.ErrInternal("failed to release lock").WithError(err)
 	}
 
 	if result == 0 {
-		return pkgerrors.SentinelLockNotHeld
+		return errors.SentinelLockNotHeld
 	}
 
 	lock.acquired = false
@@ -124,10 +122,10 @@ func (lock *Lock) Release(ctx context.Context) error {
 
 func (lock *Lock) Extend(ctx context.Context, expiry time.Duration) error {
 	if !lock.acquired {
-		return pkgerrors.SentinelLockNotHeld
+		return errors.SentinelLockNotHeld
 	}
 
-	script := redis.NewScript(`
+	script := goredis.NewScript(`
 		if redis.call("get", KEYS[1]) == ARGV[1] then
 			return redis.call("pexpire", KEYS[1], ARGV[2])
 		else
@@ -138,12 +136,12 @@ func (lock *Lock) Extend(ctx context.Context, expiry time.Duration) error {
 	lockKey := fmt.Sprintf(LockPrefix, lock.name)
 	result, err := script.Run(ctx, lock.redis.client, []string{lockKey}, lock.token, int64(expiry/time.Millisecond)).Int64()
 	if err != nil {
-		return fmt.Errorf("failed to extend lock: %w", err)
+		return errors.ErrInternal("failed to extend lock").WithError(err)
 	}
 
 	if result == 0 {
 		lock.acquired = false
-		return pkgerrors.SentinelLockNotHeld
+		return errors.SentinelLockNotHeld
 	}
 
 	lock.expiry = expiry
@@ -154,11 +152,11 @@ func (lock *Lock) IsHeld(ctx context.Context) (bool, error) {
 	lockKey := fmt.Sprintf(LockPrefix, lock.name)
 	val, err := lock.redis.client.Get(ctx, lockKey).Result()
 	if err != nil {
-		if errors.Is(err, redis.Nil) {
+		if err == goredis.Nil {
 			lock.acquired = false
 			return false, nil
 		}
-		return false, fmt.Errorf("failed to check lock: %w", err)
+		return false, errors.ErrInternal("failed to check lock").WithError(err)
 	}
 	held := val == lock.token
 	if !held {
@@ -171,7 +169,7 @@ func (lock *Lock) TTL(ctx context.Context) (time.Duration, error) {
 	lockKey := fmt.Sprintf(LockPrefix, lock.name)
 	ttl, err := lock.redis.client.TTL(ctx, lockKey).Result()
 	if err != nil {
-		return 0, fmt.Errorf("failed to get lock TTL: %w", err)
+		return 0, errors.ErrInternal("failed to get lock TTL").WithError(err)
 	}
 	return ttl, nil
 }
@@ -200,7 +198,7 @@ func (r *Redis) IsLocked(ctx context.Context, name string) (bool, error) {
 	lockKey := fmt.Sprintf(LockPrefix, name)
 	exists, err := r.client.Exists(ctx, lockKey).Result()
 	if err != nil {
-		return false, fmt.Errorf("failed to check lock: %w", err)
+		return false, errors.ErrInternal("failed to check lock").WithError(err)
 	}
 	return exists > 0, nil
 }
@@ -221,10 +219,10 @@ func (r *Redis) NewSemaphore(name string, maxCount int64) *Semaphore {
 func (s *Semaphore) Acquire(ctx context.Context, expiry time.Duration) (string, error) {
 	token, err := generateToken()
 	if err != nil {
-		return "", fmt.Errorf("failed to generate token: %w", err)
+		return "", errors.ErrInternal("failed to generate token").WithError(err)
 	}
 
-	script := redis.NewScript(`
+	script := goredis.NewScript(`
 		local current = redis.call("ZCARD", KEYS[1])
 		if current < tonumber(ARGV[1]) then
 			redis.call("ZADD", KEYS[1], ARGV[2], ARGV[3])
@@ -238,11 +236,11 @@ func (s *Semaphore) Acquire(ctx context.Context, expiry time.Duration) (string, 
 	expireAt := float64(time.Now().Add(expiry).Unix())
 	result, err := script.Run(ctx, s.redis.client, []string{semKey}, s.maxCount, expireAt, token).Int64()
 	if err != nil {
-		return "", fmt.Errorf("failed to acquire semaphore: %w", err)
+		return "", errors.ErrInternal("failed to acquire semaphore").WithError(err)
 	}
 
 	if result == 0 {
-		return "", pkgerrors.SentinelSemaphoreFull
+		return "", errors.SentinelSemaphoreFull
 	}
 
 	return token, nil
@@ -252,10 +250,10 @@ func (s *Semaphore) Release(ctx context.Context, token string) error {
 	semKey := fmt.Sprintf(SemaphorePrefix, s.name)
 	removed, err := s.redis.client.ZRem(ctx, semKey, token).Result()
 	if err != nil {
-		return fmt.Errorf("failed to release semaphore: %w", err)
+		return errors.ErrInternal("failed to release semaphore").WithError(err)
 	}
 	if removed == 0 {
-		return pkgerrors.SentinelSemaphoreTokenNotFound
+		return errors.SentinelSemaphoreTokenNotFound
 	}
 	return nil
 }
