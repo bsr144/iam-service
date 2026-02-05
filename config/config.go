@@ -157,7 +157,7 @@ func setDefaults() {
 	viper.SetDefault("log.level", "info")
 	viper.SetDefault("log.format", "json")
 
-	viper.SetDefault("email.provider", "smtp")
+	viper.SetDefault("email.provider", "console")
 	viper.SetDefault("email.smtp_port", 587)
 
 	viper.SetDefault("otp.length", 6)
