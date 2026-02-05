@@ -65,7 +65,7 @@ func NewServer(cfg *config.Config) *Server {
 	userActivationTrackingRepo := postgres.NewUserActivationTrackingRepository(postgresDB)
 	roleRepo := postgres.NewRoleRepository(postgresDB)
 
-	emailService := mailer.NewEmailService()
+	emailService := mailer.NewEmailService(&cfg.Email)
 
 	healthUsecase := health.NewUsecase()
 	authUsecase := auth.NewUsecase(
