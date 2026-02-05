@@ -4,6 +4,7 @@ import (
 	"crypto/rand"
 	"iam-service/pkg/errors"
 	"math/big"
+	"strings"
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
@@ -104,4 +105,24 @@ func (uc *usecase) parseRegistrationToken(tokenString string) (jwt.MapClaims, er
 	}
 
 	return claims, nil
+}
+
+func maskEmailForRegistration(email string) string {
+	parts := strings.Split(email, "@")
+	if len(parts) != 2 {
+		return "***"
+	}
+
+	local := parts[0]
+	domain := parts[1]
+
+	if len(local) == 0 {
+		return "***@" + domain
+	}
+
+	if len(local) == 1 {
+		return local + "***@" + domain
+	}
+
+	return string(local[0]) + "***@" + domain
 }

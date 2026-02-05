@@ -35,23 +35,3 @@ func (uc *usecase) GetRegistrationStatus(
 		ResendsRemaining:     session.RemainingResends(),
 	}, nil
 }
-
-func maskEmailForRegistration(email string) string {
-	parts := strings.Split(email, "@")
-	if len(parts) != 2 {
-		return "***"
-	}
-
-	local := parts[0]
-	domain := parts[1]
-
-	if len(local) == 0 {
-		return "***@" + domain
-	}
-
-	if len(local) == 1 {
-		return local + "***@" + domain
-	}
-
-	return string(local[0]) + "***@" + domain
-}

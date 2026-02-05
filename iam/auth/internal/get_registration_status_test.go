@@ -45,9 +45,7 @@ func TestGetRegistrationStatus(t *testing.T) {
 				}
 				redis.On("GetRegistrationSession", mock.Anything, tenantID, registrationID).Return(session, nil)
 			},
-			checkResponse: func(t *testing.T, session *entity.RegistrationSession) {
-
-			},
+			checkResponse: func(t *testing.T, session *entity.RegistrationSession) {},
 		},
 		{
 			name:  "success - case insensitive email match",
