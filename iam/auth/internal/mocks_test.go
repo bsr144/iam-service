@@ -11,12 +11,10 @@ import (
 	"github.com/stretchr/testify/mock"
 )
 
-// MockTransactionManager implements contract.TransactionManager for testing.
 type MockTransactionManager struct {
 	mock.Mock
 }
 
-// WithTransaction executes fn directly without a real transaction.
 func (m *MockTransactionManager) WithTransaction(ctx context.Context, fn func(ctx context.Context) error) error {
 	args := m.Called(ctx, fn)
 	if args.Get(0) == nil {
@@ -25,7 +23,6 @@ func (m *MockTransactionManager) WithTransaction(ctx context.Context, fn func(ct
 	return args.Error(0)
 }
 
-// NewMockTransactionManager creates a mock that executes functions directly.
 func NewMockTransactionManager() *MockTransactionManager {
 	m := &MockTransactionManager{}
 	m.On("WithTransaction", mock.Anything, mock.Anything).Return(nil)
@@ -214,7 +211,6 @@ func (m *MockEmailService) SendAdminInvitation(ctx context.Context, email, token
 	return args.Error(0)
 }
 
-// MockUserProfileRepository implements contract.UserProfileRepository for testing.
 type MockUserProfileRepository struct {
 	mock.Mock
 }
@@ -237,7 +233,6 @@ func (m *MockUserProfileRepository) Update(ctx context.Context, profile *entity.
 	return args.Error(0)
 }
 
-// MockUserCredentialsRepository implements contract.UserCredentialsRepository for testing.
 type MockUserCredentialsRepository struct {
 	mock.Mock
 }
@@ -260,7 +255,6 @@ func (m *MockUserCredentialsRepository) Update(ctx context.Context, credentials 
 	return args.Error(0)
 }
 
-// MockUserSecurityRepository implements contract.UserSecurityRepository for testing.
 type MockUserSecurityRepository struct {
 	mock.Mock
 }
@@ -283,7 +277,6 @@ func (m *MockUserSecurityRepository) Update(ctx context.Context, security *entit
 	return args.Error(0)
 }
 
-// MockUserActivationTrackingRepository implements contract.UserActivationTrackingRepository for testing.
 type MockUserActivationTrackingRepository struct {
 	mock.Mock
 }
@@ -306,7 +299,6 @@ func (m *MockUserActivationTrackingRepository) Update(ctx context.Context, track
 	return args.Error(0)
 }
 
-// MockRoleRepository implements contract.RoleRepository for testing.
 type MockRoleRepository struct {
 	mock.Mock
 }
@@ -348,7 +340,6 @@ func (m *MockRoleRepository) GetByIDs(ctx context.Context, ids []uuid.UUID) ([]*
 	return args.Get(0).([]*entity.Role), args.Error(1)
 }
 
-// MockRefreshTokenRepository implements contract.RefreshTokenRepository for testing.
 type MockRefreshTokenRepository struct {
 	mock.Mock
 }
@@ -381,7 +372,6 @@ func (m *MockRefreshTokenRepository) RevokeByFamily(ctx context.Context, tokenFa
 	return args.Error(0)
 }
 
-// MockUserRoleRepository implements contract.UserRoleRepository for testing.
 type MockUserRoleRepository struct {
 	mock.Mock
 }
@@ -399,7 +389,6 @@ func (m *MockUserRoleRepository) ListActiveByUserID(ctx context.Context, userID 
 	return args.Get(0).([]entity.UserRole), args.Error(1)
 }
 
-// MockProductRepository implements contract.ProductRepository for testing.
 type MockProductRepository struct {
 	mock.Mock
 }
@@ -420,7 +409,6 @@ func (m *MockProductRepository) GetByIDAndTenant(ctx context.Context, productID,
 	return args.Get(0).(*entity.Product), args.Error(1)
 }
 
-// MockPermissionRepository implements contract.PermissionRepository for testing.
 type MockPermissionRepository struct {
 	mock.Mock
 }
