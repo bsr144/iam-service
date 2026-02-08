@@ -56,10 +56,8 @@ func NewServer(cfg *config.Config) *Server {
 	}
 	redisWrapper := implredis.NewRedis(redisClient)
 
-	// Transaction Manager
 	txManager := postgres.NewTransactionManager(postgresDB)
 
-	// Repositories
 	authUserRepo := postgres.NewUserRepository(postgresDB)
 	userProfileRepo := postgres.NewUserProfileRepository(postgresDB)
 	userCredentialsRepo := postgres.NewUserCredentialsRepository(postgresDB)
