@@ -12,15 +12,17 @@ import (
 )
 
 type refreshTokenRepository struct {
-	db *gorm.DB
+	baseRepository
 }
 
 func NewRefreshTokenRepository(db *gorm.DB) contract.RefreshTokenRepository {
-	return &refreshTokenRepository{db: db}
+	return &refreshTokenRepository{
+		baseRepository: baseRepository{db: db},
+	}
 }
 
 func (r *refreshTokenRepository) Create(ctx context.Context, token *entity.RefreshToken) error {
-	if err := r.db.WithContext(ctx).Create(token).Error; err != nil {
+	if err := r.getDB(ctx).Create(token).Error; err != nil {
 		return translateError(err, "refresh token")
 	}
 	return nil
@@ -28,7 +30,7 @@ func (r *refreshTokenRepository) Create(ctx context.Context, token *entity.Refre
 
 func (r *refreshTokenRepository) GetByTokenHash(ctx context.Context, tokenHash string) (*entity.RefreshToken, error) {
 	var token entity.RefreshToken
-	err := r.db.WithContext(ctx).Where("token_hash = ?", tokenHash).First(&token).Error
+	err := r.getDB(ctx).Where("token_hash = ?", tokenHash).First(&token).Error
 	if err != nil {
 		return nil, translateError(err, "refresh token")
 	}
@@ -37,7 +39,7 @@ func (r *refreshTokenRepository) GetByTokenHash(ctx context.Context, tokenHash s
 
 func (r *refreshTokenRepository) Revoke(ctx context.Context, id uuid.UUID, reason string) error {
 	now := time.Now()
-	if err := r.db.WithContext(ctx).
+	if err := r.getDB(ctx).
 		Model(&entity.RefreshToken{}).
 		Where("refresh_token_id = ?", id).
 		Updates(map[string]interface{}{
@@ -51,7 +53,7 @@ func (r *refreshTokenRepository) Revoke(ctx context.Context, id uuid.UUID, reaso
 
 func (r *refreshTokenRepository) RevokeAllByUserID(ctx context.Context, userID uuid.UUID, reason string) error {
 	now := time.Now()
-	if err := r.db.WithContext(ctx).
+	if err := r.getDB(ctx).
 		Model(&entity.RefreshToken{}).
 		Where("user_id = ? AND revoked_at IS NULL", userID).
 		Updates(map[string]interface{}{
@@ -65,7 +67,7 @@ func (r *refreshTokenRepository) RevokeAllByUserID(ctx context.Context, userID u
 
 func (r *refreshTokenRepository) RevokeByFamily(ctx context.Context, tokenFamily uuid.UUID, reason string) error {
 	now := time.Now()
-	if err := r.db.WithContext(ctx).
+	if err := r.getDB(ctx).
 		Model(&entity.RefreshToken{}).
 		Where("token_family = ? AND revoked_at IS NULL", tokenFamily).
 		Updates(map[string]interface{}{

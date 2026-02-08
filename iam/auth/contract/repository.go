@@ -61,6 +61,7 @@ type RoleRepository interface {
 	GetByID(ctx context.Context, id uuid.UUID) (*entity.Role, error)
 	GetByName(ctx context.Context, tenantID uuid.UUID, name string) (*entity.Role, error)
 	GetByCode(ctx context.Context, tenantID uuid.UUID, code string) (*entity.Role, error)
+	GetByIDs(ctx context.Context, ids []uuid.UUID) ([]*entity.Role, error)
 }
 type RefreshTokenRepository interface {
 	Create(ctx context.Context, token *entity.RefreshToken) error
@@ -72,6 +73,24 @@ type RefreshTokenRepository interface {
 type PINVerificationLogRepository interface {
 	Create(ctx context.Context, log *entity.PINVerificationLog) error
 	CountRecentFailures(ctx context.Context, userID uuid.UUID, since int) (int, error)
+}
+
+type UserRoleRepository interface {
+	Create(ctx context.Context, userRole *entity.UserRole) error
+	ListActiveByUserID(ctx context.Context, userID uuid.UUID, productID *uuid.UUID) ([]entity.UserRole, error)
+}
+
+type RolePermissionRepository interface {
+	Create(ctx context.Context, rolePermission *entity.RolePermission) error
+}
+
+type ProductRepository interface {
+	GetByCodeAndTenant(ctx context.Context, tenantID uuid.UUID, code string) (*entity.Product, error)
+	GetByIDAndTenant(ctx context.Context, productID, tenantID uuid.UUID) (*entity.Product, error)
+}
+
+type PermissionRepository interface {
+	GetCodesByRoleIDs(ctx context.Context, roleIDs []uuid.UUID) ([]string, error)
 }
 
 type RegistrationSessionStore interface {

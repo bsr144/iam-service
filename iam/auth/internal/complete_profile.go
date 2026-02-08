@@ -9,7 +9,6 @@ import (
 	"iam-service/pkg/errors"
 
 	"github.com/google/uuid"
-	"gorm.io/gorm"
 )
 
 func (uc *usecase) CompleteProfile(ctx context.Context, req *authdto.CompleteProfileRequest) (*authdto.CompleteProfileResponse, error) {
@@ -63,12 +62,12 @@ func (uc *usecase) CompleteProfile(ctx context.Context, req *authdto.CompletePro
 	}
 	profile.UpdatedAt = now
 
-	err = uc.DB.Transaction(func(tx *gorm.DB) error {
-		if err := tx.Save(profile).Error; err != nil {
+	err = uc.TxManager.WithTransaction(ctx, func(txCtx context.Context) error {
+		if err := uc.UserProfileRepo.Update(txCtx, profile); err != nil {
 			return err
 		}
 
-		tracking, err := uc.UserActivationTrackingRepo.GetByUserID(ctx, userID)
+		tracking, err := uc.UserActivationTrackingRepo.GetByUserID(txCtx, userID)
 		if err != nil {
 			return err
 		}
@@ -79,7 +78,7 @@ func (uc *usecase) CompleteProfile(ctx context.Context, req *authdto.CompletePro
 			if err := tracking.MarkUserCompleted(); err != nil {
 				return err
 			}
-			if err := tx.Save(tracking).Error; err != nil {
+			if err := uc.UserActivationTrackingRepo.Update(txCtx, tracking); err != nil {
 				return err
 			}
 		}

@@ -11,6 +11,27 @@ import (
 	"github.com/stretchr/testify/mock"
 )
 
+// MockTransactionManager implements contract.TransactionManager for testing.
+type MockTransactionManager struct {
+	mock.Mock
+}
+
+// WithTransaction executes fn directly without a real transaction.
+func (m *MockTransactionManager) WithTransaction(ctx context.Context, fn func(ctx context.Context) error) error {
+	args := m.Called(ctx, fn)
+	if args.Get(0) == nil {
+		return fn(ctx)
+	}
+	return args.Error(0)
+}
+
+// NewMockTransactionManager creates a mock that executes functions directly.
+func NewMockTransactionManager() *MockTransactionManager {
+	m := &MockTransactionManager{}
+	m.On("WithTransaction", mock.Anything, mock.Anything).Return(nil)
+	return m
+}
+
 type MockTenantRepository struct {
 	mock.Mock
 }
@@ -191,4 +212,223 @@ func (m *MockEmailService) SendPINReset(ctx context.Context, email, otp string, 
 func (m *MockEmailService) SendAdminInvitation(ctx context.Context, email, token string, expiryMinutes int) error {
 	args := m.Called(ctx, email, token, expiryMinutes)
 	return args.Error(0)
+}
+
+// MockUserProfileRepository implements contract.UserProfileRepository for testing.
+type MockUserProfileRepository struct {
+	mock.Mock
+}
+
+func (m *MockUserProfileRepository) Create(ctx context.Context, profile *entity.UserProfile) error {
+	args := m.Called(ctx, profile)
+	return args.Error(0)
+}
+
+func (m *MockUserProfileRepository) GetByUserID(ctx context.Context, userID uuid.UUID) (*entity.UserProfile, error) {
+	args := m.Called(ctx, userID)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).(*entity.UserProfile), args.Error(1)
+}
+
+func (m *MockUserProfileRepository) Update(ctx context.Context, profile *entity.UserProfile) error {
+	args := m.Called(ctx, profile)
+	return args.Error(0)
+}
+
+// MockUserCredentialsRepository implements contract.UserCredentialsRepository for testing.
+type MockUserCredentialsRepository struct {
+	mock.Mock
+}
+
+func (m *MockUserCredentialsRepository) Create(ctx context.Context, credentials *entity.UserCredentials) error {
+	args := m.Called(ctx, credentials)
+	return args.Error(0)
+}
+
+func (m *MockUserCredentialsRepository) GetByUserID(ctx context.Context, userID uuid.UUID) (*entity.UserCredentials, error) {
+	args := m.Called(ctx, userID)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).(*entity.UserCredentials), args.Error(1)
+}
+
+func (m *MockUserCredentialsRepository) Update(ctx context.Context, credentials *entity.UserCredentials) error {
+	args := m.Called(ctx, credentials)
+	return args.Error(0)
+}
+
+// MockUserSecurityRepository implements contract.UserSecurityRepository for testing.
+type MockUserSecurityRepository struct {
+	mock.Mock
+}
+
+func (m *MockUserSecurityRepository) Create(ctx context.Context, security *entity.UserSecurity) error {
+	args := m.Called(ctx, security)
+	return args.Error(0)
+}
+
+func (m *MockUserSecurityRepository) GetByUserID(ctx context.Context, userID uuid.UUID) (*entity.UserSecurity, error) {
+	args := m.Called(ctx, userID)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).(*entity.UserSecurity), args.Error(1)
+}
+
+func (m *MockUserSecurityRepository) Update(ctx context.Context, security *entity.UserSecurity) error {
+	args := m.Called(ctx, security)
+	return args.Error(0)
+}
+
+// MockUserActivationTrackingRepository implements contract.UserActivationTrackingRepository for testing.
+type MockUserActivationTrackingRepository struct {
+	mock.Mock
+}
+
+func (m *MockUserActivationTrackingRepository) Create(ctx context.Context, tracking *entity.UserActivationTracking) error {
+	args := m.Called(ctx, tracking)
+	return args.Error(0)
+}
+
+func (m *MockUserActivationTrackingRepository) GetByUserID(ctx context.Context, userID uuid.UUID) (*entity.UserActivationTracking, error) {
+	args := m.Called(ctx, userID)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).(*entity.UserActivationTracking), args.Error(1)
+}
+
+func (m *MockUserActivationTrackingRepository) Update(ctx context.Context, tracking *entity.UserActivationTracking) error {
+	args := m.Called(ctx, tracking)
+	return args.Error(0)
+}
+
+// MockRoleRepository implements contract.RoleRepository for testing.
+type MockRoleRepository struct {
+	mock.Mock
+}
+
+func (m *MockRoleRepository) Create(ctx context.Context, role *entity.Role) error {
+	args := m.Called(ctx, role)
+	return args.Error(0)
+}
+
+func (m *MockRoleRepository) GetByID(ctx context.Context, id uuid.UUID) (*entity.Role, error) {
+	args := m.Called(ctx, id)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).(*entity.Role), args.Error(1)
+}
+
+func (m *MockRoleRepository) GetByName(ctx context.Context, tenantID uuid.UUID, name string) (*entity.Role, error) {
+	args := m.Called(ctx, tenantID, name)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).(*entity.Role), args.Error(1)
+}
+
+func (m *MockRoleRepository) GetByCode(ctx context.Context, tenantID uuid.UUID, code string) (*entity.Role, error) {
+	args := m.Called(ctx, tenantID, code)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).(*entity.Role), args.Error(1)
+}
+
+func (m *MockRoleRepository) GetByIDs(ctx context.Context, ids []uuid.UUID) ([]*entity.Role, error) {
+	args := m.Called(ctx, ids)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).([]*entity.Role), args.Error(1)
+}
+
+// MockRefreshTokenRepository implements contract.RefreshTokenRepository for testing.
+type MockRefreshTokenRepository struct {
+	mock.Mock
+}
+
+func (m *MockRefreshTokenRepository) Create(ctx context.Context, token *entity.RefreshToken) error {
+	args := m.Called(ctx, token)
+	return args.Error(0)
+}
+
+func (m *MockRefreshTokenRepository) GetByTokenHash(ctx context.Context, tokenHash string) (*entity.RefreshToken, error) {
+	args := m.Called(ctx, tokenHash)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).(*entity.RefreshToken), args.Error(1)
+}
+
+func (m *MockRefreshTokenRepository) Revoke(ctx context.Context, id uuid.UUID, reason string) error {
+	args := m.Called(ctx, id, reason)
+	return args.Error(0)
+}
+
+func (m *MockRefreshTokenRepository) RevokeAllByUserID(ctx context.Context, userID uuid.UUID, reason string) error {
+	args := m.Called(ctx, userID, reason)
+	return args.Error(0)
+}
+
+func (m *MockRefreshTokenRepository) RevokeByFamily(ctx context.Context, tokenFamily uuid.UUID, reason string) error {
+	args := m.Called(ctx, tokenFamily, reason)
+	return args.Error(0)
+}
+
+// MockUserRoleRepository implements contract.UserRoleRepository for testing.
+type MockUserRoleRepository struct {
+	mock.Mock
+}
+
+func (m *MockUserRoleRepository) Create(ctx context.Context, userRole *entity.UserRole) error {
+	args := m.Called(ctx, userRole)
+	return args.Error(0)
+}
+
+func (m *MockUserRoleRepository) ListActiveByUserID(ctx context.Context, userID uuid.UUID, productID *uuid.UUID) ([]entity.UserRole, error) {
+	args := m.Called(ctx, userID, productID)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).([]entity.UserRole), args.Error(1)
+}
+
+// MockProductRepository implements contract.ProductRepository for testing.
+type MockProductRepository struct {
+	mock.Mock
+}
+
+func (m *MockProductRepository) GetByCodeAndTenant(ctx context.Context, tenantID uuid.UUID, code string) (*entity.Product, error) {
+	args := m.Called(ctx, tenantID, code)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).(*entity.Product), args.Error(1)
+}
+
+func (m *MockProductRepository) GetByIDAndTenant(ctx context.Context, productID, tenantID uuid.UUID) (*entity.Product, error) {
+	args := m.Called(ctx, productID, tenantID)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).(*entity.Product), args.Error(1)
+}
+
+// MockPermissionRepository implements contract.PermissionRepository for testing.
+type MockPermissionRepository struct {
+	mock.Mock
+}
+
+func (m *MockPermissionRepository) GetCodesByRoleIDs(ctx context.Context, roleIDs []uuid.UUID) ([]string, error) {
+	args := m.Called(ctx, roleIDs)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).([]string), args.Error(1)
 }

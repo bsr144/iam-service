@@ -1,24 +1,21 @@
 package internal
 
 import (
-	"iam-service/entity"
-	"iam-service/pkg/errors"
-	"time"
+	"context"
 
-	"gorm.io/gorm"
+	"iam-service/pkg/errors"
 )
 
-func (uc *usecase) Logout(token string) error {
+func (uc *usecase) Logout(ctx context.Context, token string) error {
 	if token == "" {
 		return errors.ErrBadRequest("refresh token is required")
 	}
 
 	tokenHash := hashToken(token)
 
-	var refreshToken entity.RefreshToken
-	err := uc.DB.Where("token_hash = ?", tokenHash).First(&refreshToken).Error
+	refreshToken, err := uc.RefreshTokenRepo.GetByTokenHash(ctx, tokenHash)
 	if err != nil {
-		if err == gorm.ErrRecordNotFound {
+		if errors.IsNotFound(err) {
 			return errors.ErrUnauthorized("Invalid or expired token")
 		}
 		return errors.ErrInternal("failed to verify token").WithError(err)
@@ -28,16 +25,11 @@ func (uc *usecase) Logout(token string) error {
 		return errors.ErrUnauthorized("Token already revoked")
 	}
 
-	if refreshToken.ExpiresAt.Before(time.Now()) {
+	if refreshToken.IsExpired() {
 		return errors.ErrUnauthorized("Token has expired")
 	}
 
-	now := time.Now()
-	reason := "User logout"
-	refreshToken.RevokedAt = &now
-	refreshToken.RevokedReason = &reason
-
-	if err := uc.DB.Save(&refreshToken).Error; err != nil {
+	if err := uc.RefreshTokenRepo.Revoke(ctx, refreshToken.RefreshTokenID, "User logout"); err != nil {
 		return errors.ErrInternal("failed to revoke token").WithError(err)
 	}
 

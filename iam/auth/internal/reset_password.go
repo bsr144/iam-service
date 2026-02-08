@@ -10,7 +10,6 @@ import (
 	"iam-service/pkg/errors"
 
 	"golang.org/x/crypto/bcrypt"
-	"gorm.io/gorm"
 )
 
 func (uc *usecase) ResetPassword(ctx context.Context, req *authdto.ResetPasswordRequest) (*authdto.ResetPasswordResponse, error) {
@@ -75,7 +74,7 @@ func (uc *usecase) ResetPassword(ctx context.Context, req *authdto.ResetPassword
 		return nil, errors.ErrInternal("failed to hash password").WithError(err)
 	}
 
-	err = uc.DB.Transaction(func(tx *gorm.DB) error {
+	err = uc.TxManager.WithTransaction(ctx, func(txCtx context.Context) error {
 		now := time.Now()
 		passwordHashStr := string(passwordHash)
 		passwordExpiresAt := now.AddDate(0, 6, 0)
@@ -104,22 +103,15 @@ func (uc *usecase) ResetPassword(ctx context.Context, req *authdto.ResetPassword
 		credentials.PasswordHistory = passwordHistoryJSON
 		credentials.UpdatedAt = now
 
-		if err := tx.Save(credentials).Error; err != nil {
+		if err := uc.UserCredentialsRepo.Update(txCtx, credentials); err != nil {
 			return errors.ErrInternal("failed to update credentials").WithError(err)
 		}
 
-		if err := tx.Model(&verification).Updates(map[string]interface{}{
-			"verified_at": now,
-		}).Error; err != nil {
+		if err := uc.EmailVerificationRepo.MarkAsVerified(txCtx, verification.EmailVerificationID); err != nil {
 			return errors.ErrInternal("failed to mark OTP as verified").WithError(err)
 		}
 
-		if err := tx.Model(&entity.RefreshToken{}).
-			Where("user_id = ? AND revoked_at IS NULL", user.UserID).
-			Updates(map[string]interface{}{
-				"revoked_at":     now,
-				"revoked_reason": "Password reset",
-			}).Error; err != nil {
+		if err := uc.RefreshTokenRepo.RevokeAllByUserID(txCtx, user.UserID, "Password reset"); err != nil {
 			return errors.ErrInternal("failed to revoke tokens").WithError(err)
 		}
 

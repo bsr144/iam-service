@@ -9,7 +9,6 @@ import (
 	"iam-service/pkg/errors"
 
 	"golang.org/x/crypto/bcrypt"
-	"gorm.io/gorm"
 )
 
 func (uc *usecase) VerifyOTP(ctx context.Context, req *authdto.VerifyOTPRequest) (*authdto.VerifyOTPResponse, error) {
@@ -40,20 +39,18 @@ func (uc *usecase) VerifyOTP(ctx context.Context, req *authdto.VerifyOTPRequest)
 
 	now := time.Now()
 
-	err = uc.DB.Transaction(func(tx *gorm.DB) error {
-
-		verification.VerifiedAt = &now
-		if err := tx.Save(verification).Error; err != nil {
+	err = uc.TxManager.WithTransaction(ctx, func(txCtx context.Context) error {
+		if err := uc.EmailVerificationRepo.MarkAsVerified(txCtx, verification.EmailVerificationID); err != nil {
 			return err
 		}
 
 		user.EmailVerified = true
 		user.EmailVerifiedAt = &now
-		if err := tx.Save(user).Error; err != nil {
+		if err := uc.UserRepo.Update(txCtx, user); err != nil {
 			return err
 		}
 
-		tracking, err := uc.UserActivationTrackingRepo.GetByUserID(ctx, user.UserID)
+		tracking, err := uc.UserActivationTrackingRepo.GetByUserID(txCtx, user.UserID)
 		if err != nil {
 			return err
 		}
@@ -61,7 +58,7 @@ func (uc *usecase) VerifyOTP(ctx context.Context, req *authdto.VerifyOTPRequest)
 			if err := tracking.MarkOTPVerified(); err != nil {
 				return err
 			}
-			if err := tx.Save(tracking).Error; err != nil {
+			if err := uc.UserActivationTrackingRepo.Update(txCtx, tracking); err != nil {
 				return err
 			}
 		}

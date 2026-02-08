@@ -8,12 +8,11 @@ import (
 	"iam-service/iam/auth/internal"
 
 	"github.com/google/uuid"
-	"gorm.io/gorm"
 )
 
 type Usecase interface {
 	Login(ctx context.Context, req *authdto.LoginRequest) (*authdto.LoginResponse, error)
-	Logout(token string) error
+	Logout(ctx context.Context, token string) error
 	CompleteProfile(ctx context.Context, req *authdto.CompleteProfileRequest) (*authdto.CompleteProfileResponse, error)
 	CreatePIN(ctx context.Context, userID string, newPIN string) error
 	SetupPIN(ctx context.Context, userID uuid.UUID, req *authdto.SetupPINRequest) (*authdto.SetupPINResponse, error)
@@ -32,7 +31,7 @@ type Usecase interface {
 }
 
 func NewUsecase(
-	db *gorm.DB,
+	txManager contract.TransactionManager,
 	cfg *config.Config,
 	userRepo contract.UserRepository,
 	userProfileRepo contract.UserProfileRepository,
@@ -42,11 +41,15 @@ func NewUsecase(
 	tenantRepo contract.TenantRepository,
 	userActivationTrackingRepo contract.UserActivationTrackingRepository,
 	roleRepo contract.RoleRepository,
+	refreshTokenRepo contract.RefreshTokenRepository,
+	userRoleRepo contract.UserRoleRepository,
+	productRepo contract.ProductRepository,
+	permissionRepo contract.PermissionRepository,
 	emailService contract.EmailService,
 	redis contract.RegistrationSessionStore,
 ) Usecase {
 	return internal.NewUsecase(
-		db,
+		txManager,
 		cfg,
 		userRepo,
 		userProfileRepo,
@@ -56,6 +59,10 @@ func NewUsecase(
 		tenantRepo,
 		userActivationTrackingRepo,
 		roleRepo,
+		refreshTokenRepo,
+		userRoleRepo,
+		productRepo,
+		permissionRepo,
 		emailService,
 		redis,
 	)

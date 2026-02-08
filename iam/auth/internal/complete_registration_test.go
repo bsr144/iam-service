@@ -55,17 +55,45 @@ func TestCompleteRegistration(t *testing.T) {
 		name          string
 		req           *authdto.CompleteRegistrationRequest
 		setupToken    func() string
-		setupMocks    func(*MockRegistrationSessionStore, *MockUserRepository, *MockEmailService, string)
+		setupMocks    func(*MockTransactionManager, *MockRegistrationSessionStore, *MockUserRepository, *MockUserProfileRepository, *MockUserCredentialsRepository, *MockUserSecurityRepository, *MockUserActivationTrackingRepository, *MockEmailService, string)
 		expectedError string
 		expectedCode  string
 	}{
+		{
+			name: "success - registration completed",
+			req:  validReq,
+			setupToken: func() string {
+				tokenString, _ := generateValidToken()
+				return tokenString
+			},
+			setupMocks: func(txManager *MockTransactionManager, redis *MockRegistrationSessionStore, userRepo *MockUserRepository, profileRepo *MockUserProfileRepository, credentialsRepo *MockUserCredentialsRepository, securityRepo *MockUserSecurityRepository, trackingRepo *MockUserActivationTrackingRepository, emailSvc *MockEmailService, tokenHash string) {
+				session := &entity.RegistrationSession{
+					ID:                    registrationID,
+					TenantID:              tenantID,
+					Email:                 email,
+					Status:                entity.RegistrationSessionStatusVerified,
+					RegistrationTokenHash: &tokenHash,
+					ExpiresAt:             time.Now().Add(10 * time.Minute),
+				}
+				redis.On("GetRegistrationSession", mock.Anything, tenantID, registrationID).Return(session, nil)
+				userRepo.On("EmailExistsInTenant", mock.Anything, tenantID, email).Return(false, nil)
+				userRepo.On("Create", mock.Anything, mock.AnythingOfType("*entity.User")).Return(nil)
+				credentialsRepo.On("Create", mock.Anything, mock.AnythingOfType("*entity.UserCredentials")).Return(nil)
+				profileRepo.On("Create", mock.Anything, mock.AnythingOfType("*entity.UserProfile")).Return(nil)
+				securityRepo.On("Create", mock.Anything, mock.AnythingOfType("*entity.UserSecurity")).Return(nil)
+				trackingRepo.On("Create", mock.Anything, mock.AnythingOfType("*entity.UserActivationTracking")).Return(nil)
+				redis.On("DeleteRegistrationSession", mock.Anything, tenantID, registrationID).Return(nil)
+				redis.On("UnlockRegistrationEmail", mock.Anything, tenantID, email).Return(nil)
+				emailSvc.On("SendWelcome", mock.Anything, email, "John").Return(nil)
+			},
+		},
 		{
 			name: "error - invalid token format",
 			req:  validReq,
 			setupToken: func() string {
 				return "invalid-token"
 			},
-			setupMocks: func(redis *MockRegistrationSessionStore, userRepo *MockUserRepository, emailSvc *MockEmailService, tokenHash string) {
+			setupMocks: func(txManager *MockTransactionManager, redis *MockRegistrationSessionStore, userRepo *MockUserRepository, profileRepo *MockUserProfileRepository, credentialsRepo *MockUserCredentialsRepository, securityRepo *MockUserSecurityRepository, trackingRepo *MockUserActivationTrackingRepository, emailSvc *MockEmailService, tokenHash string) {
 
 			},
 			expectedError: "invalid",
@@ -88,7 +116,7 @@ func TestCompleteRegistration(t *testing.T) {
 				tokenString, _ := token.SignedString([]byte(jwtSecret))
 				return tokenString
 			},
-			setupMocks: func(redis *MockRegistrationSessionStore, userRepo *MockUserRepository, emailSvc *MockEmailService, tokenHash string) {
+			setupMocks: func(txManager *MockTransactionManager, redis *MockRegistrationSessionStore, userRepo *MockUserRepository, profileRepo *MockUserProfileRepository, credentialsRepo *MockUserCredentialsRepository, securityRepo *MockUserSecurityRepository, trackingRepo *MockUserActivationTrackingRepository, emailSvc *MockEmailService, tokenHash string) {
 
 			},
 			expectedError: "invalid or expired",
@@ -111,7 +139,7 @@ func TestCompleteRegistration(t *testing.T) {
 				tokenString, _ := token.SignedString([]byte(jwtSecret))
 				return tokenString
 			},
-			setupMocks: func(redis *MockRegistrationSessionStore, userRepo *MockUserRepository, emailSvc *MockEmailService, tokenHash string) {
+			setupMocks: func(txManager *MockTransactionManager, redis *MockRegistrationSessionStore, userRepo *MockUserRepository, profileRepo *MockUserProfileRepository, credentialsRepo *MockUserCredentialsRepository, securityRepo *MockUserSecurityRepository, trackingRepo *MockUserActivationTrackingRepository, emailSvc *MockEmailService, tokenHash string) {
 
 			},
 			expectedError: "not a registration completion token",
@@ -124,7 +152,7 @@ func TestCompleteRegistration(t *testing.T) {
 				tokenString, _ := generateValidToken()
 				return tokenString
 			},
-			setupMocks: func(redis *MockRegistrationSessionStore, userRepo *MockUserRepository, emailSvc *MockEmailService, tokenHash string) {
+			setupMocks: func(txManager *MockTransactionManager, redis *MockRegistrationSessionStore, userRepo *MockUserRepository, profileRepo *MockUserProfileRepository, credentialsRepo *MockUserCredentialsRepository, securityRepo *MockUserSecurityRepository, trackingRepo *MockUserActivationTrackingRepository, emailSvc *MockEmailService, tokenHash string) {
 				redis.On("GetRegistrationSession", mock.Anything, tenantID, registrationID).Return(nil, errors.ErrNotFound("registration not found"))
 			},
 			expectedError: "not found",
@@ -137,7 +165,7 @@ func TestCompleteRegistration(t *testing.T) {
 				tokenString, _ := generateValidToken()
 				return tokenString
 			},
-			setupMocks: func(redis *MockRegistrationSessionStore, userRepo *MockUserRepository, emailSvc *MockEmailService, tokenHash string) {
+			setupMocks: func(txManager *MockTransactionManager, redis *MockRegistrationSessionStore, userRepo *MockUserRepository, profileRepo *MockUserProfileRepository, credentialsRepo *MockUserCredentialsRepository, securityRepo *MockUserSecurityRepository, trackingRepo *MockUserActivationTrackingRepository, emailSvc *MockEmailService, tokenHash string) {
 				session := &entity.RegistrationSession{
 					ID:        registrationID,
 					TenantID:  tenantID,
@@ -157,7 +185,7 @@ func TestCompleteRegistration(t *testing.T) {
 				tokenString, _ := generateValidToken()
 				return tokenString
 			},
-			setupMocks: func(redis *MockRegistrationSessionStore, userRepo *MockUserRepository, emailSvc *MockEmailService, tokenHash string) {
+			setupMocks: func(txManager *MockTransactionManager, redis *MockRegistrationSessionStore, userRepo *MockUserRepository, profileRepo *MockUserProfileRepository, credentialsRepo *MockUserCredentialsRepository, securityRepo *MockUserSecurityRepository, trackingRepo *MockUserActivationTrackingRepository, emailSvc *MockEmailService, tokenHash string) {
 				session := &entity.RegistrationSession{
 					ID:        registrationID,
 					TenantID:  tenantID,
@@ -177,7 +205,7 @@ func TestCompleteRegistration(t *testing.T) {
 				tokenString, _ := generateValidToken()
 				return tokenString
 			},
-			setupMocks: func(redis *MockRegistrationSessionStore, userRepo *MockUserRepository, emailSvc *MockEmailService, tokenHash string) {
+			setupMocks: func(txManager *MockTransactionManager, redis *MockRegistrationSessionStore, userRepo *MockUserRepository, profileRepo *MockUserProfileRepository, credentialsRepo *MockUserCredentialsRepository, securityRepo *MockUserSecurityRepository, trackingRepo *MockUserActivationTrackingRepository, emailSvc *MockEmailService, tokenHash string) {
 				wrongHash := "different-hash-value"
 				session := &entity.RegistrationSession{
 					ID:                    registrationID,
@@ -206,7 +234,7 @@ func TestCompleteRegistration(t *testing.T) {
 				_ = tokenHash
 				return tokenString
 			},
-			setupMocks: func(redis *MockRegistrationSessionStore, userRepo *MockUserRepository, emailSvc *MockEmailService, tokenHash string) {
+			setupMocks: func(txManager *MockTransactionManager, redis *MockRegistrationSessionStore, userRepo *MockUserRepository, profileRepo *MockUserProfileRepository, credentialsRepo *MockUserCredentialsRepository, securityRepo *MockUserSecurityRepository, trackingRepo *MockUserActivationTrackingRepository, emailSvc *MockEmailService, tokenHash string) {
 				session := &entity.RegistrationSession{
 					ID:                    registrationID,
 					TenantID:              tenantID,
@@ -227,7 +255,7 @@ func TestCompleteRegistration(t *testing.T) {
 				tokenString, _ := generateValidToken()
 				return tokenString
 			},
-			setupMocks: func(redis *MockRegistrationSessionStore, userRepo *MockUserRepository, emailSvc *MockEmailService, tokenHash string) {
+			setupMocks: func(txManager *MockTransactionManager, redis *MockRegistrationSessionStore, userRepo *MockUserRepository, profileRepo *MockUserProfileRepository, credentialsRepo *MockUserCredentialsRepository, securityRepo *MockUserSecurityRepository, trackingRepo *MockUserActivationTrackingRepository, emailSvc *MockEmailService, tokenHash string) {
 				session := &entity.RegistrationSession{
 					ID:                    registrationID,
 					TenantID:              tenantID,
@@ -242,30 +270,62 @@ func TestCompleteRegistration(t *testing.T) {
 			expectedError: "already been registered",
 			expectedCode:  errors.CodeConflict,
 		},
+		{
+			name: "error - transaction rollback on user creation failure",
+			req:  validReq,
+			setupToken: func() string {
+				tokenString, _ := generateValidToken()
+				return tokenString
+			},
+			setupMocks: func(txManager *MockTransactionManager, redis *MockRegistrationSessionStore, userRepo *MockUserRepository, profileRepo *MockUserProfileRepository, credentialsRepo *MockUserCredentialsRepository, securityRepo *MockUserSecurityRepository, trackingRepo *MockUserActivationTrackingRepository, emailSvc *MockEmailService, tokenHash string) {
+				session := &entity.RegistrationSession{
+					ID:                    registrationID,
+					TenantID:              tenantID,
+					Email:                 email,
+					Status:                entity.RegistrationSessionStatusVerified,
+					RegistrationTokenHash: &tokenHash,
+					ExpiresAt:             time.Now().Add(10 * time.Minute),
+				}
+				redis.On("GetRegistrationSession", mock.Anything, tenantID, registrationID).Return(session, nil)
+				userRepo.On("EmailExistsInTenant", mock.Anything, tenantID, email).Return(false, nil)
+				userRepo.On("Create", mock.Anything, mock.AnythingOfType("*entity.User")).Return(errors.ErrInternal("database error"))
+			},
+			expectedError: "failed to create user",
+			expectedCode:  errors.CodeInternal,
+		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-
+			txManager := NewMockTransactionManager()
 			redis := new(MockRegistrationSessionStore)
 			userRepo := new(MockUserRepository)
+			profileRepo := new(MockUserProfileRepository)
+			credentialsRepo := new(MockUserCredentialsRepository)
+			securityRepo := new(MockUserSecurityRepository)
+			trackingRepo := new(MockUserActivationTrackingRepository)
 			emailSvc := new(MockEmailService)
 
 			token := tt.setupToken()
 			hash := sha256.Sum256([]byte(token))
 			tokenHash := hex.EncodeToString(hash[:])
 
-			tt.setupMocks(redis, userRepo, emailSvc, tokenHash)
+			tt.setupMocks(txManager, redis, userRepo, profileRepo, credentialsRepo, securityRepo, trackingRepo, emailSvc, tokenHash)
 
 			uc := &usecase{
+				TxManager: txManager,
 				Config: &config.Config{
 					JWT: config.JWTConfig{
 						AccessSecret: jwtSecret,
 					},
 				},
-				Redis:        redis,
-				UserRepo:     userRepo,
-				EmailService: emailSvc,
+				Redis:                      redis,
+				UserRepo:                   userRepo,
+				UserProfileRepo:            profileRepo,
+				UserCredentialsRepo:        credentialsRepo,
+				UserSecurityRepo:           securityRepo,
+				UserActivationTrackingRepo: trackingRepo,
+				EmailService:               emailSvc,
 			}
 
 			ctx := context.Background()
@@ -289,6 +349,10 @@ func TestCompleteRegistration(t *testing.T) {
 
 			redis.AssertExpectations(t)
 			userRepo.AssertExpectations(t)
+			profileRepo.AssertExpectations(t)
+			credentialsRepo.AssertExpectations(t)
+			securityRepo.AssertExpectations(t)
+			trackingRepo.AssertExpectations(t)
 		})
 	}
 }

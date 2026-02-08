@@ -12,15 +12,17 @@ import (
 )
 
 type emailVerificationRepository struct {
-	db *gorm.DB
+	baseRepository
 }
 
 func NewEmailVerificationRepository(db *gorm.DB) contract.EmailVerificationRepository {
-	return &emailVerificationRepository{db: db}
+	return &emailVerificationRepository{
+		baseRepository: baseRepository{db: db},
+	}
 }
 
 func (r *emailVerificationRepository) Create(ctx context.Context, verification *entity.EmailVerification) error {
-	if err := r.db.WithContext(ctx).Create(verification).Error; err != nil {
+	if err := r.getDB(ctx).Create(verification).Error; err != nil {
 		return translateError(err, "email verification")
 	}
 	return nil
@@ -28,7 +30,7 @@ func (r *emailVerificationRepository) Create(ctx context.Context, verification *
 
 func (r *emailVerificationRepository) GetByID(ctx context.Context, id uuid.UUID) (*entity.EmailVerification, error) {
 	var verification entity.EmailVerification
-	err := r.db.WithContext(ctx).Where("email_verification_id = ?", id).First(&verification).Error
+	err := r.getDB(ctx).Where("email_verification_id = ?", id).First(&verification).Error
 	if err != nil {
 		return nil, translateError(err, "email verification")
 	}
@@ -37,7 +39,7 @@ func (r *emailVerificationRepository) GetByID(ctx context.Context, id uuid.UUID)
 
 func (r *emailVerificationRepository) GetLatestByEmail(ctx context.Context, email string, otpType entity.OTPType) (*entity.EmailVerification, error) {
 	var verification entity.EmailVerification
-	err := r.db.WithContext(ctx).
+	err := r.getDB(ctx).
 		Where("email = ? AND otp_type = ? AND verified_at IS NULL AND expires_at > ?", email, otpType, time.Now()).
 		Order("created_at DESC").
 		First(&verification).Error
@@ -49,7 +51,7 @@ func (r *emailVerificationRepository) GetLatestByEmail(ctx context.Context, emai
 
 func (r *emailVerificationRepository) GetLatestByUserID(ctx context.Context, userID uuid.UUID, otpType entity.OTPType) (*entity.EmailVerification, error) {
 	var verification entity.EmailVerification
-	err := r.db.WithContext(ctx).
+	err := r.getDB(ctx).
 		Where("user_id = ? AND otp_type = ? AND verified_at IS NULL AND expires_at > ?", userID, otpType, time.Now()).
 		Order("created_at DESC").
 		First(&verification).Error
@@ -61,7 +63,7 @@ func (r *emailVerificationRepository) GetLatestByUserID(ctx context.Context, use
 
 func (r *emailVerificationRepository) MarkAsVerified(ctx context.Context, id uuid.UUID) error {
 	now := time.Now()
-	if err := r.db.WithContext(ctx).
+	if err := r.getDB(ctx).
 		Model(&entity.EmailVerification{}).
 		Where("email_verification_id = ?", id).
 		Update("verified_at", now).Error; err != nil {
@@ -72,7 +74,7 @@ func (r *emailVerificationRepository) MarkAsVerified(ctx context.Context, id uui
 
 func (r *emailVerificationRepository) CountActiveOTPsByEmail(ctx context.Context, email string, otpType entity.OTPType) (int, error) {
 	var count int64
-	err := r.db.WithContext(ctx).
+	err := r.getDB(ctx).
 		Model(&entity.EmailVerification{}).
 		Where("email = ? AND otp_type = ? AND verified_at IS NULL AND expires_at > ?", email, otpType, time.Now()).
 		Count(&count).Error
@@ -83,7 +85,7 @@ func (r *emailVerificationRepository) CountActiveOTPsByEmail(ctx context.Context
 }
 
 func (r *emailVerificationRepository) DeleteExpiredByEmail(ctx context.Context, email string) error {
-	if err := r.db.WithContext(ctx).
+	if err := r.getDB(ctx).
 		Where("email = ? AND expires_at < ?", email, time.Now()).
 		Delete(&entity.EmailVerification{}).Error; err != nil {
 		return translateError(err, "email verification")

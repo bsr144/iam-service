@@ -14,7 +14,6 @@ import (
 
 	"github.com/google/uuid"
 	"golang.org/x/crypto/bcrypt"
-	"gorm.io/gorm"
 )
 
 func (uc *usecase) CompleteRegistration(
@@ -72,7 +71,7 @@ func (uc *usecase) CompleteRegistration(
 	var userID uuid.UUID
 	now := time.Now()
 
-	err = uc.DB.Transaction(func(tx *gorm.DB) error {
+	err = uc.TxManager.WithTransaction(ctx, func(txCtx context.Context) error {
 		userID = uuid.New()
 
 		user := &entity.User{
@@ -82,7 +81,7 @@ func (uc *usecase) CompleteRegistration(
 			EmailVerified: true,
 			IsActive:      userStatus == entity.UserStatusActive,
 		}
-		if err := tx.Create(user).Error; err != nil {
+		if err := uc.UserRepo.Create(txCtx, user); err != nil {
 			return err
 		}
 
@@ -95,7 +94,7 @@ func (uc *usecase) CompleteRegistration(
 			CreatedAt:        now,
 			UpdatedAt:        now,
 		}
-		if err := tx.Create(credentials).Error; err != nil {
+		if err := uc.UserCredentialsRepo.Create(txCtx, credentials); err != nil {
 			return err
 		}
 
@@ -110,7 +109,7 @@ func (uc *usecase) CompleteRegistration(
 		if req.PhoneNumber != nil {
 			profile.Phone = req.PhoneNumber
 		}
-		if err := tx.Create(profile).Error; err != nil {
+		if err := uc.UserProfileRepo.Create(txCtx, profile); err != nil {
 			return err
 		}
 
@@ -121,7 +120,7 @@ func (uc *usecase) CompleteRegistration(
 			CreatedAt:      now,
 			UpdatedAt:      now,
 		}
-		if err := tx.Create(security).Error; err != nil {
+		if err := uc.UserSecurityRepo.Create(txCtx, security); err != nil {
 			return err
 		}
 
@@ -129,7 +128,7 @@ func (uc *usecase) CompleteRegistration(
 		if err := tracking.AddStatusTransition(string(userStatus), "registration"); err != nil {
 			return err
 		}
-		if err := tx.Create(tracking).Error; err != nil {
+		if err := uc.UserActivationTrackingRepo.Create(txCtx, tracking); err != nil {
 			return err
 		}
 

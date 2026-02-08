@@ -11,7 +11,6 @@ import (
 
 	"github.com/google/uuid"
 	"golang.org/x/crypto/bcrypt"
-	"gorm.io/gorm"
 )
 
 func (uc *usecase) RegisterSpecialAccount(ctx context.Context, req *authdto.RegisterSpecialAccountRequest) (*authdto.RegisterSpecialAccountResponse, error) {
@@ -44,7 +43,7 @@ func (uc *usecase) RegisterSpecialAccount(ctx context.Context, req *authdto.Regi
 	now := time.Now()
 	passwordHashStr := string(passwordHash)
 
-	err = uc.DB.Transaction(func(tx *gorm.DB) error {
+	err = uc.TxManager.WithTransaction(ctx, func(txCtx context.Context) error {
 
 		userID, err := uuid.NewV7()
 		if err != nil {
@@ -58,7 +57,7 @@ func (uc *usecase) RegisterSpecialAccount(ctx context.Context, req *authdto.Regi
 			EmailVerified: true,
 			IsActive:      true,
 		}
-		if err := tx.Create(user).Error; err != nil {
+		if err := uc.UserRepo.Create(txCtx, user); err != nil {
 			return err
 		}
 
@@ -76,7 +75,7 @@ func (uc *usecase) RegisterSpecialAccount(ctx context.Context, req *authdto.Regi
 			CreatedAt:        now,
 			UpdatedAt:        now,
 		}
-		if err := tx.Create(credentials).Error; err != nil {
+		if err := uc.UserCredentialsRepo.Create(txCtx, credentials); err != nil {
 			return err
 		}
 
@@ -92,11 +91,11 @@ func (uc *usecase) RegisterSpecialAccount(ctx context.Context, req *authdto.Regi
 			CreatedAt:     now,
 			UpdatedAt:     now,
 		}
-		if err := tx.Create(profile).Error; err != nil {
+		if err := uc.UserProfileRepo.Create(txCtx, profile); err != nil {
 			return err
 		}
 
-		role, err := uc.RoleRepo.GetByCode(ctx, req.TenantID, req.UserType)
+		role, err := uc.RoleRepo.GetByCode(txCtx, req.TenantID, req.UserType)
 		if err != nil {
 			if errors.IsNotFound(err) {
 				return errors.ErrRoleNotFound()
@@ -115,7 +114,7 @@ func (uc *usecase) RegisterSpecialAccount(ctx context.Context, req *authdto.Regi
 			CreatedAt:  now,
 		}
 
-		if err := tx.Create(userRole).Error; err != nil {
+		if err := uc.UserRoleRepo.Create(txCtx, userRole); err != nil {
 			return err
 		}
 
@@ -130,7 +129,7 @@ func (uc *usecase) RegisterSpecialAccount(ctx context.Context, req *authdto.Regi
 			CreatedAt:      now,
 			UpdatedAt:      now,
 		}
-		if err := tx.Create(security).Error; err != nil {
+		if err := uc.UserSecurityRepo.Create(txCtx, security); err != nil {
 			return err
 		}
 
@@ -138,7 +137,7 @@ func (uc *usecase) RegisterSpecialAccount(ctx context.Context, req *authdto.Regi
 		if err := tracking.MarkUserCreatedBySystem(); err != nil {
 			return err
 		}
-		if err := tx.Create(tracking).Error; err != nil {
+		if err := uc.UserActivationTrackingRepo.Create(txCtx, tracking); err != nil {
 			return err
 		}
 

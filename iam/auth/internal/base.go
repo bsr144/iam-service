@@ -3,12 +3,10 @@ package internal
 import (
 	"iam-service/config"
 	"iam-service/iam/auth/contract"
-
-	"gorm.io/gorm"
 )
 
 type usecase struct {
-	DB                         *gorm.DB
+	TxManager                  contract.TransactionManager
 	Config                     *config.Config
 	UserRepo                   contract.UserRepository
 	UserProfileRepo            contract.UserProfileRepository
@@ -18,12 +16,16 @@ type usecase struct {
 	TenantRepo                 contract.TenantRepository
 	UserActivationTrackingRepo contract.UserActivationTrackingRepository
 	RoleRepo                   contract.RoleRepository
+	RefreshTokenRepo           contract.RefreshTokenRepository
+	UserRoleRepo               contract.UserRoleRepository
+	ProductRepo                contract.ProductRepository
+	PermissionRepo             contract.PermissionRepository
 	EmailService               contract.EmailService
 	Redis                      contract.RegistrationSessionStore
 }
 
 func NewUsecase(
-	db *gorm.DB,
+	txManager contract.TransactionManager,
 	cfg *config.Config,
 	userRepo contract.UserRepository,
 	userProfileRepo contract.UserProfileRepository,
@@ -33,11 +35,15 @@ func NewUsecase(
 	tenantRepo contract.TenantRepository,
 	userActivationTrackingRepo contract.UserActivationTrackingRepository,
 	roleRepository contract.RoleRepository,
+	refreshTokenRepo contract.RefreshTokenRepository,
+	userRoleRepo contract.UserRoleRepository,
+	productRepo contract.ProductRepository,
+	permissionRepo contract.PermissionRepository,
 	emailService contract.EmailService,
 	redis contract.RegistrationSessionStore,
 ) *usecase {
 	return &usecase{
-		DB:                         db,
+		TxManager:                  txManager,
 		Config:                     cfg,
 		UserRepo:                   userRepo,
 		UserProfileRepo:            userProfileRepo,
@@ -47,6 +53,10 @@ func NewUsecase(
 		TenantRepo:                 tenantRepo,
 		UserActivationTrackingRepo: userActivationTrackingRepo,
 		RoleRepo:                   roleRepository,
+		RefreshTokenRepo:           refreshTokenRepo,
+		UserRoleRepo:               userRoleRepo,
+		ProductRepo:                productRepo,
+		PermissionRepo:             permissionRepo,
 		EmailService:               emailService,
 		Redis:                      redis,
 	}

@@ -3,14 +3,14 @@ package internal
 import (
 	"context"
 	"encoding/json"
+	"time"
+
 	"iam-service/entity"
 	"iam-service/iam/auth/authdto"
 	"iam-service/pkg/errors"
-	"time"
 
 	"github.com/google/uuid"
 	"golang.org/x/crypto/bcrypt"
-	"gorm.io/gorm"
 )
 
 func (uc *usecase) Register(ctx context.Context, req *authdto.RegisterRequest) (*authdto.RegisterResponse, error) {
@@ -48,7 +48,7 @@ func (uc *usecase) Register(ctx context.Context, req *authdto.RegisterRequest) (
 	now := time.Now()
 	passwordHashStr := string(passwordHash)
 
-	err = uc.DB.Transaction(func(tx *gorm.DB) error {
+	err = uc.TxManager.WithTransaction(ctx, func(txCtx context.Context) error {
 		userID := uuid.New()
 		user := &entity.User{
 			UserID:        userID,
@@ -57,7 +57,7 @@ func (uc *usecase) Register(ctx context.Context, req *authdto.RegisterRequest) (
 			EmailVerified: false,
 			IsActive:      true,
 		}
-		if err := tx.Create(user).Error; err != nil {
+		if err := uc.UserRepo.Create(txCtx, user); err != nil {
 			return err
 		}
 
@@ -70,7 +70,7 @@ func (uc *usecase) Register(ctx context.Context, req *authdto.RegisterRequest) (
 			CreatedAt:        now,
 			UpdatedAt:        now,
 		}
-		if err := tx.Create(credentials).Error; err != nil {
+		if err := uc.UserCredentialsRepo.Create(txCtx, credentials); err != nil {
 			return err
 		}
 
@@ -82,7 +82,7 @@ func (uc *usecase) Register(ctx context.Context, req *authdto.RegisterRequest) (
 			CreatedAt:     now,
 			UpdatedAt:     now,
 		}
-		if err := tx.Create(profile).Error; err != nil {
+		if err := uc.UserProfileRepo.Create(txCtx, profile); err != nil {
 			return err
 		}
 
@@ -93,7 +93,7 @@ func (uc *usecase) Register(ctx context.Context, req *authdto.RegisterRequest) (
 			CreatedAt:      now,
 			UpdatedAt:      now,
 		}
-		if err := tx.Create(security).Error; err != nil {
+		if err := uc.UserSecurityRepo.Create(txCtx, security); err != nil {
 			return err
 		}
 
@@ -101,7 +101,7 @@ func (uc *usecase) Register(ctx context.Context, req *authdto.RegisterRequest) (
 		if err := tracking.AddStatusTransition(string(entity.UserStatusPendingOTPVerification), "system"); err != nil {
 			return err
 		}
-		if err := tx.Create(tracking).Error; err != nil {
+		if err := uc.UserActivationTrackingRepo.Create(txCtx, tracking); err != nil {
 			return err
 		}
 
@@ -117,7 +117,7 @@ func (uc *usecase) Register(ctx context.Context, req *authdto.RegisterRequest) (
 			ExpiresAt:           otpExpiry,
 			CreatedAt:           now,
 		}
-		if err := tx.Create(verification).Error; err != nil {
+		if err := uc.EmailVerificationRepo.Create(txCtx, verification); err != nil {
 			return err
 		}
 

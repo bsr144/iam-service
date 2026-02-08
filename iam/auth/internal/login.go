@@ -59,22 +59,17 @@ func (uc *usecase) Login(ctx context.Context, req *authdto.LoginRequest) (*authd
 
 	var productID *uuid.UUID
 	if req.ProductCode != nil {
-		var product entity.Product
-		err := uc.DB.Where("tenant_id = ? AND code = ? AND is_active = ? AND deleted_at IS NULL",
-			req.TenantID, *req.ProductCode, true).First(&product).Error
+		product, err := uc.ProductRepo.GetByCodeAndTenant(ctx, req.TenantID, *req.ProductCode)
 		if err != nil {
 			return nil, errors.ErrBadRequest("invalid product code")
 		}
 		productID = &product.ProductID
 	} else if req.ProductID != nil {
-
-		var product entity.Product
-		err := uc.DB.Where("product_id = ? AND tenant_id = ? AND is_active = ? AND deleted_at IS NULL",
-			*req.ProductID, req.TenantID, true).First(&product).Error
+		product, err := uc.ProductRepo.GetByIDAndTenant(ctx, *req.ProductID, req.TenantID)
 		if err != nil {
 			return nil, errors.ErrBadRequest("invalid product id")
 		}
-		productID = req.ProductID
+		productID = &product.ProductID
 	}
 
 	roles, err := uc.getUserRoles(ctx, user.UserID, productID)
@@ -163,7 +158,7 @@ func (uc *usecase) Login(ctx context.Context, req *authdto.LoginRequest) (*authd
 		CreatedAt:      now,
 	}
 
-	if err := uc.DB.Create(refreshTokenEntity).Error; err != nil {
+	if err := uc.RefreshTokenRepo.Create(ctx, refreshTokenEntity); err != nil {
 		return nil, errors.ErrInternal("failed to store refresh token").WithError(err)
 	}
 
@@ -192,19 +187,7 @@ func (uc *usecase) Login(ctx context.Context, req *authdto.LoginRequest) (*authd
 }
 
 func (uc *usecase) getUserRoles(ctx context.Context, userID uuid.UUID, productID *uuid.UUID) ([]*entity.Role, error) {
-	var userRoles []entity.UserRole
-	now := time.Now()
-
-	query := uc.DB.Where("user_id = ? AND deleted_at IS NULL", userID).
-		Where("effective_from <= ?", now).
-		Where("effective_to IS NULL OR effective_to > ?", now)
-
-	if productID != nil {
-
-		query = query.Where("product_id = ? OR product_id IS NULL", *productID)
-	}
-
-	err := query.Find(&userRoles).Error
+	userRoles, err := uc.UserRoleRepo.ListActiveByUserID(ctx, userID, productID)
 	if err != nil {
 		return nil, err
 	}
@@ -218,13 +201,7 @@ func (uc *usecase) getUserRoles(ctx context.Context, userID uuid.UUID, productID
 		roleIDs[i] = ur.RoleID
 	}
 
-	var roles []*entity.Role
-	err = uc.DB.Where("role_id IN ? AND is_active = ?", roleIDs, true).Find(&roles).Error
-	if err != nil {
-		return nil, err
-	}
-
-	return roles, nil
+	return uc.RoleRepo.GetByIDs(ctx, roleIDs)
 }
 
 func (uc *usecase) resolvePermissionsFromRoles(ctx context.Context, roles []*entity.Role) ([]string, error) {
@@ -237,29 +214,7 @@ func (uc *usecase) resolvePermissionsFromRoles(ctx context.Context, roles []*ent
 		roleIDs[i] = role.RoleID
 	}
 
-	type permissionResult struct {
-		Code string
-	}
-
-	var results []permissionResult
-	err := uc.DB.Raw(`
-		SELECT DISTINCT p.code
-		FROM role_permissions rp
-		INNER JOIN permissions p ON p.permission_id = rp.permission_id
-		WHERE rp.role_id IN ? AND p.deleted_at IS NULL
-		ORDER BY p.code
-	`, roleIDs).Scan(&results).Error
-
-	if err != nil {
-		return nil, err
-	}
-
-	permissions := make([]string, len(results))
-	for i, r := range results {
-		permissions[i] = r.Code
-	}
-
-	return permissions, nil
+	return uc.PermissionRepo.GetCodesByRoleIDs(ctx, roleIDs)
 }
 
 func (uc *usecase) updateLastLogin(ctx context.Context, userID uuid.UUID) error {
