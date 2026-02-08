@@ -9,7 +9,6 @@ import (
 	"iam-service/iam/user/userdto"
 	"iam-service/pkg/errors"
 
-	"github.com/google/uuid"
 	"golang.org/x/crypto/bcrypt"
 )
 
@@ -56,13 +55,7 @@ func (uc *usecase) Create(ctx context.Context, req *userdto.CreateRequest) (*use
 	passwordHashStr := string(passwordHash)
 
 	err = uc.TxManager.WithTransaction(ctx, func(txCtx context.Context) error {
-		userID, err := uuid.NewV7()
-		if err != nil {
-			return err
-		}
-
 		user := &entity.User{
-			UserID:        userID,
 			TenantID:      &req.TenantID,
 			BranchID:      req.BranchID,
 			Email:         req.Email,
@@ -72,47 +65,32 @@ func (uc *usecase) Create(ctx context.Context, req *userdto.CreateRequest) (*use
 		if err := uc.UserRepo.Create(txCtx, user); err != nil {
 			return err
 		}
-		userCredentialID, err := uuid.NewV7()
-		if err != nil {
-			return err
-		}
 
 		credentials := &entity.UserCredentials{
-			UserCredentialID: userCredentialID,
-			UserID:           userID,
-			PasswordHash:     &passwordHashStr,
-			PasswordHistory:  json.RawMessage("[]"),
-			PINHistory:       json.RawMessage("[]"),
-			CreatedAt:        now,
-			UpdatedAt:        now,
+			UserID:          user.UserID,
+			PasswordHash:    &passwordHashStr,
+			PasswordHistory: json.RawMessage("[]"),
+			PINHistory:      json.RawMessage("[]"),
+			CreatedAt:       now,
+			UpdatedAt:       now,
 		}
 		if err := uc.UserCredentialsRepo.Create(txCtx, credentials); err != nil {
 			return err
 		}
-		userProfileID, err := uuid.NewV7()
-		if err != nil {
-			return err
-		}
 
 		profile := &entity.UserProfile{
-			UserProfileID: userProfileID,
-			UserID:        userID,
-			FirstName:     req.FirstName,
-			LastName:      req.LastName,
-			CreatedAt:     now,
-			UpdatedAt:     now,
+			UserID:    user.UserID,
+			FirstName: req.FirstName,
+			LastName:  req.LastName,
+			CreatedAt: now,
+			UpdatedAt: now,
 		}
 		if err := uc.UserProfileRepo.Create(txCtx, profile); err != nil {
 			return err
 		}
-		userRoleID, err := uuid.NewV7()
-		if err != nil {
-			return err
-		}
 
 		userRole := &entity.UserRole{
-			UserRoleID:    userRoleID,
-			UserID:        userID,
+			UserID:        user.UserID,
 			RoleID:        role.RoleID,
 			BranchID:      req.BranchID,
 			EffectiveFrom: now,
@@ -121,22 +99,18 @@ func (uc *usecase) Create(ctx context.Context, req *userdto.CreateRequest) (*use
 		if err := uc.UserRoleRepo.Create(txCtx, userRole); err != nil {
 			return err
 		}
-		userSecurityID, err := uuid.NewV7()
-		if err != nil {
-			return err
-		}
 
 		security := &entity.UserSecurity{
-			UserSecurityID: userSecurityID,
-			UserID:         userID,
-			Metadata:       json.RawMessage("{}"),
-			CreatedAt:      now,
-			UpdatedAt:      now,
+			UserID:    user.UserID,
+			Metadata:  json.RawMessage("{}"),
+			CreatedAt: now,
+			UpdatedAt: now,
 		}
 		if err := uc.UserSecurityRepo.Create(txCtx, security); err != nil {
 			return err
 		}
-		tracking := entity.NewUserActivationTracking(userID, &req.TenantID)
+
+		tracking := entity.NewUserActivationTracking(user.UserID, &req.TenantID)
 		if err := tracking.MarkUserCreatedBySystem(); err != nil {
 			return err
 		}
@@ -145,7 +119,7 @@ func (uc *usecase) Create(ctx context.Context, req *userdto.CreateRequest) (*use
 		}
 
 		response = &userdto.CreateResponse{
-			UserID:   userID,
+			UserID:   user.UserID,
 			Email:    req.Email,
 			FullName: req.FirstName + " " + req.LastName,
 			RoleCode: req.RoleCode,
