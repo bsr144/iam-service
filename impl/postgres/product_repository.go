@@ -1,0 +1,40 @@
+package postgres
+
+import (
+	"context"
+
+	"iam-service/entity"
+
+	"github.com/google/uuid"
+	"gorm.io/gorm"
+)
+
+type productRepository struct {
+	baseRepository
+}
+
+func NewProductRepository(db *gorm.DB) *productRepository {
+	return &productRepository{
+		baseRepository: baseRepository{db: db},
+	}
+}
+
+func (r *productRepository) GetByCodeAndTenant(ctx context.Context, tenantID uuid.UUID, code string) (*entity.Product, error) {
+	var product entity.Product
+	err := r.getDB(ctx).Where("tenant_id = ? AND code = ? AND is_active = ? AND deleted_at IS NULL",
+		tenantID, code, true).First(&product).Error
+	if err != nil {
+		return nil, translateError(err, "product")
+	}
+	return &product, nil
+}
+
+func (r *productRepository) GetByIDAndTenant(ctx context.Context, productID, tenantID uuid.UUID) (*entity.Product, error) {
+	var product entity.Product
+	err := r.getDB(ctx).Where("product_id = ? AND tenant_id = ? AND is_active = ? AND deleted_at IS NULL",
+		productID, tenantID, true).First(&product).Error
+	if err != nil {
+		return nil, translateError(err, "product")
+	}
+	return &product, nil
+}

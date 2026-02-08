@@ -11,16 +11,18 @@ import (
 )
 
 type tenantRepository struct {
-	db *gorm.DB
+	baseRepository
 }
 
 func NewTenantRepository(db *gorm.DB) contract.TenantRepository {
-	return &tenantRepository{db: db}
+	return &tenantRepository{
+		baseRepository: baseRepository{db: db},
+	}
 }
 
 func (r *tenantRepository) GetByID(ctx context.Context, id uuid.UUID) (*entity.Tenant, error) {
 	var tenant entity.Tenant
-	err := r.db.WithContext(ctx).Where("tenant_id = ?", id).First(&tenant).Error
+	err := r.getDB(ctx).Where("tenant_id = ?", id).First(&tenant).Error
 	if err != nil {
 		return nil, translateError(err, "tenant")
 	}
@@ -29,7 +31,7 @@ func (r *tenantRepository) GetByID(ctx context.Context, id uuid.UUID) (*entity.T
 
 func (r *tenantRepository) GetBySlug(ctx context.Context, slug string) (*entity.Tenant, error) {
 	var tenant entity.Tenant
-	err := r.db.WithContext(ctx).Where("slug = ?", slug).First(&tenant).Error
+	err := r.getDB(ctx).Where("slug = ?", slug).First(&tenant).Error
 	if err != nil {
 		return nil, translateError(err, "tenant")
 	}
@@ -38,7 +40,7 @@ func (r *tenantRepository) GetBySlug(ctx context.Context, slug string) (*entity.
 
 func (r *tenantRepository) Exists(ctx context.Context, id uuid.UUID) (bool, error) {
 	var count int64
-	err := r.db.WithContext(ctx).Model(&entity.Tenant{}).
+	err := r.getDB(ctx).Model(&entity.Tenant{}).
 		Where("tenant_id = ? AND status = ?", id, entity.TenantStatusActive).
 		Count(&count).Error
 	if err != nil {
