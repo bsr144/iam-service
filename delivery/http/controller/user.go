@@ -3,7 +3,6 @@ package controller
 import (
 	"iam-service/config"
 	"iam-service/delivery/http/dto/response"
-	"iam-service/delivery/http/middleware"
 	"iam-service/iam/user"
 	"iam-service/iam/user/userdto"
 	"iam-service/pkg/errors"
@@ -71,7 +70,7 @@ func (uc *UserController) Create(c *fiber.Ctx) error {
 }
 
 func (uc *UserController) GetMe(c *fiber.Ctx) error {
-	userID, err := middleware.GetUserID(c)
+	userID, err := getUserID(c)
 	if err != nil {
 		return err
 	}
@@ -88,7 +87,7 @@ func (uc *UserController) GetMe(c *fiber.Ctx) error {
 }
 
 func (uc *UserController) UpdateMe(c *fiber.Ctx) error {
-	userID, err := middleware.GetUserID(c)
+	userID, err := getUserID(c)
 	if err != nil {
 		return err
 	}
@@ -114,7 +113,7 @@ func (uc *UserController) UpdateMe(c *fiber.Ctx) error {
 }
 
 func (uc *UserController) List(c *fiber.Ctx) error {
-	tenantID, err := middleware.GetTenantID(c)
+	tenantID, err := getTenantID(c)
 	if err != nil {
 		return err
 	}
@@ -211,7 +210,7 @@ func (uc *UserController) Approve(c *fiber.Ctx) error {
 		return errors.ErrBadRequest("Invalid user ID")
 	}
 
-	approverID, err := middleware.GetUserID(c)
+	approverID, err := getUserID(c)
 	if err != nil {
 		return err
 	}
@@ -234,7 +233,7 @@ func (uc *UserController) Reject(c *fiber.Ctx) error {
 		return errors.ErrBadRequest("Invalid user ID")
 	}
 
-	approverID, err := middleware.GetUserID(c)
+	approverID, err := getUserID(c)
 	if err != nil {
 		return err
 	}

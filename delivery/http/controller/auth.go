@@ -5,7 +5,6 @@ import (
 
 	"iam-service/config"
 	"iam-service/delivery/http/dto/response"
-	"iam-service/delivery/http/middleware"
 	"iam-service/iam/auth"
 	"iam-service/iam/auth/authdto"
 	"iam-service/pkg/errors"
@@ -208,7 +207,7 @@ func (rc *AuthController) SetupPIN(c *fiber.Ctx) error {
 		return errors.ErrValidationWithFields(convertValidationErrors(err.(validator.ValidationErrors)))
 	}
 
-	userID, err := middleware.GetUserID(c)
+	userID, err := getUserID(c)
 	if err != nil {
 		return err
 	}
@@ -267,7 +266,7 @@ func (rc *AuthController) ResetPassword(c *fiber.Ctx) error {
 }
 
 func (rc *AuthController) InitiateRegistration(c *fiber.Ctx) error {
-	tenantID, err := middleware.GetTenantIDFromHeader(c)
+	tenantID, err := getTenantIDFromHeader(c)
 	if err != nil {
 		return err
 	}
@@ -281,8 +280,8 @@ func (rc *AuthController) InitiateRegistration(c *fiber.Ctx) error {
 		return errors.ErrValidationWithFields(convertValidationErrors(err.(validator.ValidationErrors)))
 	}
 
-	ipAddress := middleware.GetClientIP(c).String()
-	userAgent := middleware.GetUserAgent(c)
+	ipAddress := getClientIP(c).String()
+	userAgent := getUserAgent(c)
 
 	resp, err := rc.authUsecase.InitiateRegistration(c.Context(), tenantID, &req, ipAddress, userAgent)
 	if err != nil {
@@ -296,7 +295,7 @@ func (rc *AuthController) InitiateRegistration(c *fiber.Ctx) error {
 }
 
 func (rc *AuthController) VerifyRegistrationOTP(c *fiber.Ctx) error {
-	tenantID, err := middleware.GetTenantIDFromHeader(c)
+	tenantID, err := getTenantIDFromHeader(c)
 	if err != nil {
 		return err
 	}
@@ -327,7 +326,7 @@ func (rc *AuthController) VerifyRegistrationOTP(c *fiber.Ctx) error {
 }
 
 func (rc *AuthController) ResendRegistrationOTP(c *fiber.Ctx) error {
-	tenantID, err := middleware.GetTenantIDFromHeader(c)
+	tenantID, err := getTenantIDFromHeader(c)
 	if err != nil {
 		return err
 	}
@@ -358,7 +357,7 @@ func (rc *AuthController) ResendRegistrationOTP(c *fiber.Ctx) error {
 }
 
 func (rc *AuthController) GetRegistrationStatus(c *fiber.Ctx) error {
-	tenantID, err := middleware.GetTenantIDFromHeader(c)
+	tenantID, err := getTenantIDFromHeader(c)
 	if err != nil {
 		return err
 	}
@@ -385,7 +384,7 @@ func (rc *AuthController) GetRegistrationStatus(c *fiber.Ctx) error {
 }
 
 func (rc *AuthController) CompleteRegistration(c *fiber.Ctx) error {
-	tenantID, err := middleware.GetTenantIDFromHeader(c)
+	tenantID, err := getTenantIDFromHeader(c)
 	if err != nil {
 		return err
 	}
@@ -414,8 +413,8 @@ func (rc *AuthController) CompleteRegistration(c *fiber.Ctx) error {
 		return errors.ErrValidationWithFields(convertValidationErrors(err.(validator.ValidationErrors)))
 	}
 
-	ipAddress := middleware.GetClientIP(c).String()
-	userAgent := middleware.GetUserAgent(c)
+	ipAddress := getClientIP(c).String()
+	userAgent := getUserAgent(c)
 
 	resp, err := rc.authUsecase.CompleteRegistration(c.Context(), tenantID, registrationID, registrationToken, &req, ipAddress, userAgent)
 	if err != nil {
