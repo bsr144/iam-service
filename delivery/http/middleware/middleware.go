@@ -43,6 +43,8 @@ func (m *Middleware) Setup(app *fiber.App) {
 
 	app.Use(requestid.New())
 
+	app.Use(RequestContext())
+
 	app.Use(logger.New(logger.Config{
 		Format:     "${time} | ${status} | ${latency} | ${ip} | ${method} | ${path} | ${error}\n",
 		TimeFormat: "2006-01-02 15:04:05",
