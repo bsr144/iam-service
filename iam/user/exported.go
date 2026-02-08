@@ -8,7 +8,6 @@ import (
 	"iam-service/iam/user/userdto"
 
 	"github.com/google/uuid"
-	"gorm.io/gorm"
 )
 
 type Usecase interface {
@@ -26,7 +25,7 @@ type Usecase interface {
 }
 
 func NewUsecase(
-	db *gorm.DB,
+	txManager contract.TransactionManager,
 	cfg *config.Config,
 	userRepo contract.UserRepository,
 	userProfileRepo contract.UserProfileRepository,
@@ -35,9 +34,10 @@ func NewUsecase(
 	tenantRepo contract.TenantRepository,
 	roleRepo contract.RoleRepository,
 	userActivationTrackingRepo contract.UserActivationTrackingRepository,
+	userRoleRepo contract.UserRoleRepository,
 ) Usecase {
 	return internal.NewUsecase(
-		db,
+		txManager,
 		cfg,
 		userRepo,
 		userProfileRepo,
@@ -46,5 +46,6 @@ func NewUsecase(
 		tenantRepo,
 		roleRepo,
 		userActivationTrackingRepo,
+		userRoleRepo,
 	)
 }

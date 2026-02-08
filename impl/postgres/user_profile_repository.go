@@ -11,15 +11,17 @@ import (
 )
 
 type userProfileRepository struct {
-	db *gorm.DB
+	baseRepository
 }
 
 func NewUserProfileRepository(db *gorm.DB) contract.UserProfileRepository {
-	return &userProfileRepository{db: db}
+	return &userProfileRepository{
+		baseRepository: baseRepository{db: db},
+	}
 }
 
 func (r *userProfileRepository) Create(ctx context.Context, profile *entity.UserProfile) error {
-	if err := r.db.WithContext(ctx).Create(profile).Error; err != nil {
+	if err := r.getDB(ctx).Create(profile).Error; err != nil {
 		return translateError(err, "user profile")
 	}
 	return nil
@@ -27,7 +29,7 @@ func (r *userProfileRepository) Create(ctx context.Context, profile *entity.User
 
 func (r *userProfileRepository) GetByUserID(ctx context.Context, userID uuid.UUID) (*entity.UserProfile, error) {
 	var profile entity.UserProfile
-	err := r.db.WithContext(ctx).Where("user_id = ?", userID).First(&profile).Error
+	err := r.getDB(ctx).Where("user_id = ?", userID).First(&profile).Error
 	if err != nil {
 		return nil, translateError(err, "user profile")
 	}
@@ -35,7 +37,7 @@ func (r *userProfileRepository) GetByUserID(ctx context.Context, userID uuid.UUI
 }
 
 func (r *userProfileRepository) Update(ctx context.Context, profile *entity.UserProfile) error {
-	if err := r.db.WithContext(ctx).Save(profile).Error; err != nil {
+	if err := r.getDB(ctx).Save(profile).Error; err != nil {
 		return translateError(err, "user profile")
 	}
 	return nil

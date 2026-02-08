@@ -7,7 +7,6 @@ import (
 	"iam-service/pkg/errors"
 
 	"github.com/google/uuid"
-	"gorm.io/gorm"
 )
 
 func (uc *usecase) Reject(ctx context.Context, id uuid.UUID, approverID uuid.UUID, req *userdto.RejectRequest) (*userdto.RejectResponse, error) {
@@ -35,16 +34,16 @@ func (uc *usecase) Reject(ctx context.Context, id uuid.UUID, approverID uuid.UUI
 		return nil, errors.ErrBadRequest("user has already been processed by admin")
 	}
 
-	err = uc.DB.Transaction(func(tx *gorm.DB) error {
+	err = uc.TxManager.WithTransaction(ctx, func(txCtx context.Context) error {
 		if err := tracking.AddStatusTransition("admin_rejected: "+req.Reason, "admin"); err != nil {
 			return err
 		}
-		if err := tx.Save(tracking).Error; err != nil {
+		if err := uc.UserActivationTrackingRepo.Update(txCtx, tracking); err != nil {
 			return err
 		}
 
 		user.IsActive = false
-		return tx.Save(user).Error
+		return uc.UserRepo.Update(txCtx, user)
 	})
 
 	if err != nil {

@@ -5,12 +5,10 @@ import (
 	"iam-service/entity"
 	"iam-service/iam/user/contract"
 	"iam-service/iam/user/userdto"
-
-	"gorm.io/gorm"
 )
 
 type usecase struct {
-	DB                         *gorm.DB
+	TxManager                  contract.TransactionManager
 	Config                     *config.Config
 	UserRepo                   contract.UserRepository
 	UserProfileRepo            contract.UserProfileRepository
@@ -19,10 +17,11 @@ type usecase struct {
 	TenantRepo                 contract.TenantRepository
 	RoleRepo                   contract.RoleRepository
 	UserActivationTrackingRepo contract.UserActivationTrackingRepository
+	UserRoleRepo               contract.UserRoleRepository
 }
 
 func NewUsecase(
-	db *gorm.DB,
+	txManager contract.TransactionManager,
 	cfg *config.Config,
 	userRepo contract.UserRepository,
 	userProfileRepo contract.UserProfileRepository,
@@ -31,9 +30,10 @@ func NewUsecase(
 	tenantRepo contract.TenantRepository,
 	roleRepo contract.RoleRepository,
 	userActivationTrackingRepo contract.UserActivationTrackingRepository,
+	userRoleRepo contract.UserRoleRepository,
 ) *usecase {
 	return &usecase{
-		DB:                         db,
+		TxManager:                  txManager,
 		Config:                     cfg,
 		UserRepo:                   userRepo,
 		UserProfileRepo:            userProfileRepo,
@@ -42,6 +42,7 @@ func NewUsecase(
 		TenantRepo:                 tenantRepo,
 		RoleRepo:                   roleRepo,
 		UserActivationTrackingRepo: userActivationTrackingRepo,
+		UserRoleRepo:               userRoleRepo,
 	}
 }
 

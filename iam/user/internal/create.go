@@ -11,7 +11,6 @@ import (
 
 	"github.com/google/uuid"
 	"golang.org/x/crypto/bcrypt"
-	"gorm.io/gorm"
 )
 
 func (uc *usecase) Create(ctx context.Context, req *userdto.CreateRequest) (*userdto.CreateResponse, error) {
@@ -56,7 +55,7 @@ func (uc *usecase) Create(ctx context.Context, req *userdto.CreateRequest) (*use
 	now := time.Now()
 	passwordHashStr := string(passwordHash)
 
-	err = uc.DB.Transaction(func(tx *gorm.DB) error {
+	err = uc.TxManager.WithTransaction(ctx, func(txCtx context.Context) error {
 		userID, err := uuid.NewV7()
 		if err != nil {
 			return err
@@ -70,7 +69,7 @@ func (uc *usecase) Create(ctx context.Context, req *userdto.CreateRequest) (*use
 			EmailVerified: true,
 			IsActive:      true,
 		}
-		if err := tx.Create(user).Error; err != nil {
+		if err := uc.UserRepo.Create(txCtx, user); err != nil {
 			return err
 		}
 		userCredentialID, err := uuid.NewV7()
@@ -87,7 +86,7 @@ func (uc *usecase) Create(ctx context.Context, req *userdto.CreateRequest) (*use
 			CreatedAt:        now,
 			UpdatedAt:        now,
 		}
-		if err := tx.Create(credentials).Error; err != nil {
+		if err := uc.UserCredentialsRepo.Create(txCtx, credentials); err != nil {
 			return err
 		}
 		userProfileID, err := uuid.NewV7()
@@ -103,7 +102,7 @@ func (uc *usecase) Create(ctx context.Context, req *userdto.CreateRequest) (*use
 			CreatedAt:     now,
 			UpdatedAt:     now,
 		}
-		if err := tx.Create(profile).Error; err != nil {
+		if err := uc.UserProfileRepo.Create(txCtx, profile); err != nil {
 			return err
 		}
 		userRoleID, err := uuid.NewV7()
@@ -119,7 +118,7 @@ func (uc *usecase) Create(ctx context.Context, req *userdto.CreateRequest) (*use
 			EffectiveFrom: now,
 			CreatedAt:     now,
 		}
-		if err := tx.Create(userRole).Error; err != nil {
+		if err := uc.UserRoleRepo.Create(txCtx, userRole); err != nil {
 			return err
 		}
 		userSecurityID, err := uuid.NewV7()
@@ -134,14 +133,14 @@ func (uc *usecase) Create(ctx context.Context, req *userdto.CreateRequest) (*use
 			CreatedAt:      now,
 			UpdatedAt:      now,
 		}
-		if err := tx.Create(security).Error; err != nil {
+		if err := uc.UserSecurityRepo.Create(txCtx, security); err != nil {
 			return err
 		}
 		tracking := entity.NewUserActivationTracking(userID, &req.TenantID)
 		if err := tracking.MarkUserCreatedBySystem(); err != nil {
 			return err
 		}
-		if err := tx.Create(tracking).Error; err != nil {
+		if err := uc.UserActivationTrackingRepo.Create(txCtx, tracking); err != nil {
 			return err
 		}
 

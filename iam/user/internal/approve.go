@@ -9,7 +9,6 @@ import (
 	"iam-service/pkg/errors"
 
 	"github.com/google/uuid"
-	"gorm.io/gorm"
 )
 
 func (uc *usecase) Approve(ctx context.Context, id uuid.UUID, approverID uuid.UUID) (*userdto.ApproveResponse, error) {
@@ -37,7 +36,7 @@ func (uc *usecase) Approve(ctx context.Context, id uuid.UUID, approverID uuid.UU
 		return nil, errors.ErrBadRequest("user has already been approved by admin")
 	}
 
-	err = uc.DB.Transaction(func(tx *gorm.DB) error {
+	err = uc.TxManager.WithTransaction(ctx, func(txCtx context.Context) error {
 		now := time.Now()
 		tracking.AdminCreated = true
 		tracking.AdminCreatedAt = &now
@@ -52,12 +51,12 @@ func (uc *usecase) Approve(ctx context.Context, id uuid.UUID, approverID uuid.UU
 				return err
 			}
 			user.IsActive = true
-			if err := tx.Save(user).Error; err != nil {
+			if err := uc.UserRepo.Update(txCtx, user); err != nil {
 				return err
 			}
 		}
 
-		return tx.Save(tracking).Error
+		return uc.UserActivationTrackingRepo.Update(txCtx, tracking)
 	})
 
 	if err != nil {

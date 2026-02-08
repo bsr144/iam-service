@@ -11,15 +11,17 @@ import (
 )
 
 type userActivationTrackingRepository struct {
-	db *gorm.DB
+	baseRepository
 }
 
 func NewUserActivationTrackingRepository(db *gorm.DB) contract.UserActivationTrackingRepository {
-	return &userActivationTrackingRepository{db: db}
+	return &userActivationTrackingRepository{
+		baseRepository: baseRepository{db: db},
+	}
 }
 
 func (r *userActivationTrackingRepository) Create(ctx context.Context, tracking *entity.UserActivationTracking) error {
-	if err := r.db.WithContext(ctx).Create(tracking).Error; err != nil {
+	if err := r.getDB(ctx).Create(tracking).Error; err != nil {
 		return translateError(err, "user activation tracking")
 	}
 	return nil
@@ -27,7 +29,7 @@ func (r *userActivationTrackingRepository) Create(ctx context.Context, tracking 
 
 func (r *userActivationTrackingRepository) GetByUserID(ctx context.Context, userID uuid.UUID) (*entity.UserActivationTracking, error) {
 	var tracking entity.UserActivationTracking
-	err := r.db.WithContext(ctx).Where("user_id = ?", userID).First(&tracking).Error
+	err := r.getDB(ctx).Where("user_id = ?", userID).First(&tracking).Error
 	if err != nil {
 		return nil, translateError(err, "user activation tracking")
 	}
@@ -35,7 +37,7 @@ func (r *userActivationTrackingRepository) GetByUserID(ctx context.Context, user
 }
 
 func (r *userActivationTrackingRepository) Update(ctx context.Context, tracking *entity.UserActivationTracking) error {
-	if err := r.db.WithContext(ctx).Save(tracking).Error; err != nil {
+	if err := r.getDB(ctx).Save(tracking).Error; err != nil {
 		return translateError(err, "user activation tracking")
 	}
 	return nil

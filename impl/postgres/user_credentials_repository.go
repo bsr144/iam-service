@@ -11,15 +11,17 @@ import (
 )
 
 type userCredentialsRepository struct {
-	db *gorm.DB
+	baseRepository
 }
 
 func NewUserCredentialsRepository(db *gorm.DB) contract.UserCredentialsRepository {
-	return &userCredentialsRepository{db: db}
+	return &userCredentialsRepository{
+		baseRepository: baseRepository{db: db},
+	}
 }
 
 func (r *userCredentialsRepository) Create(ctx context.Context, credentials *entity.UserCredentials) error {
-	if err := r.db.WithContext(ctx).Create(credentials).Error; err != nil {
+	if err := r.getDB(ctx).Create(credentials).Error; err != nil {
 		return translateError(err, "user credentials")
 	}
 	return nil
@@ -27,7 +29,7 @@ func (r *userCredentialsRepository) Create(ctx context.Context, credentials *ent
 
 func (r *userCredentialsRepository) GetByUserID(ctx context.Context, userID uuid.UUID) (*entity.UserCredentials, error) {
 	var credentials entity.UserCredentials
-	err := r.db.WithContext(ctx).Where("user_id = ?", userID).First(&credentials).Error
+	err := r.getDB(ctx).Where("user_id = ?", userID).First(&credentials).Error
 	if err != nil {
 		return nil, translateError(err, "user credentials")
 	}
@@ -35,7 +37,7 @@ func (r *userCredentialsRepository) GetByUserID(ctx context.Context, userID uuid
 }
 
 func (r *userCredentialsRepository) Update(ctx context.Context, credentials *entity.UserCredentials) error {
-	if err := r.db.WithContext(ctx).Save(credentials).Error; err != nil {
+	if err := r.getDB(ctx).Save(credentials).Error; err != nil {
 		return translateError(err, "user credentials")
 	}
 	return nil

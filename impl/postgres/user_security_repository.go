@@ -11,15 +11,17 @@ import (
 )
 
 type userSecurityRepository struct {
-	db *gorm.DB
+	baseRepository
 }
 
 func NewUserSecurityRepository(db *gorm.DB) contract.UserSecurityRepository {
-	return &userSecurityRepository{db: db}
+	return &userSecurityRepository{
+		baseRepository: baseRepository{db: db},
+	}
 }
 
 func (r *userSecurityRepository) Create(ctx context.Context, security *entity.UserSecurity) error {
-	if err := r.db.WithContext(ctx).Create(security).Error; err != nil {
+	if err := r.getDB(ctx).Create(security).Error; err != nil {
 		return translateError(err, "user security")
 	}
 	return nil
@@ -27,7 +29,7 @@ func (r *userSecurityRepository) Create(ctx context.Context, security *entity.Us
 
 func (r *userSecurityRepository) GetByUserID(ctx context.Context, userID uuid.UUID) (*entity.UserSecurity, error) {
 	var security entity.UserSecurity
-	err := r.db.WithContext(ctx).Where("user_id = ?", userID).First(&security).Error
+	err := r.getDB(ctx).Where("user_id = ?", userID).First(&security).Error
 	if err != nil {
 		return nil, translateError(err, "user security")
 	}
@@ -35,7 +37,7 @@ func (r *userSecurityRepository) GetByUserID(ctx context.Context, userID uuid.UU
 }
 
 func (r *userSecurityRepository) Update(ctx context.Context, security *entity.UserSecurity) error {
-	if err := r.db.WithContext(ctx).Save(security).Error; err != nil {
+	if err := r.getDB(ctx).Save(security).Error; err != nil {
 		return translateError(err, "user security")
 	}
 	return nil

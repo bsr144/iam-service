@@ -14,15 +14,17 @@ import (
 )
 
 type userRepository struct {
-	db *gorm.DB
+	baseRepository
 }
 
 func NewUserRepository(db *gorm.DB) *userRepository {
-	return &userRepository{db: db}
+	return &userRepository{
+		baseRepository: baseRepository{db: db},
+	}
 }
 
 func (r *userRepository) Create(ctx context.Context, user *entity.User) error {
-	if err := r.db.WithContext(ctx).Create(user).Error; err != nil {
+	if err := r.getDB(ctx).Create(user).Error; err != nil {
 		return translateError(err, "user")
 	}
 	return nil
@@ -30,7 +32,7 @@ func (r *userRepository) Create(ctx context.Context, user *entity.User) error {
 
 func (r *userRepository) GetByID(ctx context.Context, id uuid.UUID) (*entity.User, error) {
 	var user entity.User
-	err := r.db.WithContext(ctx).Where("user_id = ?", id).First(&user).Error
+	err := r.getDB(ctx).Where("user_id = ?", id).First(&user).Error
 	if err != nil {
 		return nil, translateError(err, "user")
 	}
@@ -39,7 +41,7 @@ func (r *userRepository) GetByID(ctx context.Context, id uuid.UUID) (*entity.Use
 
 func (r *userRepository) GetByEmail(ctx context.Context, tenantID uuid.UUID, email string) (*entity.User, error) {
 	var user entity.User
-	err := r.db.WithContext(ctx).Where("tenant_id = ? AND email = ?", tenantID, email).First(&user).Error
+	err := r.getDB(ctx).Where("tenant_id = ? AND email = ?", tenantID, email).First(&user).Error
 	if err != nil {
 		return nil, translateError(err, "user")
 	}
@@ -48,7 +50,7 @@ func (r *userRepository) GetByEmail(ctx context.Context, tenantID uuid.UUID, ema
 
 func (r *userRepository) GetByEmailAnyTenant(ctx context.Context, email string) (*entity.User, error) {
 	var user entity.User
-	err := r.db.WithContext(ctx).Where("email = ?", email).First(&user).Error
+	err := r.getDB(ctx).Where("email = ?", email).First(&user).Error
 	if err != nil {
 		return nil, translateError(err, "user")
 	}
@@ -56,7 +58,7 @@ func (r *userRepository) GetByEmailAnyTenant(ctx context.Context, email string) 
 }
 
 func (r *userRepository) Update(ctx context.Context, user *entity.User) error {
-	if err := r.db.WithContext(ctx).Save(user).Error; err != nil {
+	if err := r.getDB(ctx).Save(user).Error; err != nil {
 		return translateError(err, "user")
 	}
 	return nil
@@ -64,7 +66,7 @@ func (r *userRepository) Update(ctx context.Context, user *entity.User) error {
 
 func (r *userRepository) EmailExistsInTenant(ctx context.Context, tenantID uuid.UUID, email string) (bool, error) {
 	var count int64
-	err := r.db.WithContext(ctx).Model(&entity.User{}).
+	err := r.getDB(ctx).Model(&entity.User{}).
 		Where("tenant_id = ? AND email = ?", tenantID, email).
 		Count(&count).Error
 	if err != nil {
@@ -75,7 +77,7 @@ func (r *userRepository) EmailExistsInTenant(ctx context.Context, tenantID uuid.
 
 func (r *userRepository) Delete(ctx context.Context, id uuid.UUID) error {
 	now := time.Now()
-	result := r.db.WithContext(ctx).Model(&entity.User{}).
+	result := r.getDB(ctx).Model(&entity.User{}).
 		Where("user_id = ?", id).
 		Updates(map[string]interface{}{
 			"deleted_at": now,
@@ -95,7 +97,7 @@ func (r *userRepository) List(ctx context.Context, filter *contract.UserListFilt
 	var users []*entity.User
 	var total int64
 
-	query := r.db.WithContext(ctx).Model(&entity.User{}).Where("deleted_at IS NULL")
+	query := r.getDB(ctx).Model(&entity.User{}).Where("deleted_at IS NULL")
 
 	if filter.TenantID != nil {
 		query = query.Where("tenant_id = ?", *filter.TenantID)
@@ -159,7 +161,7 @@ func (r *userRepository) List(ctx context.Context, filter *contract.UserListFilt
 
 func (r *userRepository) GetPendingApprovalUsers(ctx context.Context, tenantID uuid.UUID) ([]*entity.User, error) {
 	var users []*entity.User
-	err := r.db.WithContext(ctx).
+	err := r.getDB(ctx).
 		Where("tenant_id = ? AND deleted_at IS NULL", tenantID).
 		Where("user_id IN (SELECT user_id FROM user_activation_tracking WHERE awaiting_admin_approval = true AND admin_approval_at IS NULL)").
 		Order("created_at DESC").
