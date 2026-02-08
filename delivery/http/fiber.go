@@ -130,10 +130,14 @@ func NewServer(cfg *config.Config) *Server {
 	api := app.Group("/api")
 	v1 := api.Group("/v1")
 
+	// Health routes at /api/v1/health
 	router.SetupHealthRoutes(v1, healthController)
-	router.SetupAuthRoutes(v1, cfg, authController)
-	router.SetupRoleRoutes(v1, cfg, roleController)
-	router.SetupUserRoutes(v1, cfg, userController)
+
+	// IAM routes at /api/v1/iam/...
+	iam := v1.Group("/iam")
+	router.SetupAuthRoutes(iam, cfg, authController)
+	router.SetupRoleRoutes(iam, cfg, roleController)
+	router.SetupUserRoutes(iam, cfg, userController)
 
 	return server
 }
