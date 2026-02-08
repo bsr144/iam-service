@@ -22,7 +22,7 @@ type StatusTransition struct {
 }
 
 type UserActivationTracking struct {
-	UserActivationTrackingID uuid.UUID  `json:"user_activation_tracking_id" gorm:"column:user_activation_tracking_id;primaryKey" db:"user_activation_tracking_id"`
+	UserActivationTrackingID uuid.UUID  `json:"user_activation_tracking_id" gorm:"column:user_activation_tracking_id;primaryKey;type:uuid;default:uuidv7()" db:"user_activation_tracking_id"`
 	UserID                   uuid.UUID  `json:"user_id" gorm:"column:user_id;uniqueIndex;not null" db:"user_id"`
 	TenantID                 *uuid.UUID `json:"tenant_id,omitempty" gorm:"column:tenant_id" db:"tenant_id"`
 
@@ -106,14 +106,13 @@ func NewUserActivationTracking(userID uuid.UUID, tenantID *uuid.UUID) *UserActiv
 	now := time.Now()
 	emptyHistory, _ := json.Marshal([]StatusTransition{})
 	return &UserActivationTracking{
-		UserActivationTrackingID: uuid.New(),
-		UserID:                   userID,
-		TenantID:                 tenantID,
-		AdminCreated:             false,
-		UserCompleted:            false,
-		StatusHistory:            emptyHistory,
-		CreatedAt:                now,
-		UpdatedAt:                now,
+		UserID:        userID,
+		TenantID:      tenantID,
+		AdminCreated:  false,
+		UserCompleted: false,
+		StatusHistory: emptyHistory,
+		CreatedAt:     now,
+		UpdatedAt:     now,
 	}
 }
 

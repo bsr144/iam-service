@@ -39,7 +39,7 @@ const (
 )
 
 type User struct {
-	UserID           uuid.UUID  `json:"user_id" gorm:"column:user_id;primaryKey" db:"user_id"`
+	UserID           uuid.UUID  `json:"user_id" gorm:"column:user_id;primaryKey;type:uuid;default:uuidv7()" db:"user_id"`
 	TenantID         *uuid.UUID `json:"tenant_id,omitempty" gorm:"column:tenant_id" db:"tenant_id"`
 	BranchID         *uuid.UUID `json:"branch_id,omitempty" gorm:"column:branch_id" db:"branch_id"`
 	Email            string     `json:"email" gorm:"column:email;not null" db:"email"`
@@ -67,7 +67,7 @@ func (u *User) IsTenantUser() bool {
 }
 
 type UserCredentials struct {
-	UserCredentialID  uuid.UUID       `json:"user_credential_id" gorm:"column:user_credential_id;primaryKey" db:"user_credential_id"`
+	UserCredentialID  uuid.UUID       `json:"user_credential_id" gorm:"column:user_credential_id;primaryKey;type:uuid;default:uuidv7()" db:"user_credential_id"`
 	UserID            uuid.UUID       `json:"user_id" gorm:"column:user_id;uniqueIndex;not null" db:"user_id"`
 	PasswordHash      *string         `json:"-" gorm:"column:password_hash" db:"password_hash"`
 	PasswordChangedAt *time.Time      `json:"password_changed_at,omitempty" gorm:"column:password_changed_at" db:"password_changed_at"`
@@ -90,7 +90,7 @@ func (UserCredentials) TableName() string {
 }
 
 type UserProfile struct {
-	UserProfileID     uuid.UUID      `json:"user_profile_id" gorm:"column:user_profile_id;primaryKey" db:"user_profile_id"`
+	UserProfileID     uuid.UUID      `json:"user_profile_id" gorm:"column:user_profile_id;primaryKey;type:uuid;default:uuidv7()" db:"user_profile_id"`
 	UserID            uuid.UUID      `json:"user_id" gorm:"column:user_id;uniqueIndex;not null" db:"user_id"`
 	FirstName         string         `json:"first_name" gorm:"column:first_name;not null" db:"first_name"`
 	LastName          string         `json:"last_name" gorm:"column:last_name;not null" db:"last_name"`
@@ -116,7 +116,7 @@ func (u *UserProfile) FullName() string {
 }
 
 type UserSecurity struct {
-	UserSecurityID      uuid.UUID       `json:"user_security_id" gorm:"column:user_security_id;primaryKey" db:"user_security_id"`
+	UserSecurityID      uuid.UUID       `json:"user_security_id" gorm:"column:user_security_id;primaryKey;type:uuid;default:uuidv7()" db:"user_security_id"`
 	UserID              uuid.UUID       `json:"user_id" gorm:"column:user_id;uniqueIndex;not null" db:"user_id"`
 	LastLoginAt         *time.Time      `json:"last_login_at,omitempty" gorm:"column:last_login_at" db:"last_login_at"`
 	LastLoginIP         net.IP          `json:"last_login_ip,omitempty" gorm:"column:last_login_ip" db:"last_login_ip"`

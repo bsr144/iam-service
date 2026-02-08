@@ -51,7 +51,7 @@ type Permission struct {
 }
 
 type Role struct {
-	RoleID       uuid.UUID  `json:"role_id" db:"role_id"`
+	RoleID       uuid.UUID  `json:"role_id" gorm:"column:role_id;primaryKey;type:uuid;default:uuidv7()" db:"role_id"`
 	TenantID     *uuid.UUID `json:"tenant_id,omitempty" db:"tenant_id"`
 	ProductID    *uuid.UUID `json:"product_id,omitempty" db:"product_id"`
 	Code         string     `json:"code" db:"code"`
@@ -77,14 +77,14 @@ func (r *Role) IsProductSpecific() bool {
 }
 
 type RolePermission struct {
-	RolePermissionID uuid.UUID `json:"role_permission_id" gorm:"column:role_permission_id;primaryKey" db:"role_permission_id"`
+	RolePermissionID uuid.UUID `json:"role_permission_id" gorm:"column:role_permission_id;primaryKey;type:uuid;default:uuidv7()" db:"role_permission_id"`
 	RoleID           uuid.UUID `json:"role_id" gorm:"column:role_id;not null" db:"role_id"`
 	PermissionID     uuid.UUID `json:"permission_id" gorm:"column:permission_id;not null" db:"permission_id"`
 	CreatedAt        time.Time `json:"created_at" gorm:"column:created_at" db:"created_at"`
 }
 
 type UserRole struct {
-	UserRoleID    uuid.UUID  `json:"user_role_id" db:"user_role_id"`
+	UserRoleID    uuid.UUID  `json:"user_role_id" gorm:"column:user_role_id;primaryKey;type:uuid;default:uuidv7()" db:"user_role_id"`
 	UserID        uuid.UUID  `json:"user_id" db:"user_id"`
 	RoleID        uuid.UUID  `json:"role_id" db:"role_id"`
 	ProductID     *uuid.UUID `json:"product_id,omitempty" db:"product_id"`

@@ -18,7 +18,7 @@ const (
 )
 
 type EmailVerification struct {
-	EmailVerificationID uuid.UUID  `json:"email_verification_id" gorm:"column:email_verification_id;primaryKey" db:"email_verification_id"`
+	EmailVerificationID uuid.UUID  `json:"email_verification_id" gorm:"column:email_verification_id;primaryKey;type:uuid;default:uuidv7()" db:"email_verification_id"`
 	TenantID            uuid.UUID  `json:"tenant_id" gorm:"column:tenant_id;not null" db:"tenant_id"`
 	UserID              uuid.UUID  `json:"user_id" gorm:"column:user_id;not null" db:"user_id"`
 	Email               string     `json:"email" gorm:"column:email;not null" db:"email"`
@@ -45,7 +45,7 @@ func (e *EmailVerification) IsVerified() bool {
 }
 
 type PasswordResetToken struct {
-	PasswordResetTokenID uuid.UUID  `json:"password_reset_token_id" gorm:"column:password_reset_token_id;primaryKey" db:"password_reset_token_id"`
+	PasswordResetTokenID uuid.UUID  `json:"password_reset_token_id" gorm:"column:password_reset_token_id;primaryKey;type:uuid;default:uuidv7()" db:"password_reset_token_id"`
 	TenantID             uuid.UUID  `json:"tenant_id" gorm:"column:tenant_id;not null" db:"tenant_id"`
 	UserID               uuid.UUID  `json:"user_id" gorm:"column:user_id;not null" db:"user_id"`
 	TokenHash            string     `json:"-" gorm:"column:token_hash;uniqueIndex;not null" db:"token_hash"`
@@ -69,11 +69,11 @@ func (p *PasswordResetToken) IsUsed() bool {
 }
 
 type RefreshToken struct {
-	RefreshTokenID    uuid.UUID  `json:"refresh_token_id" gorm:"column:refresh_token_id;primaryKey" db:"refresh_token_id"`
+	RefreshTokenID    uuid.UUID  `json:"refresh_token_id" gorm:"column:refresh_token_id;primaryKey;type:uuid;default:uuidv7()" db:"refresh_token_id"`
 	TenantID          uuid.UUID  `json:"tenant_id" gorm:"column:tenant_id;not null" db:"tenant_id"`
 	UserID            uuid.UUID  `json:"user_id" gorm:"column:user_id;not null" db:"user_id"`
 	TokenHash         string     `json:"-" gorm:"column:token_hash;uniqueIndex;not null" db:"token_hash"`
-	TokenFamily       uuid.UUID  `json:"token_family" gorm:"column:token_family;not null" db:"token_family"`
+	TokenFamily       uuid.UUID  `json:"token_family" gorm:"column:token_family;type:uuid;default:uuidv7();not null" db:"token_family"`
 	ExpiresAt         time.Time  `json:"expires_at" gorm:"column:expires_at;not null" db:"expires_at"`
 	RevokedAt         *time.Time `json:"revoked_at,omitempty" gorm:"column:revoked_at" db:"revoked_at"`
 	RevokedReason     *string    `json:"revoked_reason,omitempty" gorm:"column:revoked_reason" db:"revoked_reason"`
@@ -109,7 +109,7 @@ const (
 )
 
 type PINVerificationLog struct {
-	PINVerificationLogID uuid.UUID         `json:"pin_verification_log_id" gorm:"column:pin_verification_log_id;primaryKey" db:"pin_verification_log_id"`
+	PINVerificationLogID uuid.UUID         `json:"pin_verification_log_id" gorm:"column:pin_verification_log_id;primaryKey;type:uuid;default:uuidv7()" db:"pin_verification_log_id"`
 	UserID               uuid.UUID         `json:"user_id" gorm:"column:user_id;not null" db:"user_id"`
 	TenantID             uuid.UUID         `json:"tenant_id" gorm:"column:tenant_id;not null" db:"tenant_id"`
 	Result               bool              `json:"result" gorm:"column:result;not null" db:"result"`
@@ -128,19 +128,3 @@ func (p *PINVerificationLog) IsSuccess() bool {
 	return p.Result
 }
 
-func NewPINVerificationLog(userID, tenantID uuid.UUID, result bool, operation string) *PINVerificationLog {
-	return &PINVerificationLog{
-		PINVerificationLogID: uuid.New(),
-		UserID:               userID,
-		TenantID:             tenantID,
-		Result:               result,
-		Operation:            operation,
-		CreatedAt:            time.Now(),
-	}
-}
-
-func NewFailedPINVerificationLog(userID, tenantID uuid.UUID, reason PINFailureReason, operation string) *PINVerificationLog {
-	log := NewPINVerificationLog(userID, tenantID, false, operation)
-	log.FailureReason = &reason
-	return log
-}
