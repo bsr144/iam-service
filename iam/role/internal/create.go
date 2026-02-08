@@ -8,7 +8,6 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"gorm.io/gorm"
 )
 
 func (uc *usecase) Create(ctx context.Context, req *roledto.CreateRequest) (*roledto.CreateResponse, error) {
@@ -21,7 +20,7 @@ func (uc *usecase) Create(ctx context.Context, req *roledto.CreateRequest) (*rol
 	}
 
 	existingRole, err := uc.RoleRepo.GetByCode(ctx, req.TenantID, req.Code)
-	if err != nil && err != gorm.ErrRecordNotFound {
+	if err != nil && !errors.IsNotFound(err) {
 		return nil, errors.ErrInternal("failed to check role existence").WithError(err)
 	}
 	if existingRole != nil {
@@ -51,8 +50,8 @@ func (uc *usecase) Create(ctx context.Context, req *roledto.CreateRequest) (*rol
 		IsActive:    true,
 	}
 
-	err = uc.DB.Transaction(func(tx *gorm.DB) error {
-		if err := tx.Create(role).Error; err != nil {
+	err = uc.TxManager.WithTransaction(ctx, func(txCtx context.Context) error {
+		if err := uc.RoleRepo.Create(txCtx, role); err != nil {
 			return err
 		}
 
@@ -70,7 +69,7 @@ func (uc *usecase) Create(ctx context.Context, req *roledto.CreateRequest) (*rol
 					CreatedAt:        now,
 				}
 
-				if err := tx.Create(rolePermission).Error; err != nil {
+				if err := uc.RolePermissionRepo.Create(txCtx, rolePermission); err != nil {
 					return err
 				}
 			}

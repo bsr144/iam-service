@@ -68,3 +68,7 @@ type PINVerificationLogRepository interface {
 	Create(ctx context.Context, log *entity.PINVerificationLog) error
 	CountRecentFailures(ctx context.Context, userID uuid.UUID, since int) (int, error)
 }
+
+type RolePermissionRepository interface {
+	Create(ctx context.Context, rolePermission *entity.RolePermission) error
+}

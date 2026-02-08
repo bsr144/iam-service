@@ -3,27 +3,28 @@ package internal
 import (
 	"iam-service/config"
 	"iam-service/iam/role/contract"
-
-	"gorm.io/gorm"
 )
 
 type usecase struct {
-	DB         *gorm.DB
-	Config     *config.Config
-	TenantRepo contract.TenantRepository
-	RoleRepo   contract.RoleRepository
+	TxManager          contract.TransactionManager
+	Config             *config.Config
+	TenantRepo         contract.TenantRepository
+	RoleRepo           contract.RoleRepository
+	RolePermissionRepo contract.RolePermissionRepository
 }
 
 func NewUsecase(
-	db *gorm.DB,
+	txManager contract.TransactionManager,
 	cfg *config.Config,
 	tenantRepo contract.TenantRepository,
 	roleRepo contract.RoleRepository,
+	rolePermissionRepo contract.RolePermissionRepository,
 ) *usecase {
 	return &usecase{
-		DB:         db,
-		Config:     cfg,
-		TenantRepo: tenantRepo,
-		RoleRepo:   roleRepo,
+		TxManager:          txManager,
+		Config:             cfg,
+		TenantRepo:         tenantRepo,
+		RoleRepo:           roleRepo,
+		RolePermissionRepo: rolePermissionRepo,
 	}
 }

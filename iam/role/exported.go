@@ -2,25 +2,24 @@ package role
 
 import (
 	"iam-service/config"
-	"iam-service/iam/auth/contract"
-	rolecontract "iam-service/iam/role/contract"
+	"iam-service/iam/role/contract"
 	"iam-service/iam/role/internal"
-
-	"gorm.io/gorm"
 )
 
-type Usecase = rolecontract.Usecase
+type Usecase = contract.Usecase
 
 func NewUsecase(
-	db *gorm.DB,
+	txManager contract.TransactionManager,
 	cfg *config.Config,
 	tenantRepo contract.TenantRepository,
 	roleRepo contract.RoleRepository,
+	rolePermissionRepo contract.RolePermissionRepository,
 ) Usecase {
 	return internal.NewUsecase(
-		db,
+		txManager,
 		cfg,
 		tenantRepo,
 		roleRepo,
+		rolePermissionRepo,
 	)
 }
