@@ -2,12 +2,11 @@ package internal
 
 import (
 	"context"
+	"time"
+
 	"iam-service/entity"
 	"iam-service/iam/role/roledto"
 	"iam-service/pkg/errors"
-	"time"
-
-	"github.com/google/uuid"
 )
 
 func (uc *usecase) Create(ctx context.Context, req *roledto.CreateRequest) (*roledto.CreateResponse, error) {
@@ -34,13 +33,7 @@ func (uc *usecase) Create(ctx context.Context, req *roledto.CreateRequest) (*rol
 	}
 
 	now := time.Now()
-	roleID, err := uuid.NewV7()
-	if err != nil {
-		return nil, errors.ErrInternal("failed to generate role ID").WithError(err)
-	}
-
 	role := &entity.Role{
-		RoleID:      roleID,
 		TenantID:    &req.TenantID,
 		Code:        req.Code,
 		Name:        req.Name,
@@ -57,16 +50,10 @@ func (uc *usecase) Create(ctx context.Context, req *roledto.CreateRequest) (*rol
 
 		if len(req.Permissions) > 0 {
 			for _, permissionID := range req.Permissions {
-				rolePermissionID, err := uuid.NewV7()
-				if err != nil {
-					return err
-				}
-
 				rolePermission := &entity.RolePermission{
-					RolePermissionID: rolePermissionID,
-					RoleID:           roleID,
-					PermissionID:     permissionID,
-					CreatedAt:        now,
+					RoleID:       role.RoleID,
+					PermissionID: permissionID,
+					CreatedAt:    now,
 				}
 
 				if err := uc.RolePermissionRepo.Create(txCtx, rolePermission); err != nil {
