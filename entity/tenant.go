@@ -19,6 +19,7 @@ type Tenant struct {
 	Name         string       `json:"name" gorm:"column:name" db:"name"`
 	Slug         string       `json:"slug" gorm:"column:slug;uniqueIndex" db:"slug"`
 	DatabaseName string       `json:"database_name" gorm:"column:database_name;uniqueIndex" db:"database_name"`
+	TenantType   *string      `json:"tenant_type,omitempty" gorm:"column:tenant_type" db:"tenant_type"`
 	Status       TenantStatus `json:"status" gorm:"column:status;default:active" db:"status"`
 	Timestamps
 }
