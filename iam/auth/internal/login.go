@@ -91,10 +91,7 @@ func (uc *usecase) Login(ctx context.Context, req *authdto.LoginRequest) (*authd
 		return nil, errors.ErrInternal("failed to resolve permissions").WithError(err)
 	}
 
-	sessionID, err := uuid.NewV7()
-	if err != nil {
-		return nil, errors.ErrInternal("failed to generate session ID").WithError(err)
-	}
+	sessionID := uuid.New()
 
 	tokenConfig := &jwtpkg.TokenConfig{
 		SigningMethod: uc.Config.JWT.SigningMethod,
@@ -141,21 +138,13 @@ func (uc *usecase) Login(ctx context.Context, req *authdto.LoginRequest) (*authd
 
 	refreshTokenHash := hashToken(refreshToken)
 
-	tokenFamilyID, err := uuid.NewV7()
-	if err != nil {
-		return nil, errors.ErrInternal("failed to generate token family ID").WithError(err)
-	}
-
 	now := time.Now()
-	tenantID := req.TenantID
 	refreshTokenEntity := &entity.RefreshToken{
-		RefreshTokenID: uuid.New(),
-		TenantID:       tenantID,
-		UserID:         user.UserID,
-		TokenHash:      refreshTokenHash,
-		TokenFamily:    tokenFamilyID,
-		ExpiresAt:      now.Add(uc.Config.JWT.RefreshExpiry),
-		CreatedAt:      now,
+		TenantID:  req.TenantID,
+		UserID:    user.UserID,
+		TokenHash: refreshTokenHash,
+		ExpiresAt: now.Add(uc.Config.JWT.RefreshExpiry),
+		CreatedAt: now,
 	}
 
 	if err := uc.RefreshTokenRepo.Create(ctx, refreshTokenEntity); err != nil {

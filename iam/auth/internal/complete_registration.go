@@ -68,14 +68,11 @@ func (uc *usecase) CompleteRegistration(
 	userStatus := entity.UserStatusActive
 	requiresApproval := false
 
-	var userID uuid.UUID
+	var user *entity.User
 	now := time.Now()
 
 	err = uc.TxManager.WithTransaction(ctx, func(txCtx context.Context) error {
-		userID = uuid.New()
-
-		user := &entity.User{
-			UserID:        userID,
+		user = &entity.User{
 			TenantID:      &tenantID,
 			Email:         session.Email,
 			EmailVerified: true,
@@ -86,25 +83,23 @@ func (uc *usecase) CompleteRegistration(
 		}
 
 		credentials := &entity.UserCredentials{
-			UserCredentialID: uuid.New(),
-			UserID:           userID,
-			PasswordHash:     &passwordHashStr,
-			PasswordHistory:  json.RawMessage("[]"),
-			PINHistory:       json.RawMessage("[]"),
-			CreatedAt:        now,
-			UpdatedAt:        now,
+			UserID:          user.UserID,
+			PasswordHash:    &passwordHashStr,
+			PasswordHistory: json.RawMessage("[]"),
+			PINHistory:      json.RawMessage("[]"),
+			CreatedAt:       now,
+			UpdatedAt:       now,
 		}
 		if err := uc.UserCredentialsRepo.Create(txCtx, credentials); err != nil {
 			return err
 		}
 
 		profile := &entity.UserProfile{
-			UserProfileID: uuid.New(),
-			UserID:        userID,
-			FirstName:     req.FirstName,
-			LastName:      req.LastName,
-			CreatedAt:     now,
-			UpdatedAt:     now,
+			UserID:    user.UserID,
+			FirstName: req.FirstName,
+			LastName:  req.LastName,
+			CreatedAt: now,
+			UpdatedAt: now,
 		}
 		if req.PhoneNumber != nil {
 			profile.Phone = req.PhoneNumber
@@ -114,17 +109,16 @@ func (uc *usecase) CompleteRegistration(
 		}
 
 		security := &entity.UserSecurity{
-			UserSecurityID: uuid.New(),
-			UserID:         userID,
-			Metadata:       json.RawMessage("{}"),
-			CreatedAt:      now,
-			UpdatedAt:      now,
+			UserID:    user.UserID,
+			Metadata:  json.RawMessage("{}"),
+			CreatedAt: now,
+			UpdatedAt: now,
 		}
 		if err := uc.UserSecurityRepo.Create(txCtx, security); err != nil {
 			return err
 		}
 
-		tracking := entity.NewUserActivationTracking(userID, &tenantID)
+		tracking := entity.NewUserActivationTracking(user.UserID, &tenantID)
 		if err := tracking.AddStatusTransition(string(userStatus), "registration"); err != nil {
 			return err
 		}
@@ -143,7 +137,7 @@ func (uc *usecase) CompleteRegistration(
 	_ = uc.Redis.UnlockRegistrationEmail(ctx, tenantID, session.Email)
 
 	response := &authdto.CompleteRegistrationResponse{
-		UserID: userID,
+		UserID: user.UserID,
 		Email:  session.Email,
 		Status: string(userStatus),
 		Profile: authdto.RegistrationUserProfile{
@@ -155,7 +149,7 @@ func (uc *usecase) CompleteRegistration(
 	if !requiresApproval {
 		response.Message = "Registration completed successfully. You are now logged in."
 
-		accessToken, refreshToken, expiresIn, err := uc.generateAuthTokensForRegistration(ctx, userID, tenantID, session.Email)
+		accessToken, refreshToken, expiresIn, err := uc.generateAuthTokensForRegistration(ctx, user.UserID, tenantID, session.Email)
 		if err != nil {
 			response.Message = "Registration completed successfully. Please login to continue."
 		} else {
@@ -174,7 +168,7 @@ func (uc *usecase) CompleteRegistration(
 	return response, nil
 }
 
-func (uc *usecase) generateAuthTokensForRegistration(ctx context.Context, userID, tenantID uuid.UUID, email string) (string, string, int, error) {
+func (uc *usecase) generateAuthTokensForRegistration(_ context.Context, _, _ uuid.UUID, _ string) (string, string, int, error) {
 
 	return "", "", 0, errors.ErrInternal("token generation pending implementation")
 }

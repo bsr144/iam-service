@@ -9,7 +9,6 @@ import (
 	"iam-service/iam/auth/authdto"
 	"iam-service/pkg/errors"
 
-	"github.com/google/uuid"
 	"golang.org/x/crypto/bcrypt"
 )
 
@@ -49,9 +48,7 @@ func (uc *usecase) Register(ctx context.Context, req *authdto.RegisterRequest) (
 	passwordHashStr := string(passwordHash)
 
 	err = uc.TxManager.WithTransaction(ctx, func(txCtx context.Context) error {
-		userID := uuid.New()
 		user := &entity.User{
-			UserID:        userID,
 			TenantID:      &req.TenantID,
 			Email:         req.Email,
 			EmailVerified: false,
@@ -62,42 +59,39 @@ func (uc *usecase) Register(ctx context.Context, req *authdto.RegisterRequest) (
 		}
 
 		credentials := &entity.UserCredentials{
-			UserCredentialID: uuid.New(),
-			UserID:           userID,
-			PasswordHash:     &passwordHashStr,
-			PasswordHistory:  json.RawMessage("[]"),
-			PINHistory:       json.RawMessage("[]"),
-			CreatedAt:        now,
-			UpdatedAt:        now,
+			UserID:          user.UserID,
+			PasswordHash:    &passwordHashStr,
+			PasswordHistory: json.RawMessage("[]"),
+			PINHistory:      json.RawMessage("[]"),
+			CreatedAt:       now,
+			UpdatedAt:       now,
 		}
 		if err := uc.UserCredentialsRepo.Create(txCtx, credentials); err != nil {
 			return err
 		}
 
 		profile := &entity.UserProfile{
-			UserProfileID: uuid.New(),
-			UserID:        userID,
-			FirstName:     req.FirstName,
-			LastName:      req.LastName,
-			CreatedAt:     now,
-			UpdatedAt:     now,
+			UserID:    user.UserID,
+			FirstName: req.FirstName,
+			LastName:  req.LastName,
+			CreatedAt: now,
+			UpdatedAt: now,
 		}
 		if err := uc.UserProfileRepo.Create(txCtx, profile); err != nil {
 			return err
 		}
 
 		security := &entity.UserSecurity{
-			UserSecurityID: uuid.New(),
-			UserID:         userID,
-			Metadata:       json.RawMessage("{}"),
-			CreatedAt:      now,
-			UpdatedAt:      now,
+			UserID:    user.UserID,
+			Metadata:  json.RawMessage("{}"),
+			CreatedAt: now,
+			UpdatedAt: now,
 		}
 		if err := uc.UserSecurityRepo.Create(txCtx, security); err != nil {
 			return err
 		}
 
-		tracking := entity.NewUserActivationTracking(userID, &req.TenantID)
+		tracking := entity.NewUserActivationTracking(user.UserID, &req.TenantID)
 		if err := tracking.AddStatusTransition(string(entity.UserStatusPendingOTPVerification), "system"); err != nil {
 			return err
 		}
@@ -107,22 +101,21 @@ func (uc *usecase) Register(ctx context.Context, req *authdto.RegisterRequest) (
 
 		otpExpiry := now.Add(time.Duration(OTPExpiryMinutes) * time.Minute)
 		verification := &entity.EmailVerification{
-			EmailVerificationID: uuid.New(),
-			TenantID:            req.TenantID,
-			UserID:              userID,
-			Email:               req.Email,
-			OTPCode:             otp,
-			OTPHash:             otpHash,
-			OTPType:             entity.OTPTypeRegistration,
-			ExpiresAt:           otpExpiry,
-			CreatedAt:           now,
+			TenantID:  req.TenantID,
+			UserID:    user.UserID,
+			Email:     req.Email,
+			OTPCode:   otp,
+			OTPHash:   otpHash,
+			OTPType:   entity.OTPTypeRegistration,
+			ExpiresAt: otpExpiry,
+			CreatedAt: now,
 		}
 		if err := uc.EmailVerificationRepo.Create(txCtx, verification); err != nil {
 			return err
 		}
 
 		response = &authdto.RegisterResponse{
-			UserID:       userID,
+			UserID:       user.UserID,
 			Email:        req.Email,
 			Status:       string(entity.UserStatusPendingOTPVerification),
 			OTPExpiresAt: otpExpiry,

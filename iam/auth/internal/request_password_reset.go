@@ -8,8 +8,6 @@ import (
 	"iam-service/entity"
 	"iam-service/iam/auth/authdto"
 	"iam-service/pkg/errors"
-
-	"github.com/google/uuid"
 )
 
 func (uc *usecase) RequestPasswordReset(ctx context.Context, req *authdto.RequestPasswordResetRequest) (*authdto.RequestPasswordResetResponse, error) {
@@ -48,15 +46,14 @@ func (uc *usecase) RequestPasswordReset(ctx context.Context, req *authdto.Reques
 	now := time.Now()
 	otpExpiry := now.Add(time.Duration(OTPExpiryMinutes) * time.Minute)
 	verification := &entity.EmailVerification{
-		EmailVerificationID: uuid.New(),
-		TenantID:            req.TenantID,
-		UserID:              user.UserID,
-		Email:               req.Email,
-		OTPCode:             otp,
-		OTPHash:             otpHash,
-		OTPType:             entity.OTPTypePasswordReset,
-		ExpiresAt:           otpExpiry,
-		CreatedAt:           now,
+		TenantID:  req.TenantID,
+		UserID:    user.UserID,
+		Email:     req.Email,
+		OTPCode:   otp,
+		OTPHash:   otpHash,
+		OTPType:   entity.OTPTypePasswordReset,
+		ExpiresAt: otpExpiry,
+		CreatedAt: now,
 	}
 
 	if err := uc.EmailVerificationRepo.Create(ctx, verification); err != nil {

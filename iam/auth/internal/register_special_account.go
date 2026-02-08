@@ -9,7 +9,6 @@ import (
 	"iam-service/iam/auth/authdto"
 	"iam-service/pkg/errors"
 
-	"github.com/google/uuid"
 	"golang.org/x/crypto/bcrypt"
 )
 
@@ -44,14 +43,7 @@ func (uc *usecase) RegisterSpecialAccount(ctx context.Context, req *authdto.Regi
 	passwordHashStr := string(passwordHash)
 
 	err = uc.TxManager.WithTransaction(ctx, func(txCtx context.Context) error {
-
-		userID, err := uuid.NewV7()
-		if err != nil {
-			return err
-		}
-
 		user := &entity.User{
-			UserID:        userID,
 			TenantID:      &req.TenantID,
 			Email:         req.Email,
 			EmailVerified: true,
@@ -61,35 +53,24 @@ func (uc *usecase) RegisterSpecialAccount(ctx context.Context, req *authdto.Regi
 			return err
 		}
 
-		userCredentialID, err := uuid.NewV7()
-		if err != nil {
-			return err
-		}
-
 		credentials := &entity.UserCredentials{
-			UserCredentialID: userCredentialID,
-			UserID:           userID,
-			PasswordHash:     &passwordHashStr,
-			PasswordHistory:  json.RawMessage("[]"),
-			PINHistory:       json.RawMessage("[]"),
-			CreatedAt:        now,
-			UpdatedAt:        now,
+			UserID:          user.UserID,
+			PasswordHash:    &passwordHashStr,
+			PasswordHistory: json.RawMessage("[]"),
+			PINHistory:      json.RawMessage("[]"),
+			CreatedAt:       now,
+			UpdatedAt:       now,
 		}
 		if err := uc.UserCredentialsRepo.Create(txCtx, credentials); err != nil {
 			return err
 		}
 
-		userProfileID, err := uuid.NewV7()
-		if err != nil {
-			return err
-		}
 		profile := &entity.UserProfile{
-			UserProfileID: userProfileID,
-			UserID:        userID,
-			FirstName:     req.FirstName,
-			LastName:      req.LastName,
-			CreatedAt:     now,
-			UpdatedAt:     now,
+			UserID:    user.UserID,
+			FirstName: req.FirstName,
+			LastName:  req.LastName,
+			CreatedAt: now,
+			UpdatedAt: now,
 		}
 		if err := uc.UserProfileRepo.Create(txCtx, profile); err != nil {
 			return err
@@ -103,37 +84,26 @@ func (uc *usecase) RegisterSpecialAccount(ctx context.Context, req *authdto.Regi
 			return err
 		}
 
-		userRoleID, err := uuid.NewV7()
-		if err != nil {
-			return err
-		}
 		userRole := &entity.UserRole{
-			UserRoleID: userRoleID,
-			UserID:     userID,
-			RoleID:     role.RoleID,
-			CreatedAt:  now,
+			UserID:    user.UserID,
+			RoleID:    role.RoleID,
+			CreatedAt: now,
 		}
-
 		if err := uc.UserRoleRepo.Create(txCtx, userRole); err != nil {
 			return err
 		}
 
-		userSecurityID, err := uuid.NewV7()
-		if err != nil {
-			return err
-		}
 		security := &entity.UserSecurity{
-			UserSecurityID: userSecurityID,
-			UserID:         userID,
-			Metadata:       json.RawMessage("{}"),
-			CreatedAt:      now,
-			UpdatedAt:      now,
+			UserID:    user.UserID,
+			Metadata:  json.RawMessage("{}"),
+			CreatedAt: now,
+			UpdatedAt: now,
 		}
 		if err := uc.UserSecurityRepo.Create(txCtx, security); err != nil {
 			return err
 		}
 
-		tracking := entity.NewUserActivationTracking(userID, &req.TenantID)
+		tracking := entity.NewUserActivationTracking(user.UserID, &req.TenantID)
 		if err := tracking.MarkUserCreatedBySystem(); err != nil {
 			return err
 		}
@@ -142,7 +112,7 @@ func (uc *usecase) RegisterSpecialAccount(ctx context.Context, req *authdto.Regi
 		}
 
 		response = &authdto.RegisterSpecialAccountResponse{
-			UserID: userID,
+			UserID: user.UserID,
 			Email:  req.Email,
 		}
 
