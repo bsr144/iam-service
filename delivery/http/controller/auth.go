@@ -187,7 +187,7 @@ func (rc *AuthController) Logout(c *fiber.Ctx) error {
 		return errors.ErrValidationWithFields(convertValidationErrors(err.(validator.ValidationErrors)))
 	}
 
-	err := rc.authUsecase.Logout(req.RefreshToken)
+	err := rc.authUsecase.Logout(c.UserContext(), req.RefreshToken)
 	if err != nil {
 		return err
 	}

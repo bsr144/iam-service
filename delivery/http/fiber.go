@@ -56,6 +56,10 @@ func NewServer(cfg *config.Config) *Server {
 	}
 	redisWrapper := implredis.NewRedis(redisClient)
 
+	// Transaction Manager
+	txManager := postgres.NewTransactionManager(postgresDB)
+
+	// Repositories
 	authUserRepo := postgres.NewUserRepository(postgresDB)
 	userProfileRepo := postgres.NewUserProfileRepository(postgresDB)
 	userCredentialsRepo := postgres.NewUserCredentialsRepository(postgresDB)
@@ -64,12 +68,17 @@ func NewServer(cfg *config.Config) *Server {
 	tenantRepo := postgres.NewTenantRepository(postgresDB)
 	userActivationTrackingRepo := postgres.NewUserActivationTrackingRepository(postgresDB)
 	roleRepo := postgres.NewRoleRepository(postgresDB)
+	refreshTokenRepo := postgres.NewRefreshTokenRepository(postgresDB)
+	userRoleRepo := postgres.NewUserRoleRepository(postgresDB)
+	productRepo := postgres.NewProductRepository(postgresDB)
+	permissionRepo := postgres.NewPermissionRepository(postgresDB)
+	rolePermissionRepo := postgres.NewRolePermissionRepository(postgresDB)
 
 	emailService := mailer.NewEmailService(&cfg.Email)
 
 	healthUsecase := health.NewUsecase()
 	authUsecase := auth.NewUsecase(
-		postgresDB,
+		txManager,
 		cfg,
 		authUserRepo,
 		userProfileRepo,
@@ -79,17 +88,22 @@ func NewServer(cfg *config.Config) *Server {
 		tenantRepo,
 		userActivationTrackingRepo,
 		roleRepo,
+		refreshTokenRepo,
+		userRoleRepo,
+		productRepo,
+		permissionRepo,
 		emailService,
 		redisWrapper,
 	)
 	roleUsecase := role.NewUsecase(
-		postgresDB,
+		txManager,
 		cfg,
 		tenantRepo,
 		roleRepo,
+		rolePermissionRepo,
 	)
 	userUsecase := user.NewUsecase(
-		postgresDB,
+		txManager,
 		cfg,
 		authUserRepo,
 		userProfileRepo,
@@ -98,6 +112,7 @@ func NewServer(cfg *config.Config) *Server {
 		tenantRepo,
 		roleRepo,
 		userActivationTrackingRepo,
+		userRoleRepo,
 	)
 
 	healthController := controller.NewHealthController(cfg, healthUsecase)
