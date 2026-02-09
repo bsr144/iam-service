@@ -9,13 +9,13 @@ import (
 type TenantStatus string
 
 const (
-	TenantStatusActive    TenantStatus = "active"
-	TenantStatusInactive  TenantStatus = "inactive"
-	TenantStatusSuspended TenantStatus = "suspended"
+	TenantStatusActive    TenantStatus = "ACTIVE"
+	TenantStatusInactive  TenantStatus = "INACTIVE"
+	TenantStatusSuspended TenantStatus = "SUSPENDED"
 )
 
 type Tenant struct {
-	TenantID     uuid.UUID    `json:"tenant_id" gorm:"column:tenant_id;primaryKey" db:"tenant_id"`
+	ID           uuid.UUID    `json:"id" gorm:"column:id;primaryKey" db:"id"`
 	Name         string       `json:"name" gorm:"column:name" db:"name"`
 	Slug         string       `json:"slug" gorm:"column:slug;uniqueIndex" db:"slug"`
 	DatabaseName string       `json:"database_name" gorm:"column:database_name;uniqueIndex" db:"database_name"`
@@ -28,8 +28,12 @@ func (Tenant) TableName() string {
 	return "tenants"
 }
 
+func (t *Tenant) IsActive() bool {
+	return t.Status == TenantStatusActive
+}
+
 type TenantSettings struct {
-	TenantSettingID  uuid.UUID `json:"tenant_setting_id" gorm:"column:tenant_setting_id;primaryKey" db:"tenant_setting_id"`
+	ID               uuid.UUID `json:"id" gorm:"column:id;primaryKey" db:"id"`
 	TenantID         uuid.UUID `json:"tenant_id" gorm:"column:tenant_id;uniqueIndex" db:"tenant_id"`
 	SubscriptionTier string    `json:"subscription_tier" gorm:"column:subscription_tier;default:standard" db:"subscription_tier"`
 	MaxBranches      int       `json:"max_branches" gorm:"column:max_branches;default:10" db:"max_branches"`
