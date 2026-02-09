@@ -18,6 +18,7 @@ import (
 	"iam-service/impl/postgres"
 	implredis "iam-service/impl/redis"
 	"iam-service/infrastructure"
+	"iam-service/masterdata"
 	apperrors "iam-service/pkg/errors"
 	"iam-service/pkg/logger"
 	"log"
@@ -72,6 +73,9 @@ func NewServer(cfg *config.Config) *Server {
 	permissionRepo := postgres.NewPermissionRepository(postgresDB)
 	rolePermissionRepo := postgres.NewRolePermissionRepository(postgresDB)
 
+	masterdataCategoryRepo := postgres.NewMasterdataCategoryRepository(postgresDB)
+	masterdataItemRepo := postgres.NewMasterdataItemRepository(postgresDB)
+
 	emailService := mailer.NewEmailService(&cfg.Email)
 
 	healthUsecase := health.NewUsecase()
@@ -112,11 +116,18 @@ func NewServer(cfg *config.Config) *Server {
 		userActivationTrackingRepo,
 		userRoleRepo,
 	)
+	masterdataUsecase := masterdata.NewUsecase(
+		cfg,
+		masterdataCategoryRepo,
+		masterdataItemRepo,
+		redisWrapper,
+	)
 
 	healthController := controller.NewHealthController(cfg, healthUsecase)
 	authController := controller.NewRegistrationController(cfg, authUsecase)
 	roleController := controller.NewRoleController(cfg, roleUsecase)
 	userController := controller.NewUserController(cfg, userUsecase)
+	masterdataController := controller.NewMasterdataController(cfg, masterdataUsecase)
 
 	server := &Server{
 		app:    app,
@@ -130,14 +141,14 @@ func NewServer(cfg *config.Config) *Server {
 	api := app.Group("/api")
 	v1 := api.Group("/v1")
 
-	// Health routes at /api/v1/health
 	router.SetupHealthRoutes(v1, healthController)
 
-	// IAM routes at /api/v1/iam/...
 	iam := v1.Group("/iam")
 	router.SetupAuthRoutes(iam, cfg, authController)
 	router.SetupRoleRoutes(iam, cfg, roleController)
 	router.SetupUserRoutes(iam, cfg, userController)
+
+	router.SetupMasterdataRoutes(v1, cfg, masterdataController)
 
 	return server
 }
