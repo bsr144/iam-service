@@ -60,7 +60,7 @@ type MockUserRepository struct {
 
 func (m *MockUserRepository) Create(ctx context.Context, user *entity.User) error {
 	args := m.Called(ctx, user)
-	// Simulate PostgreSQL default UUID generation
+
 	if user.UserID == uuid.Nil {
 		user.UserID = uuid.New()
 	}
@@ -221,7 +221,7 @@ type MockUserProfileRepository struct {
 
 func (m *MockUserProfileRepository) Create(ctx context.Context, profile *entity.UserProfile) error {
 	args := m.Called(ctx, profile)
-	// Simulate PostgreSQL default UUID generation
+
 	if profile.UserProfileID == uuid.Nil {
 		profile.UserProfileID = uuid.New()
 	}
@@ -247,7 +247,7 @@ type MockUserCredentialsRepository struct {
 
 func (m *MockUserCredentialsRepository) Create(ctx context.Context, credentials *entity.UserCredentials) error {
 	args := m.Called(ctx, credentials)
-	// Simulate PostgreSQL default UUID generation
+
 	if credentials.UserCredentialID == uuid.Nil {
 		credentials.UserCredentialID = uuid.New()
 	}
@@ -273,7 +273,7 @@ type MockUserSecurityRepository struct {
 
 func (m *MockUserSecurityRepository) Create(ctx context.Context, security *entity.UserSecurity) error {
 	args := m.Called(ctx, security)
-	// Simulate PostgreSQL default UUID generation
+
 	if security.UserSecurityID == uuid.Nil {
 		security.UserSecurityID = uuid.New()
 	}
@@ -299,7 +299,7 @@ type MockUserActivationTrackingRepository struct {
 
 func (m *MockUserActivationTrackingRepository) Create(ctx context.Context, tracking *entity.UserActivationTracking) error {
 	args := m.Called(ctx, tracking)
-	// Simulate PostgreSQL default UUID generation
+
 	if tracking.UserActivationTrackingID == uuid.Nil {
 		tracking.UserActivationTrackingID = uuid.New()
 	}
@@ -325,7 +325,7 @@ type MockRoleRepository struct {
 
 func (m *MockRoleRepository) Create(ctx context.Context, role *entity.Role) error {
 	args := m.Called(ctx, role)
-	// Simulate PostgreSQL default UUID generation
+
 	if role.RoleID == uuid.Nil {
 		role.RoleID = uuid.New()
 	}
@@ -370,7 +370,7 @@ type MockRefreshTokenRepository struct {
 
 func (m *MockRefreshTokenRepository) Create(ctx context.Context, token *entity.RefreshToken) error {
 	args := m.Called(ctx, token)
-	// Simulate PostgreSQL default UUID generation
+
 	if token.RefreshTokenID == uuid.Nil {
 		token.RefreshTokenID = uuid.New()
 	}
@@ -409,7 +409,7 @@ type MockUserRoleRepository struct {
 
 func (m *MockUserRoleRepository) Create(ctx context.Context, userRole *entity.UserRole) error {
 	args := m.Called(ctx, userRole)
-	// Simulate PostgreSQL default UUID generation
+
 	if userRole.UserRoleID == uuid.Nil {
 		userRole.UserRoleID = uuid.New()
 	}
