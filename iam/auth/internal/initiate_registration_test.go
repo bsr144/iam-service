@@ -22,6 +22,9 @@ func TestInitiateRegistration(t *testing.T) {
 	ipAddress := "192.168.1.1"
 	userAgent := "Mozilla/5.0"
 
+	activeTenant := &entity.Tenant{ID: tenantID, Status: entity.TenantStatusActive}
+	inactiveTenant := &entity.Tenant{ID: tenantID, Status: entity.TenantStatusInactive}
+
 	tests := []struct {
 		name          string
 		req           *authdto.InitiateRegistrationRequest
@@ -33,7 +36,7 @@ func TestInitiateRegistration(t *testing.T) {
 			name: "success - registration initiated",
 			req:  &authdto.InitiateRegistrationRequest{Email: email},
 			setupMocks: func(tenantRepo *MockTenantRepository, userRepo *MockUserRepository, redis *MockRegistrationSessionStore, emailSvc *MockEmailService) {
-				tenantRepo.On("Exists", mock.Anything, tenantID).Return(true, nil)
+				tenantRepo.On("GetByID", mock.Anything, tenantID).Return(activeTenant, nil)
 				userRepo.On("EmailExistsInTenant", mock.Anything, tenantID, email).Return(false, nil)
 				redis.On("IncrementRegistrationRateLimit", mock.Anything, tenantID, email, mock.Anything).Return(int64(1), nil)
 				redis.On("IsRegistrationEmailLocked", mock.Anything, tenantID, email).Return(false, nil)
@@ -46,16 +49,25 @@ func TestInitiateRegistration(t *testing.T) {
 			name: "error - tenant not found",
 			req:  &authdto.InitiateRegistrationRequest{Email: email},
 			setupMocks: func(tenantRepo *MockTenantRepository, userRepo *MockUserRepository, redis *MockRegistrationSessionStore, emailSvc *MockEmailService) {
-				tenantRepo.On("Exists", mock.Anything, tenantID).Return(false, nil)
+				tenantRepo.On("GetByID", mock.Anything, tenantID).Return(nil, errors.ErrNotFound("tenant not found"))
 			},
 			expectedError: "Tenant not found",
 			expectedCode:  errors.CodeTenantNotFound,
 		},
 		{
+			name: "error - tenant inactive",
+			req:  &authdto.InitiateRegistrationRequest{Email: email},
+			setupMocks: func(tenantRepo *MockTenantRepository, userRepo *MockUserRepository, redis *MockRegistrationSessionStore, emailSvc *MockEmailService) {
+				tenantRepo.On("GetByID", mock.Anything, tenantID).Return(inactiveTenant, nil)
+			},
+			expectedError: "Tenant is inactive",
+			expectedCode:  errors.CodeTenantInactive,
+		},
+		{
 			name: "error - email already exists",
 			req:  &authdto.InitiateRegistrationRequest{Email: email},
 			setupMocks: func(tenantRepo *MockTenantRepository, userRepo *MockUserRepository, redis *MockRegistrationSessionStore, emailSvc *MockEmailService) {
-				tenantRepo.On("Exists", mock.Anything, tenantID).Return(true, nil)
+				tenantRepo.On("GetByID", mock.Anything, tenantID).Return(activeTenant, nil)
 				userRepo.On("EmailExistsInTenant", mock.Anything, tenantID, email).Return(true, nil)
 			},
 			expectedError: "already exists",
@@ -65,7 +77,7 @@ func TestInitiateRegistration(t *testing.T) {
 			name: "error - rate limit exceeded",
 			req:  &authdto.InitiateRegistrationRequest{Email: email},
 			setupMocks: func(tenantRepo *MockTenantRepository, userRepo *MockUserRepository, redis *MockRegistrationSessionStore, emailSvc *MockEmailService) {
-				tenantRepo.On("Exists", mock.Anything, tenantID).Return(true, nil)
+				tenantRepo.On("GetByID", mock.Anything, tenantID).Return(activeTenant, nil)
 				userRepo.On("EmailExistsInTenant", mock.Anything, tenantID, email).Return(false, nil)
 				redis.On("IncrementRegistrationRateLimit", mock.Anything, tenantID, email, mock.Anything).Return(int64(RegistrationRateLimitPerHour+1), nil)
 			},
@@ -76,7 +88,7 @@ func TestInitiateRegistration(t *testing.T) {
 			name: "error - email already locked (registration in progress)",
 			req:  &authdto.InitiateRegistrationRequest{Email: email},
 			setupMocks: func(tenantRepo *MockTenantRepository, userRepo *MockUserRepository, redis *MockRegistrationSessionStore, emailSvc *MockEmailService) {
-				tenantRepo.On("Exists", mock.Anything, tenantID).Return(true, nil)
+				tenantRepo.On("GetByID", mock.Anything, tenantID).Return(activeTenant, nil)
 				userRepo.On("EmailExistsInTenant", mock.Anything, tenantID, email).Return(false, nil)
 				redis.On("IncrementRegistrationRateLimit", mock.Anything, tenantID, email, mock.Anything).Return(int64(1), nil)
 				redis.On("IsRegistrationEmailLocked", mock.Anything, tenantID, email).Return(true, nil)

@@ -61,8 +61,8 @@ type MockUserRepository struct {
 func (m *MockUserRepository) Create(ctx context.Context, user *entity.User) error {
 	args := m.Called(ctx, user)
 
-	if user.UserID == uuid.Nil {
-		user.UserID = uuid.New()
+	if user.ID == uuid.Nil {
+		user.ID = uuid.New()
 	}
 	return args.Error(0)
 }
@@ -222,8 +222,8 @@ type MockUserProfileRepository struct {
 func (m *MockUserProfileRepository) Create(ctx context.Context, profile *entity.UserProfile) error {
 	args := m.Called(ctx, profile)
 
-	if profile.UserProfileID == uuid.Nil {
-		profile.UserProfileID = uuid.New()
+	if profile.ID == uuid.Nil {
+		profile.ID = uuid.New()
 	}
 	return args.Error(0)
 }
@@ -248,8 +248,8 @@ type MockUserCredentialsRepository struct {
 func (m *MockUserCredentialsRepository) Create(ctx context.Context, credentials *entity.UserCredentials) error {
 	args := m.Called(ctx, credentials)
 
-	if credentials.UserCredentialID == uuid.Nil {
-		credentials.UserCredentialID = uuid.New()
+	if credentials.ID == uuid.Nil {
+		credentials.ID = uuid.New()
 	}
 	return args.Error(0)
 }
@@ -274,8 +274,8 @@ type MockUserSecurityRepository struct {
 func (m *MockUserSecurityRepository) Create(ctx context.Context, security *entity.UserSecurity) error {
 	args := m.Called(ctx, security)
 
-	if security.UserSecurityID == uuid.Nil {
-		security.UserSecurityID = uuid.New()
+	if security.ID == uuid.Nil {
+		security.ID = uuid.New()
 	}
 	return args.Error(0)
 }
@@ -300,8 +300,8 @@ type MockUserActivationTrackingRepository struct {
 func (m *MockUserActivationTrackingRepository) Create(ctx context.Context, tracking *entity.UserActivationTracking) error {
 	args := m.Called(ctx, tracking)
 
-	if tracking.UserActivationTrackingID == uuid.Nil {
-		tracking.UserActivationTrackingID = uuid.New()
+	if tracking.ID == uuid.Nil {
+		tracking.ID = uuid.New()
 	}
 	return args.Error(0)
 }
@@ -326,8 +326,8 @@ type MockRoleRepository struct {
 func (m *MockRoleRepository) Create(ctx context.Context, role *entity.Role) error {
 	args := m.Called(ctx, role)
 
-	if role.RoleID == uuid.Nil {
-		role.RoleID = uuid.New()
+	if role.ID == uuid.Nil {
+		role.ID = uuid.New()
 	}
 	return args.Error(0)
 }
@@ -371,8 +371,8 @@ type MockRefreshTokenRepository struct {
 func (m *MockRefreshTokenRepository) Create(ctx context.Context, token *entity.RefreshToken) error {
 	args := m.Called(ctx, token)
 
-	if token.RefreshTokenID == uuid.Nil {
-		token.RefreshTokenID = uuid.New()
+	if token.ID == uuid.Nil {
+		token.ID = uuid.New()
 	}
 	if token.TokenFamily == uuid.Nil {
 		token.TokenFamily = uuid.New()
@@ -410,8 +410,8 @@ type MockUserRoleRepository struct {
 func (m *MockUserRoleRepository) Create(ctx context.Context, userRole *entity.UserRole) error {
 	args := m.Called(ctx, userRole)
 
-	if userRole.UserRoleID == uuid.Nil {
-		userRole.UserRoleID = uuid.New()
+	if userRole.ID == uuid.Nil {
+		userRole.ID = uuid.New()
 	}
 	return args.Error(0)
 }
