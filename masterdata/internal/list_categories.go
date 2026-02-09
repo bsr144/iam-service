@@ -8,7 +8,6 @@ import (
 )
 
 func (uc *usecase) ListCategories(ctx context.Context, req *masterdatadto.ListCategoriesRequest) (*masterdatadto.ListCategoriesResponse, error) {
-
 	req.Page, req.PerPage = normalizePageParams(req.Page, req.PerPage)
 
 	filterHash := hashFilter(req)
