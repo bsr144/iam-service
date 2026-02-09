@@ -9,14 +9,15 @@ import (
 )
 
 type Config struct {
-	App      AppConfig      `mapstructure:"app"`
-	Server   ServerConfig   `mapstructure:"server"`
-	Infra    InfraConfig    `mapstructure:"infra"`
-	JWT      JWTConfig      `mapstructure:"jwt"`
-	Log      LogConfig      `mapstructure:"log"`
-	Email    EmailConfig    `mapstructure:"email"`
-	OTP      OTPConfig      `mapstructure:"otp"`
-	Password PasswordConfig `mapstructure:"password"`
+	App        AppConfig        `mapstructure:"app"`
+	Server     ServerConfig     `mapstructure:"server"`
+	Infra      InfraConfig      `mapstructure:"infra"`
+	JWT        JWTConfig        `mapstructure:"jwt"`
+	Log        LogConfig        `mapstructure:"log"`
+	Email      EmailConfig      `mapstructure:"email"`
+	OTP        OTPConfig        `mapstructure:"otp"`
+	Password   PasswordConfig   `mapstructure:"password"`
+	Masterdata MasterdataConfig `mapstructure:"masterdata"`
 }
 
 func Load() (*Config, error) {
@@ -105,6 +106,10 @@ func bindEnvVariables() {
 	_ = viper.BindEnv("email.smtp_pass", "EMAIL_SMTP_PASS")
 	_ = viper.BindEnv("email.from_address", "EMAIL_FROM_ADDRESS")
 	_ = viper.BindEnv("email.from_name", "EMAIL_FROM_NAME")
+
+	_ = viper.BindEnv("masterdata.cache_ttl_categories", "MASTERDATA_CACHE_TTL_CATEGORIES")
+	_ = viper.BindEnv("masterdata.cache_ttl_items", "MASTERDATA_CACHE_TTL_ITEMS")
+	_ = viper.BindEnv("masterdata.cache_ttl_tree", "MASTERDATA_CACHE_TTL_TREE")
 }
 
 func setDefaults() {
@@ -172,6 +177,10 @@ func setDefaults() {
 	viper.SetDefault("password.require_number", true)
 	viper.SetDefault("password.require_special", false)
 	viper.SetDefault("password.history_count", 5)
+
+	viper.SetDefault("masterdata.cache_ttl_categories", 24*time.Hour)
+	viper.SetDefault("masterdata.cache_ttl_items", 1*time.Hour)
+	viper.SetDefault("masterdata.cache_ttl_tree", 1*time.Hour)
 }
 
 func (c *Config) Validate() error {

@@ -64,6 +64,12 @@ type PasswordConfig struct {
 	HistoryCount     int  `mapstructure:"history_count"`
 }
 
+type MasterdataConfig struct {
+	CacheTTLCategories time.Duration `mapstructure:"cache_ttl_categories"`
+	CacheTTLItems      time.Duration `mapstructure:"cache_ttl_items"`
+	CacheTTLTree       time.Duration `mapstructure:"cache_ttl_tree"`
+}
+
 func (c *AppConfig) IsDevelopment() bool {
 	return c.Environment == "development"
 }
