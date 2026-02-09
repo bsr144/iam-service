@@ -388,3 +388,17 @@ func IsNotFound(err error) bool {
 	}
 	return false
 }
+
+func IsConflict(err error) bool {
+	if appErr := GetAppError(err); appErr != nil {
+		return appErr.Kind == KindDuplicate
+	}
+	return false
+}
+
+func IsValidation(err error) bool {
+	if appErr := GetAppError(err); appErr != nil {
+		return appErr.Kind == KindValidation
+	}
+	return false
+}
