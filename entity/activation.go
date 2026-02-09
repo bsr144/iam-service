@@ -22,7 +22,7 @@ type StatusTransition struct {
 }
 
 type UserActivationTracking struct {
-	UserActivationTrackingID uuid.UUID  `json:"user_activation_tracking_id" gorm:"column:user_activation_tracking_id;primaryKey;type:uuid;default:uuidv7()" db:"user_activation_tracking_id"`
+	ID                       uuid.UUID  `json:"id" gorm:"column:id;primaryKey;type:uuid;default:uuidv7()" db:"id"`
 	UserID                   uuid.UUID  `json:"user_id" gorm:"column:user_id;uniqueIndex;not null" db:"user_id"`
 	TenantID                 *uuid.UUID `json:"tenant_id,omitempty" gorm:"column:tenant_id" db:"tenant_id"`
 

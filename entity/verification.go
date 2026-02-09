@@ -74,7 +74,7 @@ const (
 )
 
 type Verification struct {
-	VerificationID uuid.UUID `json:"verification_id" gorm:"column:verification_id;primaryKey" db:"verification_id"`
+	ID             uuid.UUID `json:"id" gorm:"column:id;primaryKey" db:"id"`
 
 	EntityType VerificationEntityType `json:"entity_type" gorm:"column:entity_type;not null" db:"entity_type"`
 	EntityID   uuid.UUID              `json:"entity_id" gorm:"column:entity_id;not null" db:"entity_id"`
@@ -151,7 +151,7 @@ const (
 )
 
 type VerificationChallenge struct {
-	ChallengeID    uuid.UUID `json:"challenge_id" gorm:"column:challenge_id;primaryKey" db:"challenge_id"`
+	ID             uuid.UUID `json:"id" gorm:"column:id;primaryKey" db:"id"`
 	VerificationID uuid.UUID `json:"verification_id" gorm:"column:verification_id;not null" db:"verification_id"`
 
 	ChallengeType ChallengeType   `json:"challenge_type" gorm:"column:challenge_type;not null" db:"challenge_type"`

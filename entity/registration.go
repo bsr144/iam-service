@@ -19,7 +19,7 @@ const (
 )
 
 type Registration struct {
-	RegistrationID uuid.UUID  `json:"registration_id" gorm:"column:registration_id;primaryKey" db:"registration_id"`
+	ID             uuid.UUID  `json:"id" gorm:"column:id;primaryKey" db:"id"`
 	TenantID       uuid.UUID  `json:"tenant_id" gorm:"column:tenant_id;not null" db:"tenant_id"`
 	BranchID       *uuid.UUID `json:"branch_id,omitempty" gorm:"column:branch_id" db:"branch_id"`
 

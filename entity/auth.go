@@ -18,7 +18,7 @@ const (
 )
 
 type EmailVerification struct {
-	EmailVerificationID uuid.UUID  `json:"email_verification_id" gorm:"column:email_verification_id;primaryKey;type:uuid;default:uuidv7()" db:"email_verification_id"`
+	ID                  uuid.UUID  `json:"id" gorm:"column:id;primaryKey;type:uuid;default:uuidv7()" db:"id"`
 	TenantID            uuid.UUID  `json:"tenant_id" gorm:"column:tenant_id;not null" db:"tenant_id"`
 	UserID              uuid.UUID  `json:"user_id" gorm:"column:user_id;not null" db:"user_id"`
 	Email               string     `json:"email" gorm:"column:email;not null" db:"email"`
@@ -45,7 +45,7 @@ func (e *EmailVerification) IsVerified() bool {
 }
 
 type PasswordResetToken struct {
-	PasswordResetTokenID uuid.UUID  `json:"password_reset_token_id" gorm:"column:password_reset_token_id;primaryKey;type:uuid;default:uuidv7()" db:"password_reset_token_id"`
+	ID                   uuid.UUID  `json:"id" gorm:"column:id;primaryKey;type:uuid;default:uuidv7()" db:"id"`
 	TenantID             uuid.UUID  `json:"tenant_id" gorm:"column:tenant_id;not null" db:"tenant_id"`
 	UserID               uuid.UUID  `json:"user_id" gorm:"column:user_id;not null" db:"user_id"`
 	TokenHash            string     `json:"-" gorm:"column:token_hash;uniqueIndex;not null" db:"token_hash"`
@@ -69,7 +69,7 @@ func (p *PasswordResetToken) IsUsed() bool {
 }
 
 type RefreshToken struct {
-	RefreshTokenID    uuid.UUID  `json:"refresh_token_id" gorm:"column:refresh_token_id;primaryKey;type:uuid;default:uuidv7()" db:"refresh_token_id"`
+	ID                uuid.UUID  `json:"id" gorm:"column:id;primaryKey;type:uuid;default:uuidv7()" db:"id"`
 	TenantID          uuid.UUID  `json:"tenant_id" gorm:"column:tenant_id;not null" db:"tenant_id"`
 	UserID            uuid.UUID  `json:"user_id" gorm:"column:user_id;not null" db:"user_id"`
 	TokenHash         string     `json:"-" gorm:"column:token_hash;uniqueIndex;not null" db:"token_hash"`
@@ -109,7 +109,7 @@ const (
 )
 
 type PINVerificationLog struct {
-	PINVerificationLogID uuid.UUID         `json:"pin_verification_log_id" gorm:"column:pin_verification_log_id;primaryKey;type:uuid;default:uuidv7()" db:"pin_verification_log_id"`
+	ID                   uuid.UUID         `json:"id" gorm:"column:id;primaryKey;type:uuid;default:uuidv7()" db:"id"`
 	UserID               uuid.UUID         `json:"user_id" gorm:"column:user_id;not null" db:"user_id"`
 	TenantID             uuid.UUID         `json:"tenant_id" gorm:"column:tenant_id;not null" db:"tenant_id"`
 	Result               bool              `json:"result" gorm:"column:result;not null" db:"result"`
