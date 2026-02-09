@@ -10,12 +10,15 @@ import (
 )
 
 func (uc *usecase) Create(ctx context.Context, req *roledto.CreateRequest) (*roledto.CreateResponse, error) {
-	tenantExists, err := uc.TenantRepo.Exists(ctx, req.TenantID)
+	tenant, err := uc.TenantRepo.GetByID(ctx, req.TenantID)
 	if err != nil {
+		if errors.IsNotFound(err) {
+			return nil, errors.ErrTenantNotFound()
+		}
 		return nil, errors.ErrInternal("failed to verify tenant").WithError(err)
 	}
-	if !tenantExists {
-		return nil, errors.ErrTenantNotFound()
+	if !tenant.IsActive() {
+		return nil, errors.ErrTenantInactive()
 	}
 
 	existingRole, err := uc.RoleRepo.GetByCode(ctx, req.TenantID, req.Code)
@@ -51,7 +54,7 @@ func (uc *usecase) Create(ctx context.Context, req *roledto.CreateRequest) (*rol
 		if len(req.Permissions) > 0 {
 			for _, permissionID := range req.Permissions {
 				rolePermission := &entity.RolePermission{
-					RoleID:       role.RoleID,
+					RoleID:       role.ID,
 					PermissionID: permissionID,
 					CreatedAt:    now,
 				}
@@ -70,7 +73,7 @@ func (uc *usecase) Create(ctx context.Context, req *roledto.CreateRequest) (*rol
 	}
 
 	response := &roledto.CreateResponse{
-		RoleID:      role.RoleID,
+		RoleID:      role.ID,
 		TenantID:    req.TenantID,
 		Code:        role.Code,
 		Name:        role.Name,
