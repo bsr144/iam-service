@@ -47,7 +47,7 @@ func (uc *usecase) RequestPasswordReset(ctx context.Context, req *authdto.Reques
 	otpExpiry := now.Add(time.Duration(OTPExpiryMinutes) * time.Minute)
 	verification := &entity.EmailVerification{
 		TenantID:  req.TenantID,
-		UserID:    user.UserID,
+		UserID:    user.ID,
 		Email:     req.Email,
 		OTPCode:   otp,
 		OTPHash:   otpHash,

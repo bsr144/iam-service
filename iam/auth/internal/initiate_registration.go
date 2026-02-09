@@ -17,12 +17,15 @@ func (uc *usecase) InitiateRegistration(
 	req *authdto.InitiateRegistrationRequest,
 	ipAddress, userAgent string,
 ) (*authdto.InitiateRegistrationResponse, error) {
-	tenantExists, err := uc.TenantRepo.Exists(ctx, tenantID)
+	tenant, err := uc.TenantRepo.GetByID(ctx, tenantID)
 	if err != nil {
+		if errors.IsNotFound(err) {
+			return nil, errors.ErrTenantNotFound()
+		}
 		return nil, errors.ErrInternal("failed to verify tenant").WithError(err)
 	}
-	if !tenantExists {
-		return nil, errors.ErrTenantNotFound()
+	if !tenant.IsActive() {
+		return nil, errors.ErrTenantInactive()
 	}
 
 	emailExists, err := uc.UserRepo.EmailExistsInTenant(ctx, tenantID, req.Email)
@@ -93,9 +96,7 @@ func (uc *usecase) InitiateRegistration(
 		return nil, err
 	}
 
-	if err := uc.EmailService.SendOTP(ctx, req.Email, otp, RegistrationOTPExpiryMinutes); err != nil {
-
-	}
+	_ = uc.EmailService.SendOTP(ctx, req.Email, otp, RegistrationOTPExpiryMinutes)
 
 	return &authdto.InitiateRegistrationResponse{
 		RegistrationID: sessionID.String(),

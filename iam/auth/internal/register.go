@@ -13,12 +13,15 @@ import (
 )
 
 func (uc *usecase) Register(ctx context.Context, req *authdto.RegisterRequest) (*authdto.RegisterResponse, error) {
-	tenantExists, err := uc.TenantRepo.Exists(ctx, req.TenantID)
+	tenant, err := uc.TenantRepo.GetByID(ctx, req.TenantID)
 	if err != nil {
+		if errors.IsNotFound(err) {
+			return nil, errors.ErrTenantNotFound()
+		}
 		return nil, errors.ErrInternal("failed to verify tenant").WithError(err)
 	}
-	if !tenantExists {
-		return nil, errors.ErrTenantNotFound()
+	if !tenant.IsActive() {
+		return nil, errors.ErrTenantInactive()
 	}
 
 	emailExists, err := uc.UserRepo.EmailExistsInTenant(ctx, req.TenantID, req.Email)
@@ -59,7 +62,7 @@ func (uc *usecase) Register(ctx context.Context, req *authdto.RegisterRequest) (
 		}
 
 		credentials := &entity.UserCredentials{
-			UserID:          user.UserID,
+			UserID:          user.ID,
 			PasswordHash:    &passwordHashStr,
 			PasswordHistory: json.RawMessage("[]"),
 			PINHistory:      json.RawMessage("[]"),
@@ -71,7 +74,7 @@ func (uc *usecase) Register(ctx context.Context, req *authdto.RegisterRequest) (
 		}
 
 		profile := &entity.UserProfile{
-			UserID:    user.UserID,
+			UserID:    user.ID,
 			FirstName: req.FirstName,
 			LastName:  req.LastName,
 			CreatedAt: now,
@@ -82,7 +85,7 @@ func (uc *usecase) Register(ctx context.Context, req *authdto.RegisterRequest) (
 		}
 
 		security := &entity.UserSecurity{
-			UserID:    user.UserID,
+			UserID:    user.ID,
 			Metadata:  json.RawMessage("{}"),
 			CreatedAt: now,
 			UpdatedAt: now,
@@ -91,7 +94,7 @@ func (uc *usecase) Register(ctx context.Context, req *authdto.RegisterRequest) (
 			return err
 		}
 
-		tracking := entity.NewUserActivationTracking(user.UserID, &req.TenantID)
+		tracking := entity.NewUserActivationTracking(user.ID, &req.TenantID)
 		if err := tracking.AddStatusTransition(string(entity.UserStatusPendingOTPVerification), "system"); err != nil {
 			return err
 		}
@@ -102,7 +105,7 @@ func (uc *usecase) Register(ctx context.Context, req *authdto.RegisterRequest) (
 		otpExpiry := now.Add(time.Duration(OTPExpiryMinutes) * time.Minute)
 		verification := &entity.EmailVerification{
 			TenantID:  req.TenantID,
-			UserID:    user.UserID,
+			UserID:    user.ID,
 			Email:     req.Email,
 			OTPCode:   otp,
 			OTPHash:   otpHash,
@@ -115,7 +118,7 @@ func (uc *usecase) Register(ctx context.Context, req *authdto.RegisterRequest) (
 		}
 
 		response = &authdto.RegisterResponse{
-			UserID:       user.UserID,
+			UserID:       user.ID,
 			Email:        req.Email,
 			Status:       string(entity.UserStatusPendingOTPVerification),
 			OTPExpiresAt: otpExpiry,
@@ -128,9 +131,7 @@ func (uc *usecase) Register(ctx context.Context, req *authdto.RegisterRequest) (
 		return nil, errors.ErrInternal("failed to create user").WithError(err)
 	}
 
-	if err := uc.EmailService.SendOTP(ctx, req.Email, otp, OTPExpiryMinutes); err != nil {
-
-	}
+	_ = uc.EmailService.SendOTP(ctx, req.Email, otp, OTPExpiryMinutes)
 
 	return response, nil
 }

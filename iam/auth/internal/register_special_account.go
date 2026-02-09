@@ -13,12 +13,15 @@ import (
 )
 
 func (uc *usecase) RegisterSpecialAccount(ctx context.Context, req *authdto.RegisterSpecialAccountRequest) (*authdto.RegisterSpecialAccountResponse, error) {
-	tenantExists, err := uc.TenantRepo.Exists(ctx, req.TenantID)
+	tenant, err := uc.TenantRepo.GetByID(ctx, req.TenantID)
 	if err != nil {
+		if errors.IsNotFound(err) {
+			return nil, errors.ErrTenantNotFound()
+		}
 		return nil, errors.ErrInternal("failed to verify tenant").WithError(err)
 	}
-	if !tenantExists {
-		return nil, errors.ErrTenantNotFound()
+	if !tenant.IsActive() {
+		return nil, errors.ErrTenantInactive()
 	}
 
 	emailExists, err := uc.UserRepo.EmailExistsInTenant(ctx, req.TenantID, req.Email)
@@ -54,7 +57,7 @@ func (uc *usecase) RegisterSpecialAccount(ctx context.Context, req *authdto.Regi
 		}
 
 		credentials := &entity.UserCredentials{
-			UserID:          user.UserID,
+			UserID:          user.ID,
 			PasswordHash:    &passwordHashStr,
 			PasswordHistory: json.RawMessage("[]"),
 			PINHistory:      json.RawMessage("[]"),
@@ -66,7 +69,7 @@ func (uc *usecase) RegisterSpecialAccount(ctx context.Context, req *authdto.Regi
 		}
 
 		profile := &entity.UserProfile{
-			UserID:    user.UserID,
+			UserID:    user.ID,
 			FirstName: req.FirstName,
 			LastName:  req.LastName,
 			CreatedAt: now,
@@ -85,8 +88,8 @@ func (uc *usecase) RegisterSpecialAccount(ctx context.Context, req *authdto.Regi
 		}
 
 		userRole := &entity.UserRole{
-			UserID:    user.UserID,
-			RoleID:    role.RoleID,
+			UserID:    user.ID,
+			RoleID:    role.ID,
 			CreatedAt: now,
 		}
 		if err := uc.UserRoleRepo.Create(txCtx, userRole); err != nil {
@@ -94,7 +97,7 @@ func (uc *usecase) RegisterSpecialAccount(ctx context.Context, req *authdto.Regi
 		}
 
 		security := &entity.UserSecurity{
-			UserID:    user.UserID,
+			UserID:    user.ID,
 			Metadata:  json.RawMessage("{}"),
 			CreatedAt: now,
 			UpdatedAt: now,
@@ -103,7 +106,7 @@ func (uc *usecase) RegisterSpecialAccount(ctx context.Context, req *authdto.Regi
 			return err
 		}
 
-		tracking := entity.NewUserActivationTracking(user.UserID, &req.TenantID)
+		tracking := entity.NewUserActivationTracking(user.ID, &req.TenantID)
 		if err := tracking.MarkUserCreatedBySystem(); err != nil {
 			return err
 		}
@@ -112,7 +115,7 @@ func (uc *usecase) RegisterSpecialAccount(ctx context.Context, req *authdto.Regi
 		}
 
 		response = &authdto.RegisterSpecialAccountResponse{
-			UserID: user.UserID,
+			UserID: user.ID,
 			Email:  req.Email,
 		}
 

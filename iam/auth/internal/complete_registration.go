@@ -83,7 +83,7 @@ func (uc *usecase) CompleteRegistration(
 		}
 
 		credentials := &entity.UserCredentials{
-			UserID:          user.UserID,
+			UserID:          user.ID,
 			PasswordHash:    &passwordHashStr,
 			PasswordHistory: json.RawMessage("[]"),
 			PINHistory:      json.RawMessage("[]"),
@@ -95,7 +95,7 @@ func (uc *usecase) CompleteRegistration(
 		}
 
 		profile := &entity.UserProfile{
-			UserID:    user.UserID,
+			UserID:    user.ID,
 			FirstName: req.FirstName,
 			LastName:  req.LastName,
 			CreatedAt: now,
@@ -109,7 +109,7 @@ func (uc *usecase) CompleteRegistration(
 		}
 
 		security := &entity.UserSecurity{
-			UserID:    user.UserID,
+			UserID:    user.ID,
 			Metadata:  json.RawMessage("{}"),
 			CreatedAt: now,
 			UpdatedAt: now,
@@ -118,7 +118,7 @@ func (uc *usecase) CompleteRegistration(
 			return err
 		}
 
-		tracking := entity.NewUserActivationTracking(user.UserID, &tenantID)
+		tracking := entity.NewUserActivationTracking(user.ID, &tenantID)
 		if err := tracking.AddStatusTransition(string(userStatus), "registration"); err != nil {
 			return err
 		}
@@ -137,7 +137,7 @@ func (uc *usecase) CompleteRegistration(
 	_ = uc.Redis.UnlockRegistrationEmail(ctx, tenantID, session.Email)
 
 	response := &authdto.CompleteRegistrationResponse{
-		UserID: user.UserID,
+		UserID: user.ID,
 		Email:  session.Email,
 		Status: string(userStatus),
 		Profile: authdto.RegistrationUserProfile{
@@ -149,7 +149,7 @@ func (uc *usecase) CompleteRegistration(
 	if !requiresApproval {
 		response.Message = "Registration completed successfully. You are now logged in."
 
-		accessToken, refreshToken, expiresIn, err := uc.generateAuthTokensForRegistration(ctx, user.UserID, tenantID, session.Email)
+		accessToken, refreshToken, expiresIn, err := uc.generateAuthTokensForRegistration(ctx, user.ID, tenantID, session.Email)
 		if err != nil {
 			response.Message = "Registration completed successfully. Please login to continue."
 		} else {

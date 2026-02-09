@@ -28,7 +28,7 @@ func (uc *usecase) Login(ctx context.Context, req *authdto.LoginRequest) (*authd
 		return nil, errors.ErrUserSuspended()
 	}
 
-	credentials, err := uc.UserCredentialsRepo.GetByUserID(ctx, user.UserID)
+	credentials, err := uc.UserCredentialsRepo.GetByUserID(ctx, user.ID)
 	if err != nil {
 
 		if errors.IsNotFound(err) {
@@ -43,13 +43,13 @@ func (uc *usecase) Login(ctx context.Context, req *authdto.LoginRequest) (*authd
 	err = bcrypt.CompareHashAndPassword([]byte(*credentials.PasswordHash), []byte(req.Password))
 	if err != nil {
 
-		if err := uc.logFailedLogin(ctx, user.UserID); err != nil {
+		if err := uc.logFailedLogin(ctx, user.ID); err != nil {
 
 		}
 		return nil, errors.ErrInvalidCredentials()
 	}
 
-	profile, err := uc.UserProfileRepo.GetByUserID(ctx, user.UserID)
+	profile, err := uc.UserProfileRepo.GetByUserID(ctx, user.ID)
 	if err != nil {
 		if errors.IsNotFound(err) {
 			return nil, errors.ErrProfileIncomplete()
@@ -63,16 +63,16 @@ func (uc *usecase) Login(ctx context.Context, req *authdto.LoginRequest) (*authd
 		if err != nil {
 			return nil, errors.ErrBadRequest("invalid product code")
 		}
-		productID = &product.ProductID
+		productID = &product.ID
 	} else if req.ProductID != nil {
 		product, err := uc.ProductRepo.GetByIDAndTenant(ctx, *req.ProductID, req.TenantID)
 		if err != nil {
 			return nil, errors.ErrBadRequest("invalid product id")
 		}
-		productID = &product.ProductID
+		productID = &product.ID
 	}
 
-	roles, err := uc.getUserRoles(ctx, user.UserID, productID)
+	roles, err := uc.getUserRoles(ctx, user.ID, productID)
 	if err != nil {
 		return nil, errors.ErrInternal("failed to get user roles").WithError(err)
 	}
@@ -117,7 +117,7 @@ func (uc *usecase) Login(ctx context.Context, req *authdto.LoginRequest) (*authd
 	}
 
 	accessToken, err := jwtpkg.GenerateAccessToken(
-		user.UserID,
+		user.ID,
 		user.Email,
 		user.TenantID,
 		productID,
@@ -131,7 +131,7 @@ func (uc *usecase) Login(ctx context.Context, req *authdto.LoginRequest) (*authd
 		return nil, errors.ErrInternal("failed to generate access token").WithError(err)
 	}
 
-	refreshToken, err := jwtpkg.GenerateRefreshToken(user.UserID, sessionID, tokenConfig)
+	refreshToken, err := jwtpkg.GenerateRefreshToken(user.ID, sessionID, tokenConfig)
 	if err != nil {
 		return nil, errors.ErrInternal("failed to generate refresh token").WithError(err)
 	}
@@ -141,7 +141,7 @@ func (uc *usecase) Login(ctx context.Context, req *authdto.LoginRequest) (*authd
 	now := time.Now()
 	refreshTokenEntity := &entity.RefreshToken{
 		TenantID:  req.TenantID,
-		UserID:    user.UserID,
+		UserID:    user.ID,
 		TokenHash: refreshTokenHash,
 		ExpiresAt: now.Add(uc.Config.JWT.RefreshExpiry),
 		CreatedAt: now,
@@ -151,7 +151,7 @@ func (uc *usecase) Login(ctx context.Context, req *authdto.LoginRequest) (*authd
 		return nil, errors.ErrInternal("failed to store refresh token").WithError(err)
 	}
 
-	if err := uc.updateLastLogin(ctx, user.UserID); err != nil {
+	if err := uc.updateLastLogin(ctx, user.ID); err != nil {
 		return nil, errors.ErrInternal("failed to update last login").WithError(err)
 	}
 
@@ -161,7 +161,7 @@ func (uc *usecase) Login(ctx context.Context, req *authdto.LoginRequest) (*authd
 		ExpiresIn:    int(uc.Config.JWT.AccessExpiry.Seconds()),
 		TokenType:    "Bearer",
 		User: authdto.UserResponse{
-			ID:         user.UserID,
+			ID:         user.ID,
 			Email:      user.Email,
 			FullName:   profile.FullName(),
 			TenantID:   user.TenantID,
@@ -200,7 +200,7 @@ func (uc *usecase) resolvePermissionsFromRoles(ctx context.Context, roles []*ent
 
 	roleIDs := make([]uuid.UUID, len(roles))
 	for i, role := range roles {
-		roleIDs[i] = role.RoleID
+		roleIDs[i] = role.ID
 	}
 
 	return uc.PermissionRepo.GetCodesByRoleIDs(ctx, roleIDs)

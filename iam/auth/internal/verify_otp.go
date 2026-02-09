@@ -40,7 +40,7 @@ func (uc *usecase) VerifyOTP(ctx context.Context, req *authdto.VerifyOTPRequest)
 	now := time.Now()
 
 	err = uc.TxManager.WithTransaction(ctx, func(txCtx context.Context) error {
-		if err := uc.EmailVerificationRepo.MarkAsVerified(txCtx, verification.EmailVerificationID); err != nil {
+		if err := uc.EmailVerificationRepo.MarkAsVerified(txCtx, verification.ID); err != nil {
 			return err
 		}
 
@@ -50,7 +50,7 @@ func (uc *usecase) VerifyOTP(ctx context.Context, req *authdto.VerifyOTPRequest)
 			return err
 		}
 
-		tracking, err := uc.UserActivationTrackingRepo.GetByUserID(txCtx, user.UserID)
+		tracking, err := uc.UserActivationTrackingRepo.GetByUserID(txCtx, user.ID)
 		if err != nil {
 			return err
 		}
@@ -70,7 +70,7 @@ func (uc *usecase) VerifyOTP(ctx context.Context, req *authdto.VerifyOTPRequest)
 		return nil, errors.ErrInternal("failed to verify OTP").WithError(err)
 	}
 
-	regToken, err := uc.generateRegistrationToken(user.UserID, *user.TenantID)
+	regToken, err := uc.generateRegistrationToken(user.ID, *user.TenantID)
 	if err != nil {
 		return nil, errors.ErrInternal("failed to generate registration token").WithError(err)
 	}

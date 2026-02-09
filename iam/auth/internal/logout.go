@@ -29,7 +29,7 @@ func (uc *usecase) Logout(ctx context.Context, token string) error {
 		return errors.ErrUnauthorized("Token has expired")
 	}
 
-	if err := uc.RefreshTokenRepo.Revoke(ctx, refreshToken.RefreshTokenID, "User logout"); err != nil {
+	if err := uc.RefreshTokenRepo.Revoke(ctx, refreshToken.ID, "User logout"); err != nil {
 		return errors.ErrInternal("failed to revoke token").WithError(err)
 	}
 

@@ -50,7 +50,7 @@ func (uc *usecase) ResetPassword(ctx context.Context, req *authdto.ResetPassword
 		return nil, err
 	}
 
-	credentials, err := uc.UserCredentialsRepo.GetByUserID(ctx, user.UserID)
+	credentials, err := uc.UserCredentialsRepo.GetByUserID(ctx, user.ID)
 	if err != nil {
 		if errors.IsNotFound(err) {
 			return nil, errors.ErrInternal("user credentials not found")
@@ -107,11 +107,11 @@ func (uc *usecase) ResetPassword(ctx context.Context, req *authdto.ResetPassword
 			return errors.ErrInternal("failed to update credentials").WithError(err)
 		}
 
-		if err := uc.EmailVerificationRepo.MarkAsVerified(txCtx, verification.EmailVerificationID); err != nil {
+		if err := uc.EmailVerificationRepo.MarkAsVerified(txCtx, verification.ID); err != nil {
 			return errors.ErrInternal("failed to mark OTP as verified").WithError(err)
 		}
 
-		if err := uc.RefreshTokenRepo.RevokeAllByUserID(txCtx, user.UserID, "Password reset"); err != nil {
+		if err := uc.RefreshTokenRepo.RevokeAllByUserID(txCtx, user.ID, "Password reset"); err != nil {
 			return errors.ErrInternal("failed to revoke tokens").WithError(err)
 		}
 
