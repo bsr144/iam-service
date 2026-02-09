@@ -38,8 +38,8 @@ func (uc *usecase) List(ctx context.Context, tenantID *uuid.UUID, req *userdto.L
 
 	items := make([]userdto.UserListItem, 0, len(users))
 	for _, user := range users {
-		profile, _ := uc.UserProfileRepo.GetByUserID(ctx, user.UserID)
-		security, _ := uc.UserSecurityRepo.GetByUserID(ctx, user.UserID)
+		profile, _ := uc.UserProfileRepo.GetByUserID(ctx, user.ID)
+		security, _ := uc.UserSecurityRepo.GetByUserID(ctx, user.ID)
 		items = append(items, mapUserToListItem(user, profile, security))
 	}
 

@@ -48,7 +48,7 @@ func NewUsecase(
 
 func mapUserToDetailResponse(user *entity.User, profile *entity.UserProfile, credentials *entity.UserCredentials, security *entity.UserSecurity) *userdto.UserDetailResponse {
 	resp := &userdto.UserDetailResponse{
-		ID:               user.UserID,
+		ID:               user.ID,
 		Email:            user.Email,
 		EmailVerified:    user.EmailVerified,
 		IsActive:         user.IsActive,
@@ -83,7 +83,7 @@ func mapUserToDetailResponse(user *entity.User, profile *entity.UserProfile, cre
 
 func mapUserToListItem(user *entity.User, profile *entity.UserProfile, security *entity.UserSecurity) userdto.UserListItem {
 	item := userdto.UserListItem{
-		ID:            user.UserID,
+		ID:            user.ID,
 		Email:         user.Email,
 		EmailVerified: user.EmailVerified,
 		IsActive:      user.IsActive,

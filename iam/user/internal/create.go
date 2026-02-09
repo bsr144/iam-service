@@ -13,12 +13,15 @@ import (
 )
 
 func (uc *usecase) Create(ctx context.Context, req *userdto.CreateRequest) (*userdto.CreateResponse, error) {
-	tenantExists, err := uc.TenantRepo.Exists(ctx, req.TenantID)
+	tenant, err := uc.TenantRepo.GetByID(ctx, req.TenantID)
 	if err != nil {
-		return nil, err
+		if errors.IsNotFound(err) {
+			return nil, errors.ErrTenantNotFound()
+		}
+		return nil, errors.ErrInternal("failed to verify tenant").WithError(err)
 	}
-	if !tenantExists {
-		return nil, errors.ErrTenantNotFound()
+	if !tenant.IsActive() {
+		return nil, errors.ErrTenantInactive()
 	}
 
 	role, err := uc.RoleRepo.GetByCode(ctx, req.TenantID, req.RoleCode)
@@ -67,7 +70,7 @@ func (uc *usecase) Create(ctx context.Context, req *userdto.CreateRequest) (*use
 		}
 
 		credentials := &entity.UserCredentials{
-			UserID:          user.UserID,
+			UserID:          user.ID,
 			PasswordHash:    &passwordHashStr,
 			PasswordHistory: json.RawMessage("[]"),
 			PINHistory:      json.RawMessage("[]"),
@@ -79,7 +82,7 @@ func (uc *usecase) Create(ctx context.Context, req *userdto.CreateRequest) (*use
 		}
 
 		profile := &entity.UserProfile{
-			UserID:    user.UserID,
+			UserID:    user.ID,
 			FirstName: req.FirstName,
 			LastName:  req.LastName,
 			CreatedAt: now,
@@ -90,8 +93,8 @@ func (uc *usecase) Create(ctx context.Context, req *userdto.CreateRequest) (*use
 		}
 
 		userRole := &entity.UserRole{
-			UserID:        user.UserID,
-			RoleID:        role.RoleID,
+			UserID:        user.ID,
+			RoleID:        role.ID,
 			BranchID:      req.BranchID,
 			EffectiveFrom: now,
 			CreatedAt:     now,
@@ -101,7 +104,7 @@ func (uc *usecase) Create(ctx context.Context, req *userdto.CreateRequest) (*use
 		}
 
 		security := &entity.UserSecurity{
-			UserID:    user.UserID,
+			UserID:    user.ID,
 			Metadata:  json.RawMessage("{}"),
 			CreatedAt: now,
 			UpdatedAt: now,
@@ -110,7 +113,7 @@ func (uc *usecase) Create(ctx context.Context, req *userdto.CreateRequest) (*use
 			return err
 		}
 
-		tracking := entity.NewUserActivationTracking(user.UserID, &req.TenantID)
+		tracking := entity.NewUserActivationTracking(user.ID, &req.TenantID)
 		if err := tracking.MarkUserCreatedBySystem(); err != nil {
 			return err
 		}
@@ -119,7 +122,7 @@ func (uc *usecase) Create(ctx context.Context, req *userdto.CreateRequest) (*use
 		}
 
 		response = &userdto.CreateResponse{
-			UserID:   user.UserID,
+			UserID:   user.ID,
 			Email:    req.Email,
 			FullName: req.FirstName + " " + req.LastName,
 			RoleCode: req.RoleCode,
