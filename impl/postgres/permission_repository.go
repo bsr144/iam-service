@@ -30,7 +30,7 @@ func (r *permissionRepository) GetCodesByRoleIDs(ctx context.Context, roleIDs []
 	err := r.getDB(ctx).Raw(`
 		SELECT DISTINCT p.code
 		FROM role_permissions rp
-		INNER JOIN permissions p ON p.permission_id = rp.permission_id
+		INNER JOIN permissions p ON p.id = rp.permission_id
 		WHERE rp.role_id IN ? AND p.deleted_at IS NULL
 		ORDER BY p.code
 	`, roleIDs).Scan(&results).Error

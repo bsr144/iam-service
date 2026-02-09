@@ -28,7 +28,7 @@ func (r *roleRepository) Create(ctx context.Context, role *entity.Role) error {
 
 func (r *roleRepository) GetByID(ctx context.Context, id uuid.UUID) (*entity.Role, error) {
 	var role entity.Role
-	err := r.getDB(ctx).Where("role_id = ?", id).First(&role).Error
+	err := r.getDB(ctx).Where("id = ?", id).First(&role).Error
 	if err != nil {
 		return nil, translateError(err, "role")
 	}
@@ -71,7 +71,7 @@ func (r *roleRepository) Update(ctx context.Context, role *entity.Role) error {
 
 func (r *roleRepository) GetByIDs(ctx context.Context, ids []uuid.UUID) ([]*entity.Role, error) {
 	var roles []*entity.Role
-	err := r.getDB(ctx).Where("role_id IN ? AND is_active = ?", ids, true).Find(&roles).Error
+	err := r.getDB(ctx).Where("id IN ? AND is_active = ?", ids, true).Find(&roles).Error
 	if err != nil {
 		return nil, translateError(err, "roles")
 	}

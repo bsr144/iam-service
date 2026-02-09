@@ -32,7 +32,7 @@ func (r *userRepository) Create(ctx context.Context, user *entity.User) error {
 
 func (r *userRepository) GetByID(ctx context.Context, id uuid.UUID) (*entity.User, error) {
 	var user entity.User
-	err := r.getDB(ctx).Where("user_id = ?", id).First(&user).Error
+	err := r.getDB(ctx).Where("id = ?", id).First(&user).Error
 	if err != nil {
 		return nil, translateError(err, "user")
 	}
@@ -78,7 +78,7 @@ func (r *userRepository) EmailExistsInTenant(ctx context.Context, tenantID uuid.
 func (r *userRepository) Delete(ctx context.Context, id uuid.UUID) error {
 	now := time.Now()
 	result := r.getDB(ctx).Model(&entity.User{}).
-		Where("user_id = ?", id).
+		Where("id = ?", id).
 		Updates(map[string]interface{}{
 			"deleted_at": now,
 			"is_active":  false,
@@ -114,14 +114,14 @@ func (r *userRepository) List(ctx context.Context, filter *contract.UserListFilt
 	if filter.Search != "" {
 		searchTerm := "%" + filter.Search + "%"
 		query = query.Where(
-			"email ILIKE ? OR user_id IN (SELECT user_id FROM user_profiles WHERE first_name ILIKE ? OR last_name ILIKE ?)",
+			"email ILIKE ? OR id IN (SELECT user_id FROM user_profiles WHERE first_name ILIKE ? OR last_name ILIKE ?)",
 			searchTerm, searchTerm, searchTerm,
 		)
 	}
 
 	if filter.RoleID != nil {
 		query = query.Where(
-			"user_id IN (SELECT user_id FROM user_roles WHERE role_id = ? AND deleted_at IS NULL AND (effective_to IS NULL OR effective_to > NOW()))",
+			"id IN (SELECT user_id FROM user_roles WHERE role_id = ? AND deleted_at IS NULL AND (effective_to IS NULL OR effective_to > NOW()))",
 			*filter.RoleID,
 		)
 	}
@@ -163,7 +163,7 @@ func (r *userRepository) GetPendingApprovalUsers(ctx context.Context, tenantID u
 	var users []*entity.User
 	err := r.getDB(ctx).
 		Where("tenant_id = ? AND deleted_at IS NULL", tenantID).
-		Where("user_id IN (SELECT user_id FROM user_activation_tracking WHERE awaiting_admin_approval = true AND admin_approval_at IS NULL)").
+		Where("id IN (SELECT user_id FROM user_activation_tracking WHERE awaiting_admin_approval = true AND admin_approval_at IS NULL)").
 		Order("created_at DESC").
 		Find(&users).Error
 	if err != nil {

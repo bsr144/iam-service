@@ -41,7 +41,7 @@ func (r *refreshTokenRepository) Revoke(ctx context.Context, id uuid.UUID, reaso
 	now := time.Now()
 	if err := r.getDB(ctx).
 		Model(&entity.RefreshToken{}).
-		Where("refresh_token_id = ?", id).
+		Where("id = ?", id).
 		Updates(map[string]interface{}{
 			"revoked_at":     now,
 			"revoked_reason": reason,

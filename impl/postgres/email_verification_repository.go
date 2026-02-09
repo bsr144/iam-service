@@ -30,7 +30,7 @@ func (r *emailVerificationRepository) Create(ctx context.Context, verification *
 
 func (r *emailVerificationRepository) GetByID(ctx context.Context, id uuid.UUID) (*entity.EmailVerification, error) {
 	var verification entity.EmailVerification
-	err := r.getDB(ctx).Where("email_verification_id = ?", id).First(&verification).Error
+	err := r.getDB(ctx).Where("id = ?", id).First(&verification).Error
 	if err != nil {
 		return nil, translateError(err, "email verification")
 	}
@@ -65,7 +65,7 @@ func (r *emailVerificationRepository) MarkAsVerified(ctx context.Context, id uui
 	now := time.Now()
 	if err := r.getDB(ctx).
 		Model(&entity.EmailVerification{}).
-		Where("email_verification_id = ?", id).
+		Where("id = ?", id).
 		Update("verified_at", now).Error; err != nil {
 		return translateError(err, "email verification")
 	}
