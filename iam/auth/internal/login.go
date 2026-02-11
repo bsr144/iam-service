@@ -45,6 +45,23 @@ func (uc *usecase) Login(ctx context.Context, req *authdto.LoginRequest) (*authd
 		return nil, errors.ErrUserSuspended()
 	}
 
+	security, err := uc.UserSecurityRepo.GetByUserID(ctx, user.ID)
+	if err != nil && !errors.IsNotFound(err) {
+		return nil, err
+	}
+	if security != nil && security.LockedUntil != nil && security.LockedUntil.After(time.Now()) {
+		uc.AuditLogger.Log(ctx, logger.AuditEvent{
+			Domain:    "auth",
+			Action:    "login",
+			ActorID:   user.ID.String(),
+			ActorType: "user",
+			TenantID:  req.TenantID.String(),
+			Success:   false,
+			Reason:    "account_locked",
+		})
+		return nil, errors.ErrForbidden("account is temporarily locked due to too many failed login attempts")
+	}
+
 	credentials, err := uc.UserCredentialsRepo.GetByUserID(ctx, user.ID)
 	if err != nil {
 

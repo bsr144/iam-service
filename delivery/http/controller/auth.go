@@ -2,6 +2,7 @@ package controller
 
 import (
 	"strings"
+	"time"
 
 	"iam-service/config"
 	"iam-service/delivery/http/dto/response"
@@ -94,6 +95,9 @@ func (rc *AuthController) RegisterSpecialAccount(c *fiber.Ctx) error {
 }
 
 func (rc *AuthController) Login(c *fiber.Ctx) error {
+	start := time.Now()
+	const minLoginDuration = 300 * time.Millisecond
+
 	var req authdto.LoginRequest
 	if err := c.BodyParser(&req); err != nil {
 		return errors.ErrBadRequest("Invalid request body")
@@ -105,6 +109,9 @@ func (rc *AuthController) Login(c *fiber.Ctx) error {
 
 	resp, err := rc.authUsecase.Login(c.Context(), &req)
 	if err != nil {
+		if elapsed := time.Since(start); elapsed < minLoginDuration {
+			time.Sleep(minLoginDuration - elapsed)
+		}
 		return err
 	}
 
