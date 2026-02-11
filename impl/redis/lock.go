@@ -55,6 +55,9 @@ func (r *Redis) AcquireLock(ctx context.Context, name string, expiry time.Durati
 }
 
 func (r *Redis) AcquireLockWithRetry(ctx context.Context, name string, expiry time.Duration, maxRetries int, retryDelay time.Duration) (*Lock, error) {
+	ticker := time.NewTicker(retryDelay)
+	defer ticker.Stop()
+
 	for i := 0; i < maxRetries; i++ {
 		lock, err := r.AcquireLock(ctx, name, expiry)
 		if err == nil {
@@ -67,7 +70,7 @@ func (r *Redis) AcquireLockWithRetry(ctx context.Context, name string, expiry ti
 		select {
 		case <-ctx.Done():
 			return nil, ctx.Err()
-		case <-time.After(retryDelay):
+		case <-ticker.C:
 			continue
 		}
 	}
@@ -75,6 +78,9 @@ func (r *Redis) AcquireLockWithRetry(ctx context.Context, name string, expiry ti
 }
 
 func (r *Redis) AcquireLockWithWait(ctx context.Context, name string, expiry time.Duration, pollInterval time.Duration) (*Lock, error) {
+	ticker := time.NewTicker(pollInterval)
+	defer ticker.Stop()
+
 	for {
 		lock, err := r.AcquireLock(ctx, name, expiry)
 		if err == nil {
@@ -87,7 +93,7 @@ func (r *Redis) AcquireLockWithWait(ctx context.Context, name string, expiry tim
 		select {
 		case <-ctx.Done():
 			return nil, ctx.Err()
-		case <-time.After(pollInterval):
+		case <-ticker.C:
 			continue
 		}
 	}

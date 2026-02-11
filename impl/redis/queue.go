@@ -214,27 +214,42 @@ func (r *Redis) GetDeadLetterJobs(ctx context.Context, queueName string, start, 
 }
 
 func (r *Redis) RetryDeadLetter(ctx context.Context, queueName string, jobID string) error {
+	script := goredis.NewScript(`
+		local key = KEYS[1]
+		local targetID = ARGV[1]
+		local len = redis.call("LLEN", key)
 
-	data, err := r.client.LRange(ctx, deadLetterKey(queueName), 0, -1).Result()
+		for i = 0, len - 1 do
+			local raw = redis.call("LINDEX", key, i)
+			local job = cjson.decode(raw)
+			if job.id == targetID then
+				redis.call("LREM", key, 1, raw)
+				return raw
+			end
+		end
+		return nil
+	`)
+
+	dlKey := deadLetterKey(queueName)
+	result, err := script.Run(ctx, r.client, []string{dlKey}, jobID).Result()
+	if err == goredis.Nil {
+		return errors.SentinelJobNotFound
+	}
 	if err != nil {
-		return errors.ErrInternal("failed to get dead letter jobs").WithError(err)
+		return errors.ErrInternal("failed to retry dead letter job").WithError(err)
 	}
 
-	for _, d := range data {
-		var job Job
-		if err := json.Unmarshal([]byte(d), &job); err != nil {
-			continue
-		}
-		if job.ID == jobID {
-
-			job.Attempts = 0
-			job.Error = ""
-			if err := r.Enqueue(ctx, queueName, &job); err != nil {
-				return err
-			}
-
-			return r.client.LRem(ctx, deadLetterKey(queueName), 1, d).Err()
-		}
+	rawStr, ok := result.(string)
+	if !ok {
+		return errors.SentinelJobNotFound
 	}
-	return errors.SentinelJobNotFound
+
+	var job Job
+	if err := json.Unmarshal([]byte(rawStr), &job); err != nil {
+		return errors.ErrInternal("failed to unmarshal job").WithError(err)
+	}
+
+	job.Attempts = 0
+	job.Error = ""
+	return r.Enqueue(ctx, queueName, &job)
 }

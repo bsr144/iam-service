@@ -81,6 +81,8 @@ func (r *Redis) Channels(ctx context.Context, pattern string) ([]string, error) 
 type MessageHandler func(ctx context.Context, msg *Message) error
 
 func (s *Subscription) Listen(ctx context.Context, handler MessageHandler) error {
+	defer s.Close()
+
 	ch := s.Channel()
 
 	for {

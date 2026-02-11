@@ -108,30 +108,42 @@ func (c *Redis) GetOrSet(ctx context.Context, key string, target any, expiration
 		return err
 	}
 
-	if err := c.Set(ctx, key, value, expiration); err != nil {
-		return err
-	}
-
 	data, err := json.Marshal(value)
 	if err != nil {
 		return err
 	}
+
+	if err := c.client.Set(ctx, key, data, expiration).Err(); err != nil {
+		return errors.ErrInternal("failed to set value").WithError(err)
+	}
+
 	return json.Unmarshal(data, target)
 }
 
 func (c *Redis) DeleteByPattern(ctx context.Context, pattern string) error {
-	iter := c.client.Scan(ctx, 0, pattern, 0).Iterator()
-	var keys []string
+	const batchSize = 100
+
+	iter := c.client.Scan(ctx, 0, pattern, batchSize).Iterator()
+	keys := make([]string, 0, batchSize)
+
 	for iter.Next(ctx) {
 		keys = append(keys, iter.Val())
+
+		if len(keys) >= batchSize {
+			if err := c.client.Del(ctx, keys...).Err(); err != nil {
+				return errors.ErrInternal("failed to delete keys").WithError(err)
+			}
+			keys = keys[:0]
+		}
 	}
 	if err := iter.Err(); err != nil {
 		return errors.ErrInternal("failed to scan keys").WithError(err)
 	}
-	if len(keys) == 0 {
-		return nil
+
+	if len(keys) > 0 {
+		return c.client.Del(ctx, keys...).Err()
 	}
-	return c.client.Del(ctx, keys...).Err()
+	return nil
 }
 
 func (c *Redis) HSet(ctx context.Context, key, field string, value any) error {
