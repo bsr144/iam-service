@@ -33,7 +33,20 @@ func (uc *usecase) InitiateRegistration(
 		return nil, errors.ErrInternal("failed to check email").WithError(err)
 	}
 	if emailExists {
-		return nil, errors.ErrUserAlreadyExists()
+		return &authdto.InitiateRegistrationResponse{
+			RegistrationID: uuid.New().String(),
+			Email:          req.Email,
+			Status:         string(entity.RegistrationSessionStatusPendingVerification),
+			Message:        "Verification code sent to your email",
+			ExpiresAt:      time.Now().Add(time.Duration(RegistrationSessionExpiryMinutes) * time.Minute),
+			OTPConfig: authdto.OTPConfig{
+				Length:                RegistrationOTPLength,
+				ExpiresInMinutes:      RegistrationOTPExpiryMinutes,
+				MaxAttempts:           RegistrationOTPMaxAttempts,
+				ResendCooldownSeconds: RegistrationOTPResendCooldown,
+				MaxResends:            RegistrationOTPMaxResends,
+			},
+		}, nil
 	}
 
 	rateLimitTTL := time.Duration(RegistrationRateLimitWindow) * time.Minute

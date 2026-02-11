@@ -29,7 +29,11 @@ func (uc *usecase) Register(ctx context.Context, req *authdto.RegisterRequest) (
 		return nil, errors.ErrInternal("failed to check email").WithError(err)
 	}
 	if emailExists {
-		return nil, errors.ErrUserAlreadyExists()
+		return &authdto.RegisterResponse{
+			Email:        req.Email,
+			Status:       string(entity.UserStatusPendingOTPVerification),
+			OTPExpiresAt: time.Now().Add(time.Duration(OTPExpiryMinutes) * time.Minute),
+		}, nil
 	}
 
 	if err := uc.validatePassword(req.Password); err != nil {
