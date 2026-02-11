@@ -3,6 +3,7 @@ package middleware
 import (
 	"context"
 	"net"
+	"strings"
 
 	"iam-service/pkg/logger"
 
@@ -30,7 +31,6 @@ func RequestContext() fiber.Handler {
 			}
 		}
 
-		// Enrich Go context for audit logging
 		ctx := c.UserContext()
 		ctx = context.WithValue(ctx, logger.CtxRequestID, c.GetRespHeader("X-Request-ID"))
 		if clientIP != nil {
@@ -44,9 +44,12 @@ func RequestContext() fiber.Handler {
 }
 
 func extractClientIP(c *fiber.Ctx) net.IP {
-
 	if forwarded := c.Get("X-Forwarded-For"); forwarded != "" {
-		return net.ParseIP(forwarded)
+		parts := strings.SplitN(forwarded, ",", 2)
+		ip := strings.TrimSpace(parts[0])
+		if parsed := net.ParseIP(ip); parsed != nil {
+			return parsed
+		}
 	}
 
 	return net.ParseIP(c.IP())
