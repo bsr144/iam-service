@@ -3,6 +3,7 @@ package internal
 import (
 	"iam-service/config"
 	"iam-service/iam/auth/contract"
+	"iam-service/pkg/logger"
 )
 
 type usecase struct {
@@ -22,6 +23,7 @@ type usecase struct {
 	PermissionRepo             contract.PermissionRepository
 	EmailService               contract.EmailService
 	Redis                      contract.RegistrationSessionStore
+	AuditLogger                logger.AuditLogger
 }
 
 func NewUsecase(
@@ -41,6 +43,7 @@ func NewUsecase(
 	permissionRepo contract.PermissionRepository,
 	emailService contract.EmailService,
 	redis contract.RegistrationSessionStore,
+	auditLogger logger.AuditLogger,
 ) *usecase {
 	return &usecase{
 		TxManager:                  txManager,
@@ -59,5 +62,6 @@ func NewUsecase(
 		PermissionRepo:             permissionRepo,
 		EmailService:               emailService,
 		Redis:                      redis,
+		AuditLogger:                auditLogger,
 	}
 }

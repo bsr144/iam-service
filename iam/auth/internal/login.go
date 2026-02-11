@@ -10,6 +10,7 @@ import (
 	"iam-service/iam/auth/authdto"
 	"iam-service/pkg/errors"
 	jwtpkg "iam-service/pkg/jwt"
+	"iam-service/pkg/logger"
 
 	"github.com/google/uuid"
 	"golang.org/x/crypto/bcrypt"
@@ -19,12 +20,28 @@ func (uc *usecase) Login(ctx context.Context, req *authdto.LoginRequest) (*authd
 	user, err := uc.UserRepo.GetByEmail(ctx, req.TenantID, req.Email)
 	if err != nil {
 		if errors.IsNotFound(err) {
+			uc.AuditLogger.Log(ctx, logger.AuditEvent{
+				Domain:   "auth",
+				Action:   "login",
+				TenantID: req.TenantID.String(),
+				Success:  false,
+				Reason:   "user_not_found",
+			})
 			return nil, errors.ErrInvalidCredentials()
 		}
 		return nil, err
 	}
 
 	if !user.IsActive {
+		uc.AuditLogger.Log(ctx, logger.AuditEvent{
+			Domain:     "auth",
+			Action:     "login",
+			ActorID:    user.ID.String(),
+			ActorType:  "user",
+			TenantID:   req.TenantID.String(),
+			Success:    false,
+			Reason:     "user_suspended",
+		})
 		return nil, errors.ErrUserSuspended()
 	}
 
@@ -42,10 +59,16 @@ func (uc *usecase) Login(ctx context.Context, req *authdto.LoginRequest) (*authd
 
 	err = bcrypt.CompareHashAndPassword([]byte(*credentials.PasswordHash), []byte(req.Password))
 	if err != nil {
-
-		if err := uc.logFailedLogin(ctx, user.ID); err != nil {
-
-		}
+		uc.AuditLogger.Log(ctx, logger.AuditEvent{
+			Domain:     "auth",
+			Action:     "login",
+			ActorID:    user.ID.String(),
+			ActorType:  "user",
+			TenantID:   req.TenantID.String(),
+			Success:    false,
+			Reason:     "invalid_password",
+		})
+		_ = uc.logFailedLogin(ctx, user.ID)
 		return nil, errors.ErrInvalidCredentials()
 	}
 
@@ -78,6 +101,16 @@ func (uc *usecase) Login(ctx context.Context, req *authdto.LoginRequest) (*authd
 	}
 
 	if productID != nil && len(roles) == 0 {
+		uc.AuditLogger.Log(ctx, logger.AuditEvent{
+			Domain:     "auth",
+			Action:     "login",
+			ActorID:    user.ID.String(),
+			ActorType:  "user",
+			TenantID:   req.TenantID.String(),
+			Success:    false,
+			Reason:     "no_product_access",
+			Metadata:   map[string]any{"product_id": productID.String()},
+		})
 		return nil, errors.ErrForbidden("no access to the specified product")
 	}
 
@@ -171,6 +204,19 @@ func (uc *usecase) Login(ctx context.Context, req *authdto.LoginRequest) (*authd
 			MFAEnabled: credentials.MFAEnabled,
 		},
 	}
+
+	uc.AuditLogger.Log(ctx, logger.AuditEvent{
+		Domain:     "auth",
+		Action:     "login",
+		ActorID:    user.ID.String(),
+		ActorType:  "user",
+		TenantID:   req.TenantID.String(),
+		Success:    true,
+		Metadata: map[string]any{
+			"session_id": sessionID.String(),
+			"roles":      roleCodes,
+		},
+	})
 
 	return response, nil
 }

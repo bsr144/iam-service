@@ -35,6 +35,9 @@ type Server struct {
 
 func NewServer(cfg *config.Config) *Server {
 	zapLogger, _ := logger.NewZapLogger(cfg.App.Environment)
+	auditLogger := logger.NewAuditLogger(zapLogger, logger.AuditConfig{
+		Enabled: cfg.Log.AuditEnabled,
+	})
 
 	app := fiber.New(fiber.Config{
 		JSONEncoder:  json.Marshal,
@@ -96,6 +99,7 @@ func NewServer(cfg *config.Config) *Server {
 		permissionRepo,
 		emailService,
 		redisWrapper,
+		auditLogger,
 	)
 	roleUsecase := role.NewUsecase(
 		txManager,

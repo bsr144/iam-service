@@ -6,6 +6,7 @@ import (
 	"iam-service/iam/auth/authdto"
 	"iam-service/iam/auth/contract"
 	"iam-service/iam/auth/internal"
+	"iam-service/pkg/logger"
 
 	"github.com/google/uuid"
 )
@@ -47,6 +48,7 @@ func NewUsecase(
 	permissionRepo contract.PermissionRepository,
 	emailService contract.EmailService,
 	redis contract.RegistrationSessionStore,
+	auditLogger logger.AuditLogger,
 ) Usecase {
 	return internal.NewUsecase(
 		txManager,
@@ -65,5 +67,6 @@ func NewUsecase(
 		permissionRepo,
 		emailService,
 		redis,
+		auditLogger,
 	)
 }

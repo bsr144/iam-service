@@ -35,6 +35,8 @@ type JWTConfig struct {
 type LogConfig struct {
 	Level  string `mapstructure:"level"`
 	Format string `mapstructure:"format"`
+
+	AuditEnabled bool `mapstructure:"audit_enabled"`
 }
 
 type EmailConfig struct {
