@@ -40,15 +40,22 @@ func (r *masterdataCategoryRepository) List(ctx context.Context, filter *contrac
 		return nil, 0, translateError(err, "masterdata_category")
 	}
 
-	sortBy := "sort_order"
-	if filter.SortBy != "" {
-		sortBy = filter.SortBy
+	validSortColumns := map[string]string{
+		"name":       "name",
+		"code":       "code",
+		"sort_order": "sort_order",
+		"created_at": "created_at",
+		"updated_at": "updated_at",
+	}
+	sortColumn := "sort_order"
+	if col, ok := validSortColumns[filter.SortBy]; ok {
+		sortColumn = col
 	}
 	sortOrder := "ASC"
 	if filter.SortOrder == "desc" {
 		sortOrder = "DESC"
 	}
-	query = query.Order(sortBy + " " + sortOrder)
+	query = query.Order(sortColumn + " " + sortOrder)
 
 	if filter.Page > 0 && filter.PerPage > 0 {
 		offset := (filter.Page - 1) * filter.PerPage

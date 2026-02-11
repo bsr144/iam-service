@@ -75,15 +75,22 @@ func (r *masterdataItemRepository) List(ctx context.Context, filter *contract.It
 		return nil, 0, translateError(err, "masterdata_item")
 	}
 
-	sortBy := "sort_order"
-	if filter.SortBy != "" {
-		sortBy = "masterdata_items." + filter.SortBy
+	validSortColumns := map[string]string{
+		"name":       "masterdata_items.name",
+		"code":       "masterdata_items.code",
+		"sort_order": "masterdata_items.sort_order",
+		"created_at": "masterdata_items.created_at",
+		"updated_at": "masterdata_items.updated_at",
+	}
+	sortColumn := "masterdata_items.sort_order"
+	if col, ok := validSortColumns[filter.SortBy]; ok {
+		sortColumn = col
 	}
 	sortOrder := "ASC"
 	if filter.SortOrder == "desc" {
 		sortOrder = "DESC"
 	}
-	query = query.Order(sortBy + " " + sortOrder)
+	query = query.Order(sortColumn + " " + sortOrder)
 
 	if filter.Page > 0 && filter.PerPage > 0 {
 		offset := (filter.Page - 1) * filter.PerPage

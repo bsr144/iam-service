@@ -12,8 +12,8 @@ type ListCategoriesRequest struct {
 	ParentID  *uuid.UUID `query:"parent_id"`
 	Page      int        `query:"page"`
 	PerPage   int        `query:"per_page"`
-	SortBy    string     `query:"sort_by"`
-	SortOrder string     `query:"sort_order"`
+	SortBy    string     `query:"sort_by" validate:"omitempty,oneof=name code sort_order created_at updated_at"`
+	SortOrder string     `query:"sort_order" validate:"omitempty,oneof=asc desc"`
 }
 
 type CreateCategoryRequest struct {
@@ -50,8 +50,8 @@ type ListItemsRequest struct {
 	IsSystem     *bool      `query:"is_system"`
 	Page         int        `query:"page"`
 	PerPage      int        `query:"per_page"`
-	SortBy       string     `query:"sort_by"`
-	SortOrder    string     `query:"sort_order"`
+	SortBy       string     `query:"sort_by" validate:"omitempty,oneof=name code sort_order created_at updated_at"`
+	SortOrder    string     `query:"sort_order" validate:"omitempty,oneof=asc desc"`
 }
 
 type CreateItemRequest struct {
