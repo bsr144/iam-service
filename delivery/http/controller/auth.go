@@ -5,6 +5,7 @@ import (
 
 	"iam-service/config"
 	"iam-service/delivery/http/dto/response"
+	"iam-service/delivery/http/presenter"
 	"iam-service/iam/auth"
 	"iam-service/iam/auth/authdto"
 	"iam-service/pkg/errors"
@@ -67,7 +68,7 @@ func (rc *AuthController) Register(c *fiber.Ctx) error {
 
 	return c.Status(fiber.StatusCreated).JSON(response.SuccessResponse(
 		"Registration initiated. Please check your email for OTP verification.",
-		resp,
+		presenter.ToRegisterResponse(resp),
 	))
 }
 
@@ -88,7 +89,7 @@ func (rc *AuthController) RegisterSpecialAccount(c *fiber.Ctx) error {
 
 	return c.Status(fiber.StatusCreated).JSON(response.SuccessResponse(
 		"Special Account Registration is successful.",
-		resp,
+		presenter.ToRegisterSpecialAccountResponse(resp),
 	))
 }
 
@@ -109,7 +110,7 @@ func (rc *AuthController) Login(c *fiber.Ctx) error {
 
 	return c.Status(fiber.StatusOK).JSON(response.SuccessResponse(
 		"Login successful",
-		resp,
+		presenter.ToLoginResponse(resp),
 	))
 }
 
@@ -130,7 +131,7 @@ func (rc *AuthController) VerifyOTP(c *fiber.Ctx) error {
 
 	return c.Status(fiber.StatusOK).JSON(response.SuccessResponse(
 		"OTP verified successfully.",
-		resp,
+		presenter.ToVerifyOTPResponse(resp),
 	))
 }
 
@@ -151,7 +152,7 @@ func (rc *AuthController) CompleteProfile(c *fiber.Ctx) error {
 
 	return c.Status(fiber.StatusOK).JSON(response.SuccessResponse(
 		resp.Message,
-		resp,
+		presenter.ToCompleteProfileResponse(resp),
 	))
 }
 
@@ -172,7 +173,7 @@ func (rc *AuthController) ResendOTP(c *fiber.Ctx) error {
 
 	return c.Status(fiber.StatusOK).JSON(response.SuccessResponse(
 		"OTP resent successfully. Please check your email.",
-		resp,
+		presenter.ToResendOTPResponse(resp),
 	))
 }
 
@@ -219,7 +220,7 @@ func (rc *AuthController) SetupPIN(c *fiber.Ctx) error {
 
 	return c.Status(fiber.StatusOK).JSON(response.SuccessResponse(
 		"PIN setup successful",
-		resp,
+		presenter.ToSetupPINResponse(resp),
 	))
 }
 
@@ -240,7 +241,7 @@ func (rc *AuthController) RequestPasswordReset(c *fiber.Ctx) error {
 
 	return c.Status(fiber.StatusOK).JSON(response.SuccessResponse(
 		"Password reset OTP has been sent to your email",
-		resp,
+		presenter.ToRequestPasswordResetResponse(resp),
 	))
 }
 
@@ -261,7 +262,7 @@ func (rc *AuthController) ResetPassword(c *fiber.Ctx) error {
 
 	return c.Status(fiber.StatusOK).JSON(response.SuccessResponse(
 		resp.Message,
-		resp,
+		presenter.ToResetPasswordResponse(resp),
 	))
 }
 
@@ -290,7 +291,7 @@ func (rc *AuthController) InitiateRegistration(c *fiber.Ctx) error {
 
 	return c.Status(fiber.StatusCreated).JSON(response.SuccessResponse(
 		resp.Message,
-		resp,
+		presenter.ToInitiateRegistrationResponse(resp),
 	))
 }
 
@@ -321,7 +322,7 @@ func (rc *AuthController) VerifyRegistrationOTP(c *fiber.Ctx) error {
 
 	return c.Status(fiber.StatusOK).JSON(response.SuccessResponse(
 		resp.Message,
-		resp,
+		presenter.ToVerifyRegistrationOTPResponse(resp),
 	))
 }
 
@@ -352,7 +353,7 @@ func (rc *AuthController) ResendRegistrationOTP(c *fiber.Ctx) error {
 
 	return c.Status(fiber.StatusOK).JSON(response.SuccessResponse(
 		resp.Message,
-		resp,
+		presenter.ToResendRegistrationOTPResponse(resp),
 	))
 }
 
@@ -379,7 +380,7 @@ func (rc *AuthController) GetRegistrationStatus(c *fiber.Ctx) error {
 
 	return c.Status(fiber.StatusOK).JSON(response.SuccessResponse(
 		"Registration status retrieved",
-		resp,
+		presenter.ToRegistrationStatusResponse(resp),
 	))
 }
 
@@ -423,6 +424,6 @@ func (rc *AuthController) CompleteRegistration(c *fiber.Ctx) error {
 
 	return c.Status(fiber.StatusCreated).JSON(response.SuccessResponse(
 		resp.Message,
-		resp,
+		presenter.ToCompleteRegistrationResponse(resp),
 	))
 }
