@@ -9,13 +9,19 @@ import (
 	"github.com/google/uuid"
 )
 
-func (uc *usecase) GetByID(ctx context.Context, id uuid.UUID) (*userdto.UserDetailResponse, error) {
+func (uc *usecase) GetByID(ctx context.Context, callerTenantID *uuid.UUID, id uuid.UUID) (*userdto.UserDetailResponse, error) {
 	user, err := uc.UserRepo.GetByID(ctx, id)
 	if err != nil {
 		if errors.IsNotFound(err) {
 			return nil, errors.ErrUserNotFound()
 		}
 		return nil, err
+	}
+
+	if callerTenantID != nil {
+		if user.TenantID == nil || *callerTenantID != *user.TenantID {
+			return nil, errors.ErrForbidden("access denied")
+		}
 	}
 
 	profile, err := uc.UserProfileRepo.GetByUserID(ctx, id)

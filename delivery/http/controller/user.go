@@ -143,13 +143,18 @@ func (uc *UserController) List(c *fiber.Ctx) error {
 }
 
 func (uc *UserController) GetByID(c *fiber.Ctx) error {
+	callerTenantID, err := getTenantID(c)
+	if err != nil {
+		return err
+	}
+
 	idParam := c.Params("id")
 	id, err := uuid.Parse(idParam)
 	if err != nil {
 		return errors.ErrBadRequest("Invalid user ID")
 	}
 
-	resp, err := uc.userUsecase.GetByID(c.Context(), id)
+	resp, err := uc.userUsecase.GetByID(c.Context(), callerTenantID, id)
 	if err != nil {
 		return err
 	}
@@ -161,6 +166,11 @@ func (uc *UserController) GetByID(c *fiber.Ctx) error {
 }
 
 func (uc *UserController) Update(c *fiber.Ctx) error {
+	callerTenantID, err := getTenantID(c)
+	if err != nil {
+		return err
+	}
+
 	idParam := c.Params("id")
 	id, err := uuid.Parse(idParam)
 	if err != nil {
@@ -176,7 +186,7 @@ func (uc *UserController) Update(c *fiber.Ctx) error {
 		return errors.ErrValidationWithFields(convertUserValidationErrors(err.(validator.ValidationErrors)))
 	}
 
-	resp, err := uc.userUsecase.Update(c.Context(), id, &req)
+	resp, err := uc.userUsecase.Update(c.Context(), callerTenantID, id, &req)
 	if err != nil {
 		return err
 	}
@@ -188,13 +198,18 @@ func (uc *UserController) Update(c *fiber.Ctx) error {
 }
 
 func (uc *UserController) Delete(c *fiber.Ctx) error {
+	callerTenantID, err := getTenantID(c)
+	if err != nil {
+		return err
+	}
+
 	idParam := c.Params("id")
 	id, err := uuid.Parse(idParam)
 	if err != nil {
 		return errors.ErrBadRequest("Invalid user ID")
 	}
 
-	if err := uc.userUsecase.Delete(c.Context(), id); err != nil {
+	if err := uc.userUsecase.Delete(c.Context(), callerTenantID, id); err != nil {
 		return err
 	}
 
