@@ -42,7 +42,7 @@ func (uc *usecase) Create(ctx context.Context, req *roledto.CreateRequest) (*rol
 		Name:        req.Name,
 		Description: req.Description,
 		ScopeLevel:  scopeLevel,
-		IsSystem:    req.IsSystem,
+		IsSystem:    false,
 		IsActive:    true,
 	}
 
