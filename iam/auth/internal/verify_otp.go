@@ -34,6 +34,7 @@ func (uc *usecase) VerifyOTP(ctx context.Context, req *authdto.VerifyOTPRequest)
 
 	err = bcrypt.CompareHashAndPassword([]byte(verification.OTPHash), []byte(req.OTPCode))
 	if err != nil {
+		_ = uc.EmailVerificationRepo.MarkAsVerified(ctx, verification.ID)
 		return nil, errors.ErrOTPInvalid()
 	}
 
