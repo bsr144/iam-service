@@ -1,7 +1,10 @@
 package middleware
 
 import (
+	"context"
 	"net"
+
+	"iam-service/pkg/logger"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/google/uuid"
@@ -26,6 +29,15 @@ func RequestContext() fiber.Handler {
 				c.Locals(TenantIDFromHdrKey, tenantID)
 			}
 		}
+
+		// Enrich Go context for audit logging
+		ctx := c.UserContext()
+		ctx = context.WithValue(ctx, logger.CtxRequestID, c.GetRespHeader("X-Request-ID"))
+		if clientIP != nil {
+			ctx = context.WithValue(ctx, logger.CtxIPAddress, clientIP.String())
+		}
+		ctx = context.WithValue(ctx, logger.CtxUserAgent, userAgent)
+		c.SetUserContext(ctx)
 
 		return c.Next()
 	}
