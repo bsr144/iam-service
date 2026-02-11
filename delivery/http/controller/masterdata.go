@@ -3,6 +3,7 @@ package controller
 import (
 	"iam-service/config"
 	"iam-service/delivery/http/dto/response"
+	"iam-service/delivery/http/presenter"
 	"iam-service/masterdata"
 	"iam-service/masterdata/masterdatadto"
 	"iam-service/pkg/errors"
@@ -40,7 +41,7 @@ func (mc *MasterdataController) ListCategories(c *fiber.Ctx) error {
 	return c.JSON(response.APIResponse{
 		Success: true,
 		Message: "Categories retrieved successfully",
-		Data:    resp.Categories,
+		Data:    presenter.ToCategoryListResponse(resp.Categories),
 		Pagination: &response.Pagination{
 			Total:      resp.Pagination.Total,
 			Page:       resp.Pagination.Page,
@@ -62,7 +63,7 @@ func (mc *MasterdataController) GetCategoryByID(c *fiber.Ctx) error {
 		return err
 	}
 
-	return c.JSON(response.SuccessResponse("Category retrieved successfully", resp))
+	return c.JSON(response.SuccessResponse("Category retrieved successfully", presenter.ToCategoryResponse(resp)))
 }
 
 func (mc *MasterdataController) GetCategoryByCode(c *fiber.Ctx) error {
@@ -76,7 +77,7 @@ func (mc *MasterdataController) GetCategoryByCode(c *fiber.Ctx) error {
 		return err
 	}
 
-	return c.JSON(response.SuccessResponse("Category retrieved successfully", resp))
+	return c.JSON(response.SuccessResponse("Category retrieved successfully", presenter.ToCategoryResponse(resp)))
 }
 
 func (mc *MasterdataController) CreateCategory(c *fiber.Ctx) error {
@@ -96,7 +97,7 @@ func (mc *MasterdataController) CreateCategory(c *fiber.Ctx) error {
 
 	return c.Status(fiber.StatusCreated).JSON(response.SuccessResponse(
 		"Category created successfully",
-		resp,
+		presenter.ToCategoryResponse(resp),
 	))
 }
 
@@ -121,7 +122,7 @@ func (mc *MasterdataController) UpdateCategory(c *fiber.Ctx) error {
 		return err
 	}
 
-	return c.JSON(response.SuccessResponse("Category updated successfully", resp))
+	return c.JSON(response.SuccessResponse("Category updated successfully", presenter.ToCategoryResponse(resp)))
 }
 
 func (mc *MasterdataController) DeleteCategory(c *fiber.Ctx) error {
@@ -150,7 +151,7 @@ func (mc *MasterdataController) GetCategoryChildren(c *fiber.Ctx) error {
 		return err
 	}
 
-	return c.JSON(response.SuccessResponse("Child categories retrieved successfully", resp))
+	return c.JSON(response.SuccessResponse("Child categories retrieved successfully", presenter.ToCategoryListResponse(resp)))
 }
 
 func (mc *MasterdataController) ListItems(c *fiber.Ctx) error {
@@ -167,7 +168,7 @@ func (mc *MasterdataController) ListItems(c *fiber.Ctx) error {
 	return c.JSON(response.APIResponse{
 		Success: true,
 		Message: "Items retrieved successfully",
-		Data:    resp.Items,
+		Data:    presenter.ToItemListResponse(resp.Items),
 		Pagination: &response.Pagination{
 			Total:      resp.Pagination.Total,
 			Page:       resp.Pagination.Page,
@@ -189,7 +190,7 @@ func (mc *MasterdataController) GetItemByID(c *fiber.Ctx) error {
 		return err
 	}
 
-	return c.JSON(response.SuccessResponse("Item retrieved successfully", resp))
+	return c.JSON(response.SuccessResponse("Item retrieved successfully", presenter.ToItemResponse(resp)))
 }
 
 func (mc *MasterdataController) GetItemByCode(c *fiber.Ctx) error {
@@ -217,7 +218,7 @@ func (mc *MasterdataController) GetItemByCode(c *fiber.Ctx) error {
 		return err
 	}
 
-	return c.JSON(response.SuccessResponse("Item retrieved successfully", resp))
+	return c.JSON(response.SuccessResponse("Item retrieved successfully", presenter.ToItemResponse(resp)))
 }
 
 func (mc *MasterdataController) CreateItem(c *fiber.Ctx) error {
@@ -241,7 +242,7 @@ func (mc *MasterdataController) CreateItem(c *fiber.Ctx) error {
 
 	return c.Status(fiber.StatusCreated).JSON(response.SuccessResponse(
 		"Item created successfully",
-		resp,
+		presenter.ToItemResponse(resp),
 	))
 }
 
@@ -266,7 +267,7 @@ func (mc *MasterdataController) UpdateItem(c *fiber.Ctx) error {
 		return err
 	}
 
-	return c.JSON(response.SuccessResponse("Item updated successfully", resp))
+	return c.JSON(response.SuccessResponse("Item updated successfully", presenter.ToItemResponse(resp)))
 }
 
 func (mc *MasterdataController) DeleteItem(c *fiber.Ctx) error {
@@ -295,7 +296,7 @@ func (mc *MasterdataController) GetItemChildren(c *fiber.Ctx) error {
 		return err
 	}
 
-	return c.JSON(response.SuccessResponse("Child items retrieved successfully", resp))
+	return c.JSON(response.SuccessResponse("Child items retrieved successfully", presenter.ToItemListResponse(resp)))
 }
 
 func (mc *MasterdataController) GetItemTree(c *fiber.Ctx) error {
@@ -346,7 +347,7 @@ func (mc *MasterdataController) ListItemsByParent(c *fiber.Ctx) error {
 		return err
 	}
 
-	return c.JSON(response.SuccessResponse("Items retrieved successfully", resp))
+	return c.JSON(response.SuccessResponse("Items retrieved successfully", presenter.ToItemListResponse(resp)))
 }
 
 func (mc *MasterdataController) GetDefaultItem(c *fiber.Ctx) error {
@@ -369,7 +370,7 @@ func (mc *MasterdataController) GetDefaultItem(c *fiber.Ctx) error {
 		return err
 	}
 
-	return c.JSON(response.SuccessResponse("Default item retrieved successfully", resp))
+	return c.JSON(response.SuccessResponse("Default item retrieved successfully", presenter.ToItemResponse(resp)))
 }
 
 func (mc *MasterdataController) ValidateCode(c *fiber.Ctx) error {
