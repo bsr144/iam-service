@@ -319,7 +319,7 @@ func (mc *MasterdataController) GetItemTree(c *fiber.Ctx) error {
 		return err
 	}
 
-	return c.JSON(response.SuccessResponse("Item tree retrieved successfully", resp))
+	return c.JSON(response.SuccessResponse("Item tree retrieved successfully", presenter.ToItemTreeResponse(resp)))
 }
 
 func (mc *MasterdataController) ListItemsByParent(c *fiber.Ctx) error {
@@ -388,7 +388,7 @@ func (mc *MasterdataController) ValidateCode(c *fiber.Ctx) error {
 		return err
 	}
 
-	return c.JSON(response.SuccessResponse("Validation completed", resp))
+	return c.JSON(response.SuccessResponse("Validation completed", presenter.ToValidateCodeResponse(resp)))
 }
 
 func (mc *MasterdataController) ValidateCodes(c *fiber.Ctx) error {
@@ -406,7 +406,7 @@ func (mc *MasterdataController) ValidateCodes(c *fiber.Ctx) error {
 		return err
 	}
 
-	return c.JSON(response.SuccessResponse("Batch validation completed", resp))
+	return c.JSON(response.SuccessResponse("Batch validation completed", presenter.ToValidateCodesResponse(resp)))
 }
 
 func convertMasterdataValidationErrors(errs validator.ValidationErrors) []errors.FieldError {
