@@ -3,6 +3,7 @@ package controller
 import (
 	"iam-service/config"
 	"iam-service/delivery/http/dto/response"
+	"iam-service/delivery/http/presenter"
 	"iam-service/iam/user"
 	"iam-service/iam/user/userdto"
 	"iam-service/pkg/errors"
@@ -65,7 +66,7 @@ func (uc *UserController) Create(c *fiber.Ctx) error {
 
 	return c.Status(fiber.StatusCreated).JSON(response.SuccessResponse(
 		"User created successfully",
-		resp,
+		presenter.ToCreateUserResponse(resp),
 	))
 }
 
@@ -82,7 +83,7 @@ func (uc *UserController) GetMe(c *fiber.Ctx) error {
 
 	return c.Status(fiber.StatusOK).JSON(response.SuccessResponse(
 		"User profile retrieved successfully",
-		resp,
+		presenter.ToUserResponse(resp),
 	))
 }
 
@@ -108,7 +109,7 @@ func (uc *UserController) UpdateMe(c *fiber.Ctx) error {
 
 	return c.Status(fiber.StatusOK).JSON(response.SuccessResponse(
 		"Profile updated successfully",
-		resp,
+		presenter.ToUserResponse(resp),
 	))
 }
 
@@ -131,7 +132,7 @@ func (uc *UserController) List(c *fiber.Ctx) error {
 	return c.Status(fiber.StatusOK).JSON(response.APIResponse{
 		Success: true,
 		Message: "Users retrieved successfully",
-		Data:    resp.Users,
+		Data:    presenter.ToUserListResponse(resp.Users),
 		Pagination: &response.Pagination{
 			Total:      resp.Pagination.Total,
 			Page:       resp.Pagination.Page,
@@ -155,7 +156,7 @@ func (uc *UserController) GetByID(c *fiber.Ctx) error {
 
 	return c.Status(fiber.StatusOK).JSON(response.SuccessResponse(
 		"User retrieved successfully",
-		resp,
+		presenter.ToUserResponse(resp),
 	))
 }
 
@@ -182,7 +183,7 @@ func (uc *UserController) Update(c *fiber.Ctx) error {
 
 	return c.Status(fiber.StatusOK).JSON(response.SuccessResponse(
 		"User updated successfully",
-		resp,
+		presenter.ToUserResponse(resp),
 	))
 }
 
@@ -222,7 +223,7 @@ func (uc *UserController) Approve(c *fiber.Ctx) error {
 
 	return c.Status(fiber.StatusOK).JSON(response.SuccessResponse(
 		resp.Message,
-		resp,
+		presenter.ToApproveUserResponse(resp),
 	))
 }
 
@@ -254,7 +255,7 @@ func (uc *UserController) Reject(c *fiber.Ctx) error {
 
 	return c.Status(fiber.StatusOK).JSON(response.SuccessResponse(
 		resp.Message,
-		resp,
+		presenter.ToRejectUserResponse(resp),
 	))
 }
 
@@ -272,7 +273,7 @@ func (uc *UserController) Unlock(c *fiber.Ctx) error {
 
 	return c.Status(fiber.StatusOK).JSON(response.SuccessResponse(
 		resp.Message,
-		resp,
+		presenter.ToUnlockUserResponse(resp),
 	))
 }
 
@@ -290,6 +291,6 @@ func (uc *UserController) ResetPIN(c *fiber.Ctx) error {
 
 	return c.Status(fiber.StatusOK).JSON(response.SuccessResponse(
 		resp.Message,
-		resp,
+		presenter.ToResetUserPINResponse(resp),
 	))
 }
