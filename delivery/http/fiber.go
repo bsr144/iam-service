@@ -43,7 +43,7 @@ func NewServer(cfg *config.Config) *Server {
 		JSONEncoder:  json.Marshal,
 		JSONDecoder:  json.Unmarshal,
 		AppName:      cfg.App.Name,
-		BodyLimit:    256 * 1024, // 256KB - sufficient for JSON-only IAM payloads
+		BodyLimit:    256 * 1024,
 		ReadTimeout:  cfg.Server.ReadTimeout,
 		WriteTimeout: cfg.Server.WriteTimeout,
 		IdleTimeout:  cfg.Server.IdleTimeout,
@@ -67,7 +67,6 @@ func NewServer(cfg *config.Config) *Server {
 	userProfileRepo := postgres.NewUserProfileRepository(postgresDB)
 	userCredentialsRepo := postgres.NewUserCredentialsRepository(postgresDB)
 	userSecurityRepo := postgres.NewUserSecurityRepository(postgresDB)
-	emailVerificationRepo := postgres.NewEmailVerificationRepository(postgresDB)
 	tenantRepo := postgres.NewTenantRepository(postgresDB)
 	userActivationTrackingRepo := postgres.NewUserActivationTrackingRepository(postgresDB)
 	roleRepo := postgres.NewRoleRepository(postgresDB)
@@ -90,7 +89,6 @@ func NewServer(cfg *config.Config) *Server {
 		userProfileRepo,
 		userCredentialsRepo,
 		userSecurityRepo,
-		emailVerificationRepo,
 		tenantRepo,
 		userActivationTrackingRepo,
 		roleRepo,
@@ -176,6 +174,8 @@ func createErrorHandler(cfg *config.Config, zapLogger *zap.Logger) fiber.ErrorHa
 	return func(c *fiber.Ctx, err error) error {
 		requestID := middleware.GetRequestID(c)
 		includeDebug := cfg.IsDevelopment()
+
+		log.Fatalln(includeDebug)
 
 		var appErr *apperrors.AppError
 		if apperrors.As(err, &appErr) {

@@ -6,64 +6,6 @@ import (
 	"github.com/google/uuid"
 )
 
-type LoginResponse struct {
-	AccessToken  string            `json:"access_token"`
-	RefreshToken string            `json:"refresh_token"`
-	ExpiresIn    int               `json:"expires_in"`
-	TokenType    string            `json:"token_type"`
-	User         LoginUserResponse `json:"user"`
-}
-
-type LoginUserResponse struct {
-	ID       uuid.UUID `json:"id"`
-	Email    string    `json:"email"`
-	FullName string    `json:"full_name"`
-	Roles    []string  `json:"roles"`
-}
-
-type RegisterResponse struct {
-	UserID       uuid.UUID `json:"user_id"`
-	Email        string    `json:"email"`
-	Status       string    `json:"status"`
-	OTPExpiresAt time.Time `json:"otp_expires_at"`
-}
-
-type RegisterSpecialAccountResponse struct {
-	UserID uuid.UUID `json:"user_id"`
-	Email  string    `json:"email"`
-}
-
-type VerifyOTPResponse struct {
-	RegistrationToken string `json:"registration_token"`
-	ExpiresIn         int    `json:"expires_in"`
-	NextStep          string `json:"next_step"`
-}
-
-type CompleteProfileResponse struct {
-	UserID   uuid.UUID `json:"user_id"`
-	Status   string    `json:"status"`
-	Email    string    `json:"email"`
-	FullName string    `json:"full_name"`
-	Message  string    `json:"message"`
-}
-
-type ResendOTPResponse struct {
-	OTPExpiresAt time.Time `json:"otp_expires_at"`
-}
-
-type SetupPINResponse struct {
-	PINSetAt time.Time `json:"pin_set_at"`
-}
-
-type RequestPasswordResetResponse struct {
-	OTPExpiresAt time.Time `json:"otp_expires_at"`
-	EmailMasked  string    `json:"email_masked"`
-}
-
-type ResetPasswordResponse struct {
-	Message string `json:"message"`
-}
-
 type InitiateRegistrationOTPConfig struct {
 	ExpiresInMinutes      int `json:"expires_in_minutes"`
 	ResendCooldownSeconds int `json:"resend_cooldown_seconds"`
@@ -107,6 +49,37 @@ type RegistrationStatusResponse struct {
 	ExpiresAt            time.Time `json:"expires_at"`
 	OTPAttemptsRemaining int       `json:"otp_attempts_remaining"`
 	ResendsRemaining     int       `json:"resends_remaining"`
+}
+
+type SetPasswordNextStep struct {
+	Action         string   `json:"action"`
+	Endpoint       string   `json:"endpoint"`
+	RequiredFields []string `json:"required_fields"`
+}
+
+type SetPasswordResponse struct {
+	RegistrationID    string              `json:"registration_id"`
+	Status            string              `json:"status"`
+	Message           string              `json:"message"`
+	RegistrationToken string              `json:"registration_token"`
+	NextStep          SetPasswordNextStep `json:"next_step"`
+}
+
+type CompleteProfileRegistrationProfile struct {
+	FirstName string `json:"first_name"`
+	LastName  string `json:"last_name"`
+}
+
+type CompleteProfileRegistrationResponse struct {
+	UserID       uuid.UUID                          `json:"user_id"`
+	Email        string                             `json:"email"`
+	Status       string                             `json:"status"`
+	Message      string                             `json:"message"`
+	Profile      CompleteProfileRegistrationProfile `json:"profile"`
+	AccessToken  string                             `json:"access_token"`
+	RefreshToken string                             `json:"refresh_token"`
+	TokenType    string                             `json:"token_type"`
+	ExpiresIn    int                                `json:"expires_in"`
 }
 
 type CompleteRegistrationProfile struct {
