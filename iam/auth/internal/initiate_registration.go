@@ -15,7 +15,6 @@ import (
 func (uc *usecase) InitiateRegistration(
 	ctx context.Context,
 	req *authdto.InitiateRegistrationRequest,
-	ipAddress, userAgent string,
 ) (*authdto.InitiateRegistrationResponse, error) {
 	emailExists, err := uc.UserRepo.EmailExists(ctx, req.Email)
 	if err != nil {
@@ -77,8 +76,8 @@ func (uc *usecase) InitiateRegistration(
 		ResendCount:           0,
 		MaxResends:            RegistrationOTPMaxResends,
 		ResendCooldownSeconds: RegistrationOTPResendCooldown,
-		IPAddress:             ipAddress,
-		UserAgent:             userAgent,
+		IPAddress:             req.IPAddress,
+		UserAgent:             req.UserAgent,
 		CreatedAt:             now,
 		ExpiresAt:             now.Add(sessionTTL),
 	}

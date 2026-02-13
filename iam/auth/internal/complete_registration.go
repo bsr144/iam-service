@@ -19,17 +19,14 @@ import (
 
 func (uc *usecase) CompleteRegistration(
 	ctx context.Context,
-	registrationID uuid.UUID,
-	registrationToken string,
 	req *authdto.CompleteRegistrationRequest,
-	ipAddress, userAgent string,
 ) (*authdto.CompleteRegistrationResponse, error) {
-	_, err := uc.validateRegistrationCompleteToken(registrationToken, registrationID)
+	_, err := uc.validateRegistrationCompleteToken(req.RegistrationToken, req.RegistrationID)
 	if err != nil {
 		return nil, err
 	}
 
-	session, err := uc.Redis.GetRegistrationSession(ctx, registrationID)
+	session, err := uc.Redis.GetRegistrationSession(ctx, req.RegistrationID)
 	if err != nil {
 		return nil, err
 	}
@@ -42,7 +39,7 @@ func (uc *usecase) CompleteRegistration(
 		return nil, errors.ErrForbidden("Email has not been verified")
 	}
 
-	tokenHash := sha256.Sum256([]byte(registrationToken))
+	tokenHash := sha256.Sum256([]byte(req.RegistrationToken))
 	tokenHashStr := hex.EncodeToString(tokenHash[:])
 	if session.RegistrationTokenHash == nil || *session.RegistrationTokenHash != tokenHashStr {
 		return nil, errors.ErrUnauthorized("Registration token has already been used or is invalid")
@@ -133,7 +130,7 @@ func (uc *usecase) CompleteRegistration(
 		return nil, errors.ErrInternal("failed to create user").WithError(err)
 	}
 
-	_ = uc.Redis.DeleteRegistrationSession(ctx, registrationID)
+	_ = uc.Redis.DeleteRegistrationSession(ctx, req.RegistrationID)
 	_ = uc.Redis.UnlockRegistrationEmail(ctx, session.Email)
 
 	response := &authdto.CompleteRegistrationResponse{

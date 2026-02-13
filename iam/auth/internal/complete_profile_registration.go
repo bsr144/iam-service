@@ -12,22 +12,18 @@ import (
 	"iam-service/entity"
 	"iam-service/iam/auth/authdto"
 	"iam-service/pkg/errors"
-
-	"github.com/google/uuid"
 )
 
 func (uc *usecase) CompleteProfileRegistration(
 	ctx context.Context,
-	registrationID uuid.UUID,
-	registrationToken string,
 	req *authdto.CompleteProfileRegistrationRequest,
 ) (*authdto.CompleteProfileRegistrationResponse, error) {
-	_, err := uc.validateRegistrationCompleteToken(registrationToken, registrationID)
+	_, err := uc.validateRegistrationCompleteToken(req.RegistrationToken, req.RegistrationID)
 	if err != nil {
 		return nil, err
 	}
 
-	session, err := uc.Redis.GetRegistrationSession(ctx, registrationID)
+	session, err := uc.Redis.GetRegistrationSession(ctx, req.RegistrationID)
 	if err != nil {
 		return nil, err
 	}
@@ -40,7 +36,7 @@ func (uc *usecase) CompleteProfileRegistration(
 		return nil, errors.ErrForbidden("Registration session is not ready for profile completion. Password must be set first.")
 	}
 
-	tokenHash := sha256.Sum256([]byte(registrationToken))
+	tokenHash := sha256.Sum256([]byte(req.RegistrationToken))
 	tokenHashStr := hex.EncodeToString(tokenHash[:])
 	if session.RegistrationTokenHash == nil || *session.RegistrationTokenHash != tokenHashStr {
 		return nil, errors.ErrUnauthorized("Registration token has already been used or is invalid")
@@ -74,7 +70,7 @@ func (uc *usecase) CompleteProfileRegistration(
 		return nil, errors.ErrConflict("This email has already been registered")
 	}
 
-	passwordHashStr, err := uc.Redis.GetRegistrationPasswordHash(ctx, registrationID)
+	passwordHashStr, err := uc.Redis.GetRegistrationPasswordHash(ctx, req.RegistrationID)
 	if err != nil {
 		return nil, errors.ErrForbidden("Password has not been set")
 	}
@@ -147,7 +143,7 @@ func (uc *usecase) CompleteProfileRegistration(
 		return nil, errors.ErrInternal("failed to create user").WithError(err)
 	}
 
-	_ = uc.Redis.DeleteRegistrationSession(ctx, registrationID)
+	_ = uc.Redis.DeleteRegistrationSession(ctx, req.RegistrationID)
 	_ = uc.Redis.UnlockRegistrationEmail(ctx, session.Email)
 
 	accessToken, refreshToken, expiresIn, err := uc.generateAuthTokensForRegistration(ctx, user.ID, session.Email)
