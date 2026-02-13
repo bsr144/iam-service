@@ -18,6 +18,7 @@ type UserRepository interface {
 	Update(ctx context.Context, user *entity.User) error
 	Delete(ctx context.Context, id uuid.UUID) error
 	EmailExistsInTenant(ctx context.Context, tenantID uuid.UUID, email string) (bool, error)
+	EmailExists(ctx context.Context, email string) (bool, error)
 	List(ctx context.Context, filter *usercontract.UserListFilter) ([]*entity.User, int64, error)
 	GetPendingApprovalUsers(ctx context.Context, tenantID uuid.UUID) ([]*entity.User, error)
 }
@@ -35,15 +36,6 @@ type UserSecurityRepository interface {
 	Create(ctx context.Context, security *entity.UserSecurity) error
 	GetByUserID(ctx context.Context, userID uuid.UUID) (*entity.UserSecurity, error)
 	Update(ctx context.Context, security *entity.UserSecurity) error
-}
-type EmailVerificationRepository interface {
-	Create(ctx context.Context, verification *entity.EmailVerification) error
-	GetByID(ctx context.Context, id uuid.UUID) (*entity.EmailVerification, error)
-	GetLatestByEmail(ctx context.Context, email string, otpType entity.OTPType) (*entity.EmailVerification, error)
-	GetLatestByUserID(ctx context.Context, userID uuid.UUID, otpType entity.OTPType) (*entity.EmailVerification, error)
-	MarkAsVerified(ctx context.Context, id uuid.UUID) error
-	CountActiveOTPsByEmail(ctx context.Context, email string, otpType entity.OTPType) (int, error)
-	DeleteExpiredByEmail(ctx context.Context, email string) error
 }
 type TenantRepository interface {
 	GetByID(ctx context.Context, id uuid.UUID) (*entity.Tenant, error)
@@ -70,11 +62,6 @@ type RefreshTokenRepository interface {
 	RevokeAllByUserID(ctx context.Context, userID uuid.UUID, reason string) error
 	RevokeByFamily(ctx context.Context, tokenFamily uuid.UUID, reason string) error
 }
-type PINVerificationLogRepository interface {
-	Create(ctx context.Context, log *entity.PINVerificationLog) error
-	CountRecentFailures(ctx context.Context, userID uuid.UUID, since int) (int, error)
-}
-
 type UserRoleRepository interface {
 	Create(ctx context.Context, userRole *entity.UserRole) error
 	ListActiveByUserID(ctx context.Context, userID uuid.UUID, productID *uuid.UUID) ([]entity.UserRole, error)
@@ -95,18 +82,20 @@ type PermissionRepository interface {
 
 type RegistrationSessionStore interface {
 	CreateRegistrationSession(ctx context.Context, session *entity.RegistrationSession, ttl time.Duration) error
-	GetRegistrationSession(ctx context.Context, tenantID, sessionID uuid.UUID) (*entity.RegistrationSession, error)
+	GetRegistrationSession(ctx context.Context, sessionID uuid.UUID) (*entity.RegistrationSession, error)
 	UpdateRegistrationSession(ctx context.Context, session *entity.RegistrationSession, ttl time.Duration) error
-	DeleteRegistrationSession(ctx context.Context, tenantID, sessionID uuid.UUID) error
+	DeleteRegistrationSession(ctx context.Context, sessionID uuid.UUID) error
 
-	IncrementRegistrationAttempts(ctx context.Context, tenantID, sessionID uuid.UUID) (int, error)
-	UpdateRegistrationOTP(ctx context.Context, tenantID, sessionID uuid.UUID, otpHash string, expiresAt time.Time) error
-	MarkRegistrationVerified(ctx context.Context, tenantID, sessionID uuid.UUID, tokenHash string) error
+	IncrementRegistrationAttempts(ctx context.Context, sessionID uuid.UUID) (int, error)
+	UpdateRegistrationOTP(ctx context.Context, sessionID uuid.UUID, otpHash string, expiresAt time.Time) error
+	MarkRegistrationVerified(ctx context.Context, sessionID uuid.UUID, tokenHash string) error
+	MarkRegistrationPasswordSet(ctx context.Context, sessionID uuid.UUID, passwordHash string, tokenHash string) error
+	GetRegistrationPasswordHash(ctx context.Context, sessionID uuid.UUID) (string, error)
 
-	LockRegistrationEmail(ctx context.Context, tenantID uuid.UUID, email string, ttl time.Duration) (bool, error)
-	UnlockRegistrationEmail(ctx context.Context, tenantID uuid.UUID, email string) error
-	IsRegistrationEmailLocked(ctx context.Context, tenantID uuid.UUID, email string) (bool, error)
+	LockRegistrationEmail(ctx context.Context, email string, ttl time.Duration) (bool, error)
+	UnlockRegistrationEmail(ctx context.Context, email string) error
+	IsRegistrationEmailLocked(ctx context.Context, email string) (bool, error)
 
-	IncrementRegistrationRateLimit(ctx context.Context, tenantID uuid.UUID, email string, ttl time.Duration) (int64, error)
-	GetRegistrationRateLimitCount(ctx context.Context, tenantID uuid.UUID, email string) (int64, error)
+	IncrementRegistrationRateLimit(ctx context.Context, email string, ttl time.Duration) (int64, error)
+	GetRegistrationRateLimitCount(ctx context.Context, email string) (int64, error)
 }
