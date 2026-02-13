@@ -39,7 +39,7 @@ const (
 )
 
 type User struct {
-	UserID           uuid.UUID  `json:"user_id" gorm:"column:user_id;primaryKey" db:"user_id"`
+	ID               uuid.UUID  `json:"id" gorm:"column:id;primaryKey;type:uuid;default:uuidv7()" db:"id"`
 	TenantID         *uuid.UUID `json:"tenant_id,omitempty" gorm:"column:tenant_id" db:"tenant_id"`
 	BranchID         *uuid.UUID `json:"branch_id,omitempty" gorm:"column:branch_id" db:"branch_id"`
 	Email            string     `json:"email" gorm:"column:email;not null" db:"email"`
@@ -48,7 +48,6 @@ type User struct {
 	IsServiceAccount bool       `json:"is_service_account" gorm:"column:is_service_account;default:false" db:"is_service_account"`
 	IsActive         bool       `json:"is_active" gorm:"column:is_active;default:true" db:"is_active"`
 
-	// Registration tracking (audit trail)
 	RegistrationID          *uuid.UUID `json:"registration_id,omitempty" gorm:"column:registration_id" db:"registration_id"`
 	RegistrationCompletedAt *time.Time `json:"registration_completed_at,omitempty" gorm:"column:registration_completed_at" db:"registration_completed_at"`
 
@@ -59,16 +58,8 @@ func (User) TableName() string {
 	return "users"
 }
 
-func (u *User) IsPlatformAdmin() bool {
-	return u.TenantID == nil
-}
-
-func (u *User) IsTenantUser() bool {
-	return u.TenantID != nil
-}
-
 type UserCredentials struct {
-	UserCredentialID  uuid.UUID       `json:"user_credential_id" gorm:"column:user_credential_id;primaryKey" db:"user_credential_id"`
+	ID                uuid.UUID       `json:"id" gorm:"column:id;primaryKey;type:uuid;default:uuidv7()" db:"id"`
 	UserID            uuid.UUID       `json:"user_id" gorm:"column:user_id;uniqueIndex;not null" db:"user_id"`
 	PasswordHash      *string         `json:"-" gorm:"column:password_hash" db:"password_hash"`
 	PasswordChangedAt *time.Time      `json:"password_changed_at,omitempty" gorm:"column:password_changed_at" db:"password_changed_at"`
@@ -91,7 +82,7 @@ func (UserCredentials) TableName() string {
 }
 
 type UserProfile struct {
-	UserProfileID     uuid.UUID      `json:"user_profile_id" gorm:"column:user_profile_id;primaryKey" db:"user_profile_id"`
+	ID                uuid.UUID      `json:"id" gorm:"column:id;primaryKey;type:uuid;default:uuidv7()" db:"id"`
 	UserID            uuid.UUID      `json:"user_id" gorm:"column:user_id;uniqueIndex;not null" db:"user_id"`
 	FirstName         string         `json:"first_name" gorm:"column:first_name;not null" db:"first_name"`
 	LastName          string         `json:"last_name" gorm:"column:last_name;not null" db:"last_name"`
@@ -117,7 +108,7 @@ func (u *UserProfile) FullName() string {
 }
 
 type UserSecurity struct {
-	UserSecurityID      uuid.UUID       `json:"user_security_id" gorm:"column:user_security_id;primaryKey" db:"user_security_id"`
+	ID                  uuid.UUID       `json:"id" gorm:"column:id;primaryKey;type:uuid;default:uuidv7()" db:"id"`
 	UserID              uuid.UUID       `json:"user_id" gorm:"column:user_id;uniqueIndex;not null" db:"user_id"`
 	LastLoginAt         *time.Time      `json:"last_login_at,omitempty" gorm:"column:last_login_at" db:"last_login_at"`
 	LastLoginIP         net.IP          `json:"last_login_ip,omitempty" gorm:"column:last_login_ip" db:"last_login_ip"`

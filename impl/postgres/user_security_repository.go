@@ -2,39 +2,43 @@ package postgres
 
 import (
 	"context"
-	"errors"
 
 	"iam-service/entity"
-	"iam-service/internal/auth/contract"
+	"iam-service/iam/auth/contract"
 
 	"github.com/google/uuid"
 	"gorm.io/gorm"
 )
 
 type userSecurityRepository struct {
-	db *gorm.DB
+	baseRepository
 }
 
 func NewUserSecurityRepository(db *gorm.DB) contract.UserSecurityRepository {
-	return &userSecurityRepository{db: db}
+	return &userSecurityRepository{
+		baseRepository: baseRepository{db: db},
+	}
 }
 
 func (r *userSecurityRepository) Create(ctx context.Context, security *entity.UserSecurity) error {
-	return r.db.WithContext(ctx).Create(security).Error
+	if err := r.getDB(ctx).Create(security).Error; err != nil {
+		return translateError(err, "user security")
+	}
+	return nil
 }
 
 func (r *userSecurityRepository) GetByUserID(ctx context.Context, userID uuid.UUID) (*entity.UserSecurity, error) {
 	var security entity.UserSecurity
-	err := r.db.WithContext(ctx).Where("user_id = ?", userID).First(&security).Error
+	err := r.getDB(ctx).Where("user_id = ?", userID).First(&security).Error
 	if err != nil {
-		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return nil, nil
-		}
-		return nil, err
+		return nil, translateError(err, "user security")
 	}
 	return &security, nil
 }
 
 func (r *userSecurityRepository) Update(ctx context.Context, security *entity.UserSecurity) error {
-	return r.db.WithContext(ctx).Save(security).Error
+	if err := r.getDB(ctx).Save(security).Error; err != nil {
+		return translateError(err, "user security")
+	}
+	return nil
 }

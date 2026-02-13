@@ -3,8 +3,8 @@ package hashivault
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
+	"iam-service/pkg/errors"
 )
 
 type SecretData struct {
@@ -27,7 +27,7 @@ func (v *SecureVault) WriteSecret(ctx context.Context, path string, data map[str
 
 	secret, err := v.client.KVv2(getMountPath(path)).Put(ctx, getSecretPath(path), secretData)
 	if err != nil {
-		return nil, fmt.Errorf("failed to write secret: %w", err)
+		return nil, errors.ErrInternal("failed to write secret").WithError(err)
 	}
 
 	metadata := &SecretMetadata{
@@ -46,11 +46,11 @@ func (v *SecureVault) WriteSecret(ctx context.Context, path string, data map[str
 func (v *SecureVault) ReadSecret(ctx context.Context, path string) (map[string]interface{}, error) {
 	secret, err := v.client.KVv2(getMountPath(path)).Get(ctx, getSecretPath(path))
 	if err != nil {
-		return nil, fmt.Errorf("failed to read secret: %w", err)
+		return nil, errors.ErrInternal("failed to read secret").WithError(err)
 	}
 
 	if secret == nil || secret.Data == nil {
-		return nil, ErrSecretNotFound
+		return nil, errors.ErrNotFound("secret not found")
 	}
 
 	return secret.Data, nil
@@ -59,11 +59,11 @@ func (v *SecureVault) ReadSecret(ctx context.Context, path string) (map[string]i
 func (v *SecureVault) ReadSecretVersion(ctx context.Context, path string, version int) (map[string]interface{}, error) {
 	secret, err := v.client.KVv2(getMountPath(path)).GetVersion(ctx, getSecretPath(path), version)
 	if err != nil {
-		return nil, fmt.Errorf("failed to read secret version: %w", err)
+		return nil, errors.ErrInternal("failed to read secret version").WithError(err)
 	}
 
 	if secret == nil || secret.Data == nil {
-		return nil, ErrSecretNotFound
+		return nil, errors.ErrNotFound("secret not found")
 	}
 
 	return secret.Data, nil
@@ -72,11 +72,11 @@ func (v *SecureVault) ReadSecretVersion(ctx context.Context, path string, versio
 func (v *SecureVault) ReadSecretWithMetadata(ctx context.Context, path string) (*SecretData, error) {
 	secret, err := v.client.KVv2(getMountPath(path)).Get(ctx, getSecretPath(path))
 	if err != nil {
-		return nil, fmt.Errorf("failed to read secret: %w", err)
+		return nil, errors.ErrInternal("failed to read secret").WithError(err)
 	}
 
 	if secret == nil {
-		return nil, ErrSecretNotFound
+		return nil, errors.ErrNotFound("secret not found")
 	}
 
 	metadata := SecretMetadata{
@@ -106,7 +106,7 @@ func (v *SecureVault) PatchSecret(ctx context.Context, path string, data map[str
 
 	secret, err := v.client.KVv2(getMountPath(path)).Patch(ctx, getSecretPath(path), secretData)
 	if err != nil {
-		return nil, fmt.Errorf("failed to patch secret: %w", err)
+		return nil, errors.ErrInternal("failed to patch secret").WithError(err)
 	}
 
 	metadata := &SecretMetadata{
@@ -125,7 +125,7 @@ func (v *SecureVault) PatchSecret(ctx context.Context, path string, data map[str
 func (v *SecureVault) DeleteSecret(ctx context.Context, path string) error {
 	err := v.client.KVv2(getMountPath(path)).Delete(ctx, getSecretPath(path))
 	if err != nil {
-		return fmt.Errorf("failed to delete secret: %w", err)
+		return errors.ErrInternal("failed to delete secret").WithError(err)
 	}
 	return nil
 }
@@ -133,7 +133,7 @@ func (v *SecureVault) DeleteSecret(ctx context.Context, path string) error {
 func (v *SecureVault) DeleteSecretVersions(ctx context.Context, path string, versions []int) error {
 	err := v.client.KVv2(getMountPath(path)).DeleteVersions(ctx, getSecretPath(path), versions)
 	if err != nil {
-		return fmt.Errorf("failed to delete secret versions: %w", err)
+		return errors.ErrInternal("failed to delete secret versions").WithError(err)
 	}
 	return nil
 }
@@ -141,7 +141,7 @@ func (v *SecureVault) DeleteSecretVersions(ctx context.Context, path string, ver
 func (v *SecureVault) UndeleteSecretVersions(ctx context.Context, path string, versions []int) error {
 	err := v.client.KVv2(getMountPath(path)).Undelete(ctx, getSecretPath(path), versions)
 	if err != nil {
-		return fmt.Errorf("failed to undelete secret versions: %w", err)
+		return errors.ErrInternal("failed to undelete secret versions").WithError(err)
 	}
 	return nil
 }
@@ -149,7 +149,7 @@ func (v *SecureVault) UndeleteSecretVersions(ctx context.Context, path string, v
 func (v *SecureVault) DestroySecretVersions(ctx context.Context, path string, versions []int) error {
 	err := v.client.KVv2(getMountPath(path)).Destroy(ctx, getSecretPath(path), versions)
 	if err != nil {
-		return fmt.Errorf("failed to destroy secret versions: %w", err)
+		return errors.ErrInternal("failed to destroy secret versions").WithError(err)
 	}
 	return nil
 }
@@ -157,7 +157,7 @@ func (v *SecureVault) DestroySecretVersions(ctx context.Context, path string, ve
 func (v *SecureVault) DeleteSecretMetadata(ctx context.Context, path string) error {
 	err := v.client.KVv2(getMountPath(path)).DeleteMetadata(ctx, getSecretPath(path))
 	if err != nil {
-		return fmt.Errorf("failed to delete secret metadata: %w", err)
+		return errors.ErrInternal("failed to delete secret metadata").WithError(err)
 	}
 	return nil
 }
@@ -165,7 +165,7 @@ func (v *SecureVault) DeleteSecretMetadata(ctx context.Context, path string) err
 func (v *SecureVault) ListSecrets(ctx context.Context, path string) ([]string, error) {
 	secret, err := v.client.Logical().ListWithContext(ctx, fmt.Sprintf("%s/metadata/%s", getMountPath(path), getSecretPath(path)))
 	if err != nil {
-		return nil, fmt.Errorf("failed to list secrets: %w", err)
+		return nil, errors.ErrInternal("failed to list secrets").WithError(err)
 	}
 
 	if secret == nil || secret.Data == nil {
@@ -179,7 +179,7 @@ func (v *SecureVault) ListSecrets(ctx context.Context, path string) ([]string, e
 
 	keysSlice, ok := keysInterface.([]interface{})
 	if !ok {
-		return nil, fmt.Errorf("unexpected keys format")
+		return nil, errors.ErrInternal("unexpected keys format")
 	}
 
 	keys := make([]string, 0, len(keysSlice))
@@ -195,7 +195,7 @@ func (v *SecureVault) ListSecrets(ctx context.Context, path string) ([]string, e
 func (v *SecureVault) WriteSecretTyped(ctx context.Context, path string, value interface{}) (*SecretMetadata, error) {
 	data, err := structToMap(value)
 	if err != nil {
-		return nil, fmt.Errorf("failed to convert value to map: %w", err)
+		return nil, errors.ErrInternal("failed to convert value to map").WithError(err)
 	}
 	return v.WriteSecret(ctx, path, data)
 }
@@ -250,7 +250,3 @@ func convertToStringMap(m map[string]interface{}) map[string]string {
 	}
 	return result
 }
-
-var (
-	ErrSecretNotFound = errors.New("secret not found")
-)

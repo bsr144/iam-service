@@ -2,101 +2,151 @@ package mailer
 
 import (
 	"context"
+	"fmt"
+	"iam-service/config"
 	"log"
+	"strings"
+
+	"gopkg.in/gomail.v2"
 )
 
-type EmailService struct{}
+const (
+	ProviderConsole = "console"
+	ProviderSMTP    = "smtp"
+)
 
-func NewEmailService() *EmailService {
-	return &EmailService{}
+type EmailService struct {
+	config *config.EmailConfig
+	dialer *gomail.Dialer
+}
+
+func NewEmailService(cfg *config.EmailConfig) *EmailService {
+	svc := &EmailService{config: cfg}
+
+	if cfg.Provider == ProviderSMTP {
+		svc.dialer = gomail.NewDialer(
+			cfg.SMTPHost,
+			cfg.SMTPPort,
+			cfg.SMTPUser,
+			cfg.SMTPPass,
+		)
+	}
+
+	return svc
 }
 
 func (s *EmailService) SendOTP(ctx context.Context, email, otp string, expiryMinutes int) error {
-	log.Printf(`
-========================================
-📧 OTP EMAIL (Development Mode)
-========================================
-To: %s
-Subject: Your Verification Code
+	subject := "Kode Verifikasi OTP - Dana Pensiun"
 
-Your OTP verification code is: %s
+	htmlBody, err := renderOTPEmail(otp, expiryMinutes)
+	if err != nil {
+		return fmt.Errorf("failed to render OTP email: %w", err)
+	}
 
-This code will expire in %d minutes.
-
-Do not share this code with anyone.
-========================================
-`, email, otp, expiryMinutes)
-	return nil
+	return s.send(ctx, email, subject, htmlBody)
 }
 
 func (s *EmailService) SendWelcome(ctx context.Context, email, firstName string) error {
-	log.Printf(`
-========================================
-📧 WELCOME EMAIL (Development Mode)
-========================================
-To: %s
-Subject: Welcome to Dana Pensiun
+	subject := "Selamat Datang di Dana Pensiun"
 
-Dear %s,
+	htmlBody, err := renderWelcomeEmail(firstName)
+	if err != nil {
+		return fmt.Errorf("failed to render welcome email: %w", err)
+	}
 
-Welcome! Your account has been approved.
-You can now log in to access your account.
-
-========================================
-`, email, firstName)
-	return nil
+	return s.send(ctx, email, subject, htmlBody)
 }
 
 func (s *EmailService) SendPasswordReset(ctx context.Context, email, token string, expiryMinutes int) error {
-	log.Printf(`
-========================================
-📧 PASSWORD RESET EMAIL (Development Mode)
-========================================
-To: %s
-Subject: Password Reset Request
+	subject := "Reset Password - Dana Pensiun"
 
-Your password reset token is: %s
+	htmlBody, err := renderPasswordResetEmail(token, expiryMinutes)
+	if err != nil {
+		return fmt.Errorf("failed to render password reset email: %w", err)
+	}
 
-This token will expire in %d minutes.
-
-If you did not request this, please ignore this email.
-========================================
-`, email, token, expiryMinutes)
-	return nil
+	return s.send(ctx, email, subject, htmlBody)
 }
 
 func (s *EmailService) SendPINReset(ctx context.Context, email, otp string, expiryMinutes int) error {
-	log.Printf(`
-========================================
-📧 PIN RESET EMAIL (Development Mode)
-========================================
-To: %s
-Subject: PIN Reset Verification Code
+	subject := "Reset PIN - Dana Pensiun"
 
-Your PIN reset verification code is: %s
+	htmlBody, err := renderPINResetEmail(otp, expiryMinutes)
+	if err != nil {
+		return fmt.Errorf("failed to render PIN reset email: %w", err)
+	}
 
-This code will expire in %d minutes.
-
-If you did not request this, please secure your account immediately.
-========================================
-`, email, otp, expiryMinutes)
-	return nil
+	return s.send(ctx, email, subject, htmlBody)
 }
 
 func (s *EmailService) SendAdminInvitation(ctx context.Context, email, token string, expiryMinutes int) error {
+	subject := "Undangan Administrator - Dana Pensiun"
+
+	htmlBody, err := renderAdminInvitationEmail(token, expiryMinutes)
+	if err != nil {
+		return fmt.Errorf("failed to render admin invitation email: %w", err)
+	}
+
+	return s.send(ctx, email, subject, htmlBody)
+}
+
+func (s *EmailService) send(ctx context.Context, to, subject, htmlBody string) error {
+	if s.config.Provider == ProviderConsole {
+		return s.sendConsole(to, subject, htmlBody)
+	}
+	return s.sendSMTP(ctx, to, subject, htmlBody)
+}
+
+func (s *EmailService) sendConsole(to, subject, htmlBody string) error {
+	maskedTo := maskEmail(to)
 	log.Printf(`
 ========================================
-📧 ADMIN INVITATION EMAIL (Development Mode)
+EMAIL (Console Mode)
 ========================================
 To: %s
-Subject: You've Been Invited to Join
+From: %s <%s>
+Subject: %s
+Content-Type: text/html
 
-You have been invited to join as an administrator.
-
-Your invitation token is: %s
-
-This invitation will expire in %d minutes.
+[HTML Content - %d bytes]
 ========================================
-`, email, token, expiryMinutes)
+`, maskedTo, s.config.FromName, s.config.FromAddress, subject, len(htmlBody))
 	return nil
+}
+
+func (s *EmailService) sendSMTP(ctx context.Context, to, subject, htmlBody string) error {
+	if s.dialer == nil {
+		return fmt.Errorf("SMTP dialer not configured")
+	}
+
+	m := gomail.NewMessage()
+	m.SetHeader("From", m.FormatAddress(s.config.FromAddress, s.config.FromName))
+	m.SetHeader("To", to)
+	m.SetHeader("Subject", subject)
+	m.SetBody("text/html", htmlBody)
+
+	if err := s.dialer.DialAndSend(m); err != nil {
+		return fmt.Errorf("failed to send email via SMTP: %w", err)
+	}
+
+	maskedTo := maskEmail(to)
+	log.Printf("[Email] Sent to %s: %s", maskedTo, subject)
+
+	return nil
+}
+
+func maskEmail(email string) string {
+	parts := strings.Split(email, "@")
+	if len(parts) != 2 {
+		return "***"
+	}
+
+	local := parts[0]
+	domain := parts[1]
+
+	if len(local) <= 2 {
+		return local[:1] + "***@" + domain
+	}
+
+	return local[:2] + "***@" + domain
 }

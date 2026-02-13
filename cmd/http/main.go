@@ -33,6 +33,7 @@ func main() {
 	<-quit
 
 	log.Println("shutting down server...")
+	log.Printf("Serever is starting on port %s", os.DevNull)
 
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()

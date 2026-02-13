@@ -14,11 +14,13 @@ type ServerConfig struct {
 	ReadTimeout  time.Duration `mapstructure:"read_timeout"`
 	WriteTimeout time.Duration `mapstructure:"write_timeout"`
 	IdleTimeout  time.Duration `mapstructure:"idle_timeout"`
+	CORSOrigins  string        `mapstructure:"cors_origins"`
 }
 
 type JWTConfig struct {
-	AccessSecret  string `mapstructure:"access_secret"`
-	RefreshSecret string `mapstructure:"refresh_secret"`
+	AccessSecret       string `mapstructure:"access_secret"`
+	RefreshSecret      string `mapstructure:"refresh_secret"`
+	RegistrationSecret string `mapstructure:"registration_secret"`
 
 	PrivateKeyPath string `mapstructure:"private_key_path"`
 	PublicKeyPath  string `mapstructure:"public_key_path"`
@@ -35,6 +37,15 @@ type JWTConfig struct {
 type LogConfig struct {
 	Level  string `mapstructure:"level"`
 	Format string `mapstructure:"format"`
+
+	AuditEnabled bool `mapstructure:"audit_enabled"`
+
+	FilePath   string `mapstructure:"file_path"`
+	MaxSizeMB  int    `mapstructure:"max_size_mb"`
+	MaxBackups int    `mapstructure:"max_backups"`
+	MaxAgeDays int    `mapstructure:"max_age_days"`
+	Compress   bool   `mapstructure:"compress"`
+	RetainAll  bool   `mapstructure:"retain_all"`
 }
 
 type EmailConfig struct {
@@ -62,6 +73,12 @@ type PasswordConfig struct {
 	RequireNumber    bool `mapstructure:"require_number"`
 	RequireSpecial   bool `mapstructure:"require_special"`
 	HistoryCount     int  `mapstructure:"history_count"`
+}
+
+type MasterdataConfig struct {
+	CacheTTLCategories time.Duration `mapstructure:"cache_ttl_categories"`
+	CacheTTLItems      time.Duration `mapstructure:"cache_ttl_items"`
+	CacheTTLTree       time.Duration `mapstructure:"cache_ttl_tree"`
 }
 
 func (c *AppConfig) IsDevelopment() bool {

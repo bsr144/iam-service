@@ -3,18 +3,18 @@ package redis
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
+	"iam-service/pkg/errors"
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/redis/go-redis/v9"
+	goredis "github.com/redis/go-redis/v9"
 )
 
 func NewJob(payload any, maxRetry int) (*Job, error) {
 	data, err := json.Marshal(payload)
 	if err != nil {
-		return nil, fmt.Errorf("failed to marshal payload: %w", err)
+		return nil, errors.ErrInternal("failed to marshal payload").WithError(err)
 	}
 	return &Job{
 		ID:        uuid.New().String(),
@@ -28,7 +28,7 @@ func NewJob(payload any, maxRetry int) (*Job, error) {
 func (r *Redis) Enqueue(ctx context.Context, queueName string, job *Job) error {
 	data, err := json.Marshal(job)
 	if err != nil {
-		return ErrFailedToMarshalValue(err)
+		return errors.ErrInternal("failed to marshal job").WithError(err)
 	}
 	return r.client.RPush(ctx, queueKey(queueName), data).Err()
 }
@@ -47,10 +47,10 @@ func (r *Redis) EnqueuePayload(ctx context.Context, queueName string, payload an
 func (r *Redis) EnqueueDelayed(ctx context.Context, queueName string, job *Job, delay time.Duration) error {
 	data, err := json.Marshal(job)
 	if err != nil {
-		return ErrFailedToMarshalValue(err)
+		return errors.ErrInternal("failed to marshal job").WithError(err)
 	}
 	score := float64(time.Now().Add(delay).Unix())
-	return r.client.ZAdd(ctx, delayedKey(queueName), redis.Z{
+	return r.client.ZAdd(ctx, delayedKey(queueName), goredis.Z{
 		Score:  score,
 		Member: data,
 	}).Err()
@@ -60,15 +60,15 @@ func (r *Redis) Dequeue(ctx context.Context, queueName string, timeout time.Dura
 
 	data, err := r.client.BRPopLPush(ctx, queueKey(queueName), processingKey(queueName), timeout).Bytes()
 	if err != nil {
-		if errors.Is(err, redis.Nil) {
-			return nil, ErrQueueEmpty
+		if err == goredis.Nil {
+			return nil, errors.SentinelQueueEmpty
 		}
-		return nil, fmt.Errorf("failed to dequeue: %w", err)
+		return nil, errors.ErrInternal("failed to dequeue job").WithError(err)
 	}
 
 	var job Job
 	if err := json.Unmarshal(data, &job); err != nil {
-		return nil, fmt.Errorf("failed to unmarshal job: %w", err)
+		return nil, errors.ErrInternal("failed to unmarshal job").WithError(err)
 	}
 
 	job.Attempts++
@@ -82,24 +82,24 @@ func (r *Redis) DequeueBlocking(ctx context.Context, queueName string) (*Job, er
 func (r *Redis) AcknowledgeJob(ctx context.Context, queueName string, job *Job) error {
 	data, err := json.Marshal(job)
 	if err != nil {
-		return fmt.Errorf("failed to marshal job: %w", err)
+		return errors.ErrInternal("failed to marshal job").WithError(err)
 	}
 
 	job.Attempts--
 	origData, err := json.Marshal(job)
 	if err != nil {
-		return fmt.Errorf("failed to marshal original job: %w", err)
+		return errors.ErrInternal("failed to marshal original job").WithError(err)
 	}
 
 	removed, err := r.client.LRem(ctx, processingKey(queueName), 1, origData).Result()
 	if err != nil {
-		return fmt.Errorf("failed to acknowledge job: %w", err)
+		return errors.ErrInternal("failed to acknowledge job").WithError(err)
 	}
 	if removed == 0 {
 
 		_, err = r.client.LRem(ctx, processingKey(queueName), 1, data).Result()
 		if err != nil {
-			return fmt.Errorf("failed to acknowledge job: %w", err)
+			return errors.ErrInternal("failed to acknowledge job").WithError(err)
 		}
 	}
 	return nil
@@ -117,7 +117,7 @@ func (r *Redis) RejectJob(ctx context.Context, queueName string, job *Job, errMs
 
 		data, err := json.Marshal(job)
 		if err != nil {
-			return fmt.Errorf("failed to marshal job: %w", err)
+			return errors.ErrInternal("failed to marshal job").WithError(err)
 		}
 		return r.client.RPush(ctx, deadLetterKey(queueName), data).Err()
 	}
@@ -128,12 +128,12 @@ func (r *Redis) RejectJob(ctx context.Context, queueName string, job *Job, errMs
 func (r *Redis) ProcessDelayed(ctx context.Context, queueName string) (int, error) {
 	now := float64(time.Now().Unix())
 
-	jobs, err := r.client.ZRangeByScore(ctx, delayedKey(queueName), &redis.ZRangeBy{
+	jobs, err := r.client.ZRangeByScore(ctx, delayedKey(queueName), &goredis.ZRangeBy{
 		Min: "-inf",
 		Max: fmt.Sprintf("%f", now),
 	}).Result()
 	if err != nil {
-		return 0, fmt.Errorf("failed to get delayed jobs: %w", err)
+		return 0, errors.ErrInternal("failed to get delayed jobs").WithError(err)
 	}
 
 	if len(jobs) == 0 {
@@ -147,7 +147,7 @@ func (r *Redis) ProcessDelayed(ctx context.Context, queueName string) (int, erro
 	}
 	_, err = pipe.Exec(ctx)
 	if err != nil {
-		return 0, fmt.Errorf("failed to move delayed jobs: %w", err)
+		return 0, errors.ErrInternal("failed to move delayed jobs").WithError(err)
 	}
 
 	return len(jobs), nil
@@ -183,10 +183,10 @@ func (r *Redis) RequeueProcessing(ctx context.Context, queueName string) (int64,
 	for {
 		result, err := r.client.RPopLPush(ctx, processingKey(queueName), queueKey(queueName)).Result()
 		if err != nil {
-			if errors.Is(err, redis.Nil) {
+			if err == goredis.Nil {
 				break
 			}
-			return count, fmt.Errorf("failed to requeue processing job: %w", err)
+			return count, errors.ErrInternal("failed to requeue processing job").WithError(err)
 		}
 		if result == "" {
 			break
@@ -199,7 +199,7 @@ func (r *Redis) RequeueProcessing(ctx context.Context, queueName string) (int64,
 func (r *Redis) GetDeadLetterJobs(ctx context.Context, queueName string, start, stop int64) ([]*Job, error) {
 	data, err := r.client.LRange(ctx, deadLetterKey(queueName), start, stop).Result()
 	if err != nil {
-		return nil, fmt.Errorf("failed to get dead letter jobs: %w", err)
+		return nil, errors.ErrInternal("failed to get dead letter jobs").WithError(err)
 	}
 
 	jobs := make([]*Job, 0, len(data))
@@ -214,31 +214,42 @@ func (r *Redis) GetDeadLetterJobs(ctx context.Context, queueName string, start, 
 }
 
 func (r *Redis) RetryDeadLetter(ctx context.Context, queueName string, jobID string) error {
+	script := goredis.NewScript(`
+		local key = KEYS[1]
+		local targetID = ARGV[1]
+		local len = redis.call("LLEN", key)
 
-	data, err := r.client.LRange(ctx, deadLetterKey(queueName), 0, -1).Result()
+		for i = 0, len - 1 do
+			local raw = redis.call("LINDEX", key, i)
+			local job = cjson.decode(raw)
+			if job.id == targetID then
+				redis.call("LREM", key, 1, raw)
+				return raw
+			end
+		end
+		return nil
+	`)
+
+	dlKey := deadLetterKey(queueName)
+	result, err := script.Run(ctx, r.client, []string{dlKey}, jobID).Result()
+	if err == goredis.Nil {
+		return errors.SentinelJobNotFound
+	}
 	if err != nil {
-		return fmt.Errorf("failed to get dead letter jobs: %w", err)
+		return errors.ErrInternal("failed to retry dead letter job").WithError(err)
 	}
 
-	for _, d := range data {
-		var job Job
-		if err := json.Unmarshal([]byte(d), &job); err != nil {
-			continue
-		}
-		if job.ID == jobID {
-
-			job.Attempts = 0
-			job.Error = ""
-			if err := r.Enqueue(ctx, queueName, &job); err != nil {
-				return err
-			}
-
-			return r.client.LRem(ctx, deadLetterKey(queueName), 1, d).Err()
-		}
+	rawStr, ok := result.(string)
+	if !ok {
+		return errors.SentinelJobNotFound
 	}
-	return ErrJobNotFound
+
+	var job Job
+	if err := json.Unmarshal([]byte(rawStr), &job); err != nil {
+		return errors.ErrInternal("failed to unmarshal job").WithError(err)
+	}
+
+	job.Attempts = 0
+	job.Error = ""
+	return r.Enqueue(ctx, queueName, &job)
 }
-
-var ErrQueueEmpty = errors.New("queue is empty")
-
-var ErrJobNotFound = errors.New("job not found")

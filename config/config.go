@@ -9,14 +9,15 @@ import (
 )
 
 type Config struct {
-	App      AppConfig      `mapstructure:"app"`
-	Server   ServerConfig   `mapstructure:"server"`
-	Infra    InfraConfig    `mapstructure:"infra"`
-	JWT      JWTConfig      `mapstructure:"jwt"`
-	Log      LogConfig      `mapstructure:"log"`
-	Email    EmailConfig    `mapstructure:"email"`
-	OTP      OTPConfig      `mapstructure:"otp"`
-	Password PasswordConfig `mapstructure:"password"`
+	App        AppConfig        `mapstructure:"app"`
+	Server     ServerConfig     `mapstructure:"server"`
+	Infra      InfraConfig      `mapstructure:"infra"`
+	JWT        JWTConfig        `mapstructure:"jwt"`
+	Log        LogConfig        `mapstructure:"log"`
+	Email      EmailConfig      `mapstructure:"email"`
+	OTP        OTPConfig        `mapstructure:"otp"`
+	Password   PasswordConfig   `mapstructure:"password"`
+	Masterdata MasterdataConfig `mapstructure:"masterdata"`
 }
 
 func Load() (*Config, error) {
@@ -51,6 +52,7 @@ func bindEnvVariables() {
 	_ = viper.BindEnv("server.read_timeout", "SERVER_READ_TIMEOUT")
 	_ = viper.BindEnv("server.write_timeout", "SERVER_WRITE_TIMEOUT")
 	_ = viper.BindEnv("server.idle_timeout", "SERVER_IDLE_TIMEOUT")
+	_ = viper.BindEnv("server.cors_origins", "SERVER_CORS_ORIGINS")
 
 	_ = viper.BindEnv("infra.postgres.platform.host", "POSTGRES_HOST")
 	_ = viper.BindEnv("infra.postgres.platform.port", "POSTGRES_PORT")
@@ -72,6 +74,12 @@ func bindEnvVariables() {
 	_ = viper.BindEnv("infra.redis.port", "REDIS_PORT")
 	_ = viper.BindEnv("infra.redis.password", "REDIS_PASSWORD")
 	_ = viper.BindEnv("infra.redis.db", "REDIS_DB")
+	_ = viper.BindEnv("infra.redis.pool_size", "REDIS_POOL_SIZE")
+	_ = viper.BindEnv("infra.redis.min_idle_conns", "REDIS_MIN_IDLE_CONNS")
+	_ = viper.BindEnv("infra.redis.conn_max_idle_time", "REDIS_CONN_MAX_IDLE_TIME")
+	_ = viper.BindEnv("infra.redis.conn_max_lifetime", "REDIS_CONN_MAX_LIFETIME")
+	_ = viper.BindEnv("infra.redis.read_timeout", "REDIS_READ_TIMEOUT")
+	_ = viper.BindEnv("infra.redis.write_timeout", "REDIS_WRITE_TIMEOUT")
 
 	_ = viper.BindEnv("infra.minio.endpoint", "MINIO_ENDPOINT")
 	_ = viper.BindEnv("infra.minio.access_key", "MINIO_ACCESS_KEY")
@@ -94,9 +102,16 @@ func bindEnvVariables() {
 	_ = viper.BindEnv("jwt.audience", "JWT_AUDIENCE")
 	_ = viper.BindEnv("jwt.pin_token_expiry", "JWT_PIN_TOKEN_EXPIRY")
 	_ = viper.BindEnv("jwt.registration_expiry", "JWT_REGISTRATION_EXPIRY")
+	_ = viper.BindEnv("jwt.registration_secret", "JWT_REGISTRATION_SECRET")
 
 	_ = viper.BindEnv("log.level", "LOG_LEVEL")
 	_ = viper.BindEnv("log.format", "LOG_FORMAT")
+	_ = viper.BindEnv("log.file_path", "LOG_FILE_PATH")
+	_ = viper.BindEnv("log.max_size_mb", "LOG_MAX_SIZE_MB")
+	_ = viper.BindEnv("log.max_backups", "LOG_MAX_BACKUPS")
+	_ = viper.BindEnv("log.max_age_days", "LOG_MAX_AGE_DAYS")
+	_ = viper.BindEnv("log.compress", "LOG_COMPRESS")
+	_ = viper.BindEnv("log.retain_all", "LOG_RETAIN_ALL")
 
 	_ = viper.BindEnv("email.provider", "EMAIL_PROVIDER")
 	_ = viper.BindEnv("email.smtp_host", "EMAIL_SMTP_HOST")
@@ -105,6 +120,10 @@ func bindEnvVariables() {
 	_ = viper.BindEnv("email.smtp_pass", "EMAIL_SMTP_PASS")
 	_ = viper.BindEnv("email.from_address", "EMAIL_FROM_ADDRESS")
 	_ = viper.BindEnv("email.from_name", "EMAIL_FROM_NAME")
+
+	_ = viper.BindEnv("masterdata.cache_ttl_categories", "MASTERDATA_CACHE_TTL_CATEGORIES")
+	_ = viper.BindEnv("masterdata.cache_ttl_items", "MASTERDATA_CACHE_TTL_ITEMS")
+	_ = viper.BindEnv("masterdata.cache_ttl_tree", "MASTERDATA_CACHE_TTL_TREE")
 }
 
 func setDefaults() {
@@ -117,18 +136,19 @@ func setDefaults() {
 	viper.SetDefault("server.read_timeout", 30*time.Second)
 	viper.SetDefault("server.write_timeout", 30*time.Second)
 	viper.SetDefault("server.idle_timeout", 120*time.Second)
+	viper.SetDefault("server.cors_origins", "*")
 
 	viper.SetDefault("infra.postgres.platform.host", "localhost")
 	viper.SetDefault("infra.postgres.platform.port", 5432)
 	viper.SetDefault("infra.postgres.platform.database", "iam_db")
-	viper.SetDefault("infra.postgres.platform.ssl_mode", "disable")
+	viper.SetDefault("infra.postgres.platform.ssl_mode", "require")
 	viper.SetDefault("infra.postgres.platform.max_open_conns", 25)
 	viper.SetDefault("infra.postgres.platform.max_idle_conns", 10)
 	viper.SetDefault("infra.postgres.platform.conn_max_lifetime", 5*time.Minute)
 
 	viper.SetDefault("infra.postgres.tenant.host", "localhost")
 	viper.SetDefault("infra.postgres.tenant.port", 5432)
-	viper.SetDefault("infra.postgres.tenant.ssl_mode", "disable")
+	viper.SetDefault("infra.postgres.tenant.ssl_mode", "require")
 	viper.SetDefault("infra.postgres.tenant.max_open_conns", 10)
 	viper.SetDefault("infra.postgres.tenant.max_idle_conns", 5)
 	viper.SetDefault("infra.postgres.tenant.conn_max_lifetime", 5*time.Minute)
@@ -136,6 +156,12 @@ func setDefaults() {
 	viper.SetDefault("infra.redis.host", "localhost")
 	viper.SetDefault("infra.redis.port", 6379)
 	viper.SetDefault("infra.redis.db", 0)
+	viper.SetDefault("infra.redis.pool_size", 20)
+	viper.SetDefault("infra.redis.min_idle_conns", 5)
+	viper.SetDefault("infra.redis.conn_max_idle_time", 5*time.Minute)
+	viper.SetDefault("infra.redis.conn_max_lifetime", 30*time.Minute)
+	viper.SetDefault("infra.redis.read_timeout", 3*time.Second)
+	viper.SetDefault("infra.redis.write_timeout", 3*time.Second)
 
 	viper.SetDefault("infra.minio.endpoint", "localhost:9000")
 	viper.SetDefault("infra.minio.use_ssl", false)
@@ -145,8 +171,8 @@ func setDefaults() {
 	viper.SetDefault("infra.vault.address", "http://localhost:8200")
 
 	viper.SetDefault("jwt.signing_method", "RS256")
-	viper.SetDefault("jwt.private_key_path", "config/keys/internal_private_key.pem")
-	viper.SetDefault("jwt.public_key_path", "config/keys/internal_public_key.pem")
+	viper.SetDefault("jwt.private_key_path", "config/keys/iam_private_key.pem")
+	viper.SetDefault("jwt.public_key_path", "config/keys/iam_public_key.pem")
 	viper.SetDefault("jwt.access_expiry", 15*time.Minute)
 	viper.SetDefault("jwt.refresh_expiry", 30*24*time.Hour)
 	viper.SetDefault("jwt.issuer", "iam-service")
@@ -156,8 +182,14 @@ func setDefaults() {
 
 	viper.SetDefault("log.level", "info")
 	viper.SetDefault("log.format", "json")
+	viper.SetDefault("log.file_path", "logs/app.log")
+	viper.SetDefault("log.max_size_mb", 100)
+	viper.SetDefault("log.max_backups", 30)
+	viper.SetDefault("log.max_age_days", 30)
+	viper.SetDefault("log.compress", true)
+	viper.SetDefault("log.retain_all", false)
 
-	viper.SetDefault("email.provider", "smtp")
+	viper.SetDefault("email.provider", "console")
 	viper.SetDefault("email.smtp_port", 587)
 
 	viper.SetDefault("otp.length", 6)
@@ -172,6 +204,10 @@ func setDefaults() {
 	viper.SetDefault("password.require_number", true)
 	viper.SetDefault("password.require_special", false)
 	viper.SetDefault("password.history_count", 5)
+
+	viper.SetDefault("masterdata.cache_ttl_categories", 24*time.Hour)
+	viper.SetDefault("masterdata.cache_ttl_items", 1*time.Hour)
+	viper.SetDefault("masterdata.cache_ttl_tree", 1*time.Hour)
 }
 
 func (c *Config) Validate() error {

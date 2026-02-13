@@ -3,6 +3,7 @@ package hashivault
 import (
 	"context"
 	"fmt"
+	"iam-service/pkg/errors"
 	"time"
 )
 
@@ -28,11 +29,11 @@ type TokenInfo struct {
 func (v *SecureVault) CreateToken(ctx context.Context, options map[string]interface{}) (string, error) {
 	secret, err := v.client.Logical().WriteWithContext(ctx, "auth/token/create", options)
 	if err != nil {
-		return "", fmt.Errorf("failed to create token: %w", err)
+		return "", errors.ErrInternal("failed to create token").WithError(err)
 	}
 
 	if secret == nil || secret.Auth == nil {
-		return "", fmt.Errorf("empty response from vault")
+		return "", errors.ErrNotFound("vault returned empty response")
 	}
 
 	return secret.Auth.ClientToken, nil
@@ -46,11 +47,11 @@ func (v *SecureVault) CreateOrphanToken(ctx context.Context, options map[string]
 
 	secret, err := v.client.Logical().WriteWithContext(ctx, "auth/token/create-orphan", options)
 	if err != nil {
-		return "", fmt.Errorf("failed to create orphan token: %w", err)
+		return "", errors.ErrInternal("failed to create orphan token").WithError(err)
 	}
 
 	if secret == nil || secret.Auth == nil {
-		return "", fmt.Errorf("empty response from vault")
+		return "", errors.ErrNotFound("vault returned empty response")
 	}
 
 	return secret.Auth.ClientToken, nil
@@ -63,11 +64,11 @@ func (v *SecureVault) LookupToken(ctx context.Context, token string) (*TokenInfo
 
 	secret, err := v.client.Logical().WriteWithContext(ctx, "auth/token/lookup", data)
 	if err != nil {
-		return nil, fmt.Errorf("failed to lookup token: %w", err)
+		return nil, errors.ErrInternal("failed to lookup token").WithError(err)
 	}
 
 	if secret == nil || secret.Data == nil {
-		return nil, fmt.Errorf("empty response from vault")
+		return nil, errors.ErrNotFound("token not found")
 	}
 
 	return parseTokenInfo(secret.Data)
@@ -76,11 +77,11 @@ func (v *SecureVault) LookupToken(ctx context.Context, token string) (*TokenInfo
 func (v *SecureVault) LookupSelfToken(ctx context.Context) (*TokenInfo, error) {
 	secret, err := v.client.Logical().ReadWithContext(ctx, "auth/token/lookup-self")
 	if err != nil {
-		return nil, fmt.Errorf("failed to lookup self token: %w", err)
+		return nil, errors.ErrInternal("failed to lookup self token").WithError(err)
 	}
 
 	if secret == nil || secret.Data == nil {
-		return nil, fmt.Errorf("empty response from vault")
+		return nil, errors.ErrNotFound("token not found")
 	}
 
 	return parseTokenInfo(secret.Data)
@@ -97,11 +98,11 @@ func (v *SecureVault) RenewToken(ctx context.Context, token string, increment in
 
 	secret, err := v.client.Logical().WriteWithContext(ctx, "auth/token/renew", data)
 	if err != nil {
-		return nil, fmt.Errorf("failed to renew token: %w", err)
+		return nil, errors.ErrInternal("failed to renew token").WithError(err)
 	}
 
 	if secret == nil || secret.Auth == nil {
-		return nil, fmt.Errorf("empty response from vault")
+		return nil, errors.ErrNotFound("token not found or not renewable")
 	}
 
 	return &TokenInfo{
@@ -120,7 +121,7 @@ func (v *SecureVault) RenewSelfToken(ctx context.Context, increment int) error {
 
 	_, err := v.client.Logical().WriteWithContext(ctx, "auth/token/renew-self", data)
 	if err != nil {
-		return fmt.Errorf("failed to renew self token: %w", err)
+		return errors.ErrInternal("failed to renew self token").WithError(err)
 	}
 
 	return nil
@@ -133,7 +134,7 @@ func (v *SecureVault) RevokeToken(ctx context.Context, token string) error {
 
 	_, err := v.client.Logical().WriteWithContext(ctx, "auth/token/revoke", data)
 	if err != nil {
-		return fmt.Errorf("failed to revoke token: %w", err)
+		return errors.ErrInternal("failed to revoke token").WithError(err)
 	}
 
 	return nil
@@ -142,7 +143,7 @@ func (v *SecureVault) RevokeToken(ctx context.Context, token string) error {
 func (v *SecureVault) RevokeSelfToken(ctx context.Context) error {
 	_, err := v.client.Logical().WriteWithContext(ctx, "auth/token/revoke-self", nil)
 	if err != nil {
-		return fmt.Errorf("failed to revoke self token: %w", err)
+		return errors.ErrInternal("failed to revoke self token").WithError(err)
 	}
 
 	return nil
@@ -155,7 +156,7 @@ func (v *SecureVault) RevokeOrphanToken(ctx context.Context, token string) error
 
 	_, err := v.client.Logical().WriteWithContext(ctx, "auth/token/revoke-orphan", data)
 	if err != nil {
-		return fmt.Errorf("failed to revoke orphan token: %w", err)
+		return errors.ErrInternal("failed to revoke orphan token").WithError(err)
 	}
 
 	return nil
@@ -168,7 +169,7 @@ func (v *SecureVault) RevokeTokenByAccessor(ctx context.Context, accessor string
 
 	_, err := v.client.Logical().WriteWithContext(ctx, "auth/token/revoke-accessor", data)
 	if err != nil {
-		return fmt.Errorf("failed to revoke token by accessor: %w", err)
+		return errors.ErrInternal("failed to revoke token by accessor").WithError(err)
 	}
 
 	return nil
@@ -182,11 +183,11 @@ func (v *SecureVault) LoginWithAppRole(ctx context.Context, roleID, secretID str
 
 	secret, err := v.client.Logical().WriteWithContext(ctx, "auth/approle/login", data)
 	if err != nil {
-		return "", fmt.Errorf("failed to login with approle: %w", err)
+		return "", errors.ErrInternal("failed to login with approle").WithError(err)
 	}
 
 	if secret == nil || secret.Auth == nil {
-		return "", fmt.Errorf("empty response from vault")
+		return "", errors.ErrNotFound("vault returned empty response")
 	}
 
 	v.client.SetToken(secret.Auth.ClientToken)
@@ -202,11 +203,11 @@ func (v *SecureVault) LoginWithUserpass(ctx context.Context, username, password 
 	path := fmt.Sprintf("auth/userpass/login/%s", username)
 	secret, err := v.client.Logical().WriteWithContext(ctx, path, data)
 	if err != nil {
-		return "", fmt.Errorf("failed to login with userpass: %w", err)
+		return "", errors.ErrInternal("failed to login with userpass").WithError(err)
 	}
 
 	if secret == nil || secret.Auth == nil {
-		return "", fmt.Errorf("empty response from vault")
+		return "", errors.ErrNotFound("vault returned empty response")
 	}
 
 	v.client.SetToken(secret.Auth.ClientToken)
@@ -222,11 +223,11 @@ func (v *SecureVault) LoginWithKubernetes(ctx context.Context, role, jwt string)
 
 	secret, err := v.client.Logical().WriteWithContext(ctx, "auth/kubernetes/login", data)
 	if err != nil {
-		return "", fmt.Errorf("failed to login with kubernetes: %w", err)
+		return "", errors.ErrInternal("failed to login with kubernetes").WithError(err)
 	}
 
 	if secret == nil || secret.Auth == nil {
-		return "", fmt.Errorf("empty response from vault")
+		return "", errors.ErrNotFound("vault returned empty response")
 	}
 
 	v.client.SetToken(secret.Auth.ClientToken)

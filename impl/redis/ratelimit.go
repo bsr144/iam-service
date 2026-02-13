@@ -2,16 +2,16 @@ package redis
 
 import (
 	"context"
-	"fmt"
+	"iam-service/pkg/errors"
 	"time"
 
-	"github.com/redis/go-redis/v9"
+	goredis "github.com/redis/go-redis/v9"
 )
 
 func (r *Redis) RateLimitAllow(ctx context.Context, key string, limit int64, window time.Duration) (*RateLimitResult, error) {
 	fullKey := rateLimitKey(key)
 
-	script := redis.NewScript(`
+	script := goredis.NewScript(`
 		local current = redis.call("INCR", KEYS[1])
 		if current == 1 then
 			redis.call("PEXPIRE", KEYS[1], ARGV[1])
@@ -22,7 +22,7 @@ func (r *Redis) RateLimitAllow(ctx context.Context, key string, limit int64, win
 
 	result, err := script.Run(ctx, r.client, []string{fullKey}, int64(window/time.Millisecond)).Slice()
 	if err != nil {
-		return nil, ErrFailedToCheckRateLimit(err)
+		return nil, errors.ErrInternal("failed to check rate limit").WithError(err)
 	}
 
 	current := result[0].(int64)
@@ -46,7 +46,7 @@ func (r *Redis) RateLimitAllowSlidingWindow(ctx context.Context, key string, lim
 	now := time.Now()
 	windowStart := now.Add(-window).UnixMilli()
 
-	script := redis.NewScript(`
+	script := goredis.NewScript(`
 		-- Remove old entries
 		redis.call("ZREMRANGEBYSCORE", KEYS[1], "-inf", ARGV[1])
 
@@ -64,7 +64,7 @@ func (r *Redis) RateLimitAllowSlidingWindow(ctx context.Context, key string, lim
 
 	count, err := script.Run(ctx, r.client, []string{fullKey}, windowStart, now.UnixMilli(), int64(window/time.Millisecond)).Int64()
 	if err != nil {
-		return nil, fmt.Errorf("failed to check rate limit: %w", err)
+		return nil, errors.ErrInternal("failed to check rate limit").WithError(err)
 	}
 
 	remaining := limit - count
@@ -84,7 +84,7 @@ func (r *Redis) RateLimitAllowTokenBucket(ctx context.Context, key string, capac
 	fullKey := rateLimitKey(key)
 	now := time.Now().UnixMilli()
 
-	script := redis.NewScript(`
+	script := goredis.NewScript(`
 		local tokens_key = KEYS[1] .. ":tokens"
 		local timestamp_key = KEYS[1] .. ":ts"
 
@@ -120,7 +120,7 @@ func (r *Redis) RateLimitAllowTokenBucket(ctx context.Context, key string, capac
 
 	result, err := script.Run(ctx, r.client, []string{fullKey}, capacity, refillRate, int64(refillInterval/time.Millisecond), now).Slice()
 	if err != nil {
-		return nil, fmt.Errorf("failed to check rate limit: %w", err)
+		return nil, errors.ErrInternal("failed to check rate limit").WithError(err)
 	}
 
 	allowed := result[0].(int64) == 1
@@ -148,7 +148,7 @@ func (r *Redis) RateLimitGetCount(ctx context.Context, key string) (int64, error
 	fullKey := rateLimitKey(key)
 	val, err := r.client.Get(ctx, fullKey).Int64()
 	if err != nil {
-		if err == redis.Nil {
+		if err == goredis.Nil {
 			return 0, nil
 		}
 		return 0, err

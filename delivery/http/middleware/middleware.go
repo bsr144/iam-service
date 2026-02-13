@@ -9,9 +9,9 @@ import (
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/cors"
 	"github.com/gofiber/fiber/v2/middleware/limiter"
-	"github.com/gofiber/fiber/v2/middleware/logger"
 	"github.com/gofiber/fiber/v2/middleware/recover"
 	"github.com/gofiber/fiber/v2/middleware/requestid"
+	"github.com/google/uuid"
 	"go.uber.org/zap"
 )
 
@@ -41,25 +41,44 @@ func (m *Middleware) Setup(app *fiber.App) {
 		},
 	}))
 
-	app.Use(requestid.New())
+	app.Use(func(c *fiber.Ctx) error {
+		c.Set("X-Content-Type-Options", "nosniff")
+		c.Set("X-Frame-Options", "DENY")
+		c.Set("X-XSS-Protection", "0")
+		c.Set("Strict-Transport-Security", "max-age=31536000; includeSubDomains")
+		c.Set("Cache-Control", "no-store, no-cache, must-revalidate")
+		c.Set("Referrer-Policy", "strict-origin-when-cross-origin")
+		c.Set("Permissions-Policy", "geolocation=(), microphone=(), camera=()")
+		c.Set("Content-Security-Policy", "default-src 'none'; frame-ancestors 'none'")
+		return c.Next()
+	})
 
-	app.Use(logger.New(logger.Config{
-		Format:     "${time} | ${status} | ${latency} | ${ip} | ${method} | ${path} | ${error}\n",
-		TimeFormat: "2006-01-02 15:04:05",
-		TimeZone:   "Local",
+	app.Use(requestid.New(requestid.Config{
+		Generator: func() string {
+			return uuid.New().String()
+		},
 	}))
 
+	app.Use(RequestContext())
+
+	app.Use(RequestLogger(m.logger))
+
+	corsOrigins := m.config.Server.CORSOrigins
+	if corsOrigins == "" {
+		corsOrigins = "*"
+	}
+	allowCredentials := corsOrigins != "*"
 	app.Use(cors.New(cors.Config{
-		AllowOrigins:     "*",
+		AllowOrigins:     corsOrigins,
 		AllowMethods:     "GET,POST,PUT,PATCH,DELETE,OPTIONS",
 		AllowHeaders:     "Origin,Content-Type,Accept,Authorization,X-Request-ID",
-		AllowCredentials: false,
+		AllowCredentials: allowCredentials,
 		MaxAge:           300,
 	}))
 
-	if m.config.IsProduction() {
+	if !m.config.IsDevelopment() {
 		app.Use(limiter.New(limiter.Config{
-			Max:               10,
+			Max:               60,
 			Expiration:        1 * time.Minute,
 			LimiterMiddleware: limiter.SlidingWindow{},
 			KeyGenerator: func(c *fiber.Ctx) string {

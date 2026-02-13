@@ -41,10 +41,16 @@ type TenantDBConfig struct {
 }
 
 type RedisConfig struct {
-	Host     string `mapstructure:"host"`
-	Port     int    `mapstructure:"port"`
-	Password string `mapstructure:"password"`
-	DB       int    `mapstructure:"db"`
+	Host            string        `mapstructure:"host"`
+	Port            int           `mapstructure:"port"`
+	Password        string        `mapstructure:"password"`
+	DB              int           `mapstructure:"db"`
+	PoolSize        int           `mapstructure:"pool_size"`
+	MinIdleConns    int           `mapstructure:"min_idle_conns"`
+	ConnMaxIdleTime time.Duration `mapstructure:"conn_max_idle_time"`
+	ConnMaxLifetime time.Duration `mapstructure:"conn_max_lifetime"`
+	ReadTimeout     time.Duration `mapstructure:"read_timeout"`
+	WriteTimeout    time.Duration `mapstructure:"write_timeout"`
 }
 
 type MinioConfig struct {

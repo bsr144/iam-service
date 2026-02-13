@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/base64"
 	"fmt"
+	"iam-service/pkg/errors"
 )
 
 type TransitKey struct {
@@ -31,16 +32,16 @@ func (v *SecureVault) EncryptData(ctx context.Context, keyName string, plaintext
 
 	secret, err := v.client.Logical().WriteWithContext(ctx, fmt.Sprintf("transit/encrypt/%s", keyName), data)
 	if err != nil {
-		return "", fmt.Errorf("failed to encrypt data: %w", err)
+		return "", errors.ErrInternal("failed to encrypt data").WithError(err)
 	}
 
 	if secret == nil || secret.Data == nil {
-		return "", fmt.Errorf("empty response from vault")
+		return "", errors.ErrNotFound("vault returned empty response")
 	}
 
 	ciphertext, ok := secret.Data["ciphertext"].(string)
 	if !ok {
-		return "", fmt.Errorf("unexpected ciphertext format")
+		return "", errors.ErrInternal("unexpected ciphertext format")
 	}
 
 	return ciphertext, nil
@@ -53,21 +54,21 @@ func (v *SecureVault) DecryptData(ctx context.Context, keyName string, ciphertex
 
 	secret, err := v.client.Logical().WriteWithContext(ctx, fmt.Sprintf("transit/decrypt/%s", keyName), data)
 	if err != nil {
-		return nil, fmt.Errorf("failed to decrypt data: %w", err)
+		return nil, errors.ErrInternal("failed to decrypt data").WithError(err)
 	}
 
 	if secret == nil || secret.Data == nil {
-		return nil, fmt.Errorf("empty response from vault")
+		return nil, errors.ErrNotFound("vault returned empty response")
 	}
 
 	encodedPlaintext, ok := secret.Data["plaintext"].(string)
 	if !ok {
-		return nil, fmt.Errorf("unexpected plaintext format")
+		return nil, errors.ErrInternal("unexpected plaintext format")
 	}
 
 	plaintext, err := base64.StdEncoding.DecodeString(encodedPlaintext)
 	if err != nil {
-		return nil, fmt.Errorf("failed to decode plaintext: %w", err)
+		return nil, errors.ErrInternal("failed to decode plaintext").WithError(err)
 	}
 
 	return plaintext, nil
@@ -84,16 +85,16 @@ func (v *SecureVault) EncryptDataWithContext(ctx context.Context, keyName string
 
 	secret, err := v.client.Logical().WriteWithContext(ctx, fmt.Sprintf("transit/encrypt/%s", keyName), data)
 	if err != nil {
-		return "", fmt.Errorf("failed to encrypt data: %w", err)
+		return "", errors.ErrInternal("failed to encrypt data").WithError(err)
 	}
 
 	if secret == nil || secret.Data == nil {
-		return "", fmt.Errorf("empty response from vault")
+		return "", errors.ErrNotFound("vault returned empty response")
 	}
 
 	ciphertext, ok := secret.Data["ciphertext"].(string)
 	if !ok {
-		return "", fmt.Errorf("unexpected ciphertext format")
+		return "", errors.ErrInternal("unexpected ciphertext format")
 	}
 
 	return ciphertext, nil
@@ -109,21 +110,21 @@ func (v *SecureVault) DecryptDataWithContext(ctx context.Context, keyName string
 
 	secret, err := v.client.Logical().WriteWithContext(ctx, fmt.Sprintf("transit/decrypt/%s", keyName), data)
 	if err != nil {
-		return nil, fmt.Errorf("failed to decrypt data: %w", err)
+		return nil, errors.ErrInternal("failed to decrypt data").WithError(err)
 	}
 
 	if secret == nil || secret.Data == nil {
-		return nil, fmt.Errorf("empty response from vault")
+		return nil, errors.ErrNotFound("vault returned empty response")
 	}
 
 	encodedPlaintext, ok := secret.Data["plaintext"].(string)
 	if !ok {
-		return nil, fmt.Errorf("unexpected plaintext format")
+		return nil, errors.ErrInternal("unexpected plaintext format")
 	}
 
 	plaintext, err := base64.StdEncoding.DecodeString(encodedPlaintext)
 	if err != nil {
-		return nil, fmt.Errorf("failed to decode plaintext: %w", err)
+		return nil, errors.ErrInternal("failed to decode plaintext").WithError(err)
 	}
 
 	return plaintext, nil
@@ -136,16 +137,16 @@ func (v *SecureVault) RewrapData(ctx context.Context, keyName string, ciphertext
 
 	secret, err := v.client.Logical().WriteWithContext(ctx, fmt.Sprintf("transit/rewrap/%s", keyName), data)
 	if err != nil {
-		return "", fmt.Errorf("failed to rewrap data: %w", err)
+		return "", errors.ErrInternal("failed to rewrap data").WithError(err)
 	}
 
 	if secret == nil || secret.Data == nil {
-		return "", fmt.Errorf("empty response from vault")
+		return "", errors.ErrNotFound("vault returned empty response")
 	}
 
 	newCiphertext, ok := secret.Data["ciphertext"].(string)
 	if !ok {
-		return "", fmt.Errorf("unexpected ciphertext format")
+		return "", errors.ErrInternal("unexpected ciphertext format")
 	}
 
 	return newCiphertext, nil
@@ -159,21 +160,21 @@ func (v *SecureVault) GenerateDataKey(ctx context.Context, keyName string, bits 
 
 	secret, err := v.client.Logical().WriteWithContext(ctx, fmt.Sprintf("transit/datakey/plaintext/%s", keyName), data)
 	if err != nil {
-		return "", "", fmt.Errorf("failed to generate data key: %w", err)
+		return "", "", errors.ErrInternal("failed to generate data key").WithError(err)
 	}
 
 	if secret == nil || secret.Data == nil {
-		return "", "", fmt.Errorf("empty response from vault")
+		return "", "", errors.ErrNotFound("vault returned empty response")
 	}
 
 	plaintext, ok := secret.Data["plaintext"].(string)
 	if !ok {
-		return "", "", fmt.Errorf("unexpected plaintext format")
+		return "", "", errors.ErrInternal("unexpected plaintext format")
 	}
 
 	ciphertext, ok := secret.Data["ciphertext"].(string)
 	if !ok {
-		return "", "", fmt.Errorf("unexpected ciphertext format")
+		return "", "", errors.ErrInternal("unexpected ciphertext format")
 	}
 
 	return plaintext, ciphertext, nil
@@ -187,16 +188,16 @@ func (v *SecureVault) GenerateWrappedDataKey(ctx context.Context, keyName string
 
 	secret, err := v.client.Logical().WriteWithContext(ctx, fmt.Sprintf("transit/datakey/wrapped/%s", keyName), data)
 	if err != nil {
-		return "", fmt.Errorf("failed to generate wrapped data key: %w", err)
+		return "", errors.ErrInternal("failed to generate wrapped data key").WithError(err)
 	}
 
 	if secret == nil || secret.Data == nil {
-		return "", fmt.Errorf("empty response from vault")
+		return "", errors.ErrNotFound("vault returned empty response")
 	}
 
 	ciphertext, ok := secret.Data["ciphertext"].(string)
 	if !ok {
-		return "", fmt.Errorf("unexpected ciphertext format")
+		return "", errors.ErrInternal("unexpected ciphertext format")
 	}
 
 	return ciphertext, nil
@@ -210,7 +211,7 @@ func (v *SecureVault) CreateTransitKey(ctx context.Context, keyName string, keyT
 
 	_, err := v.client.Logical().WriteWithContext(ctx, fmt.Sprintf("transit/keys/%s", keyName), data)
 	if err != nil {
-		return fmt.Errorf("failed to create transit key: %w", err)
+		return errors.ErrInternal("failed to create transit key").WithError(err)
 	}
 
 	return nil
@@ -219,11 +220,11 @@ func (v *SecureVault) CreateTransitKey(ctx context.Context, keyName string, keyT
 func (v *SecureVault) ReadTransitKey(ctx context.Context, keyName string) (*TransitKey, error) {
 	secret, err := v.client.Logical().ReadWithContext(ctx, fmt.Sprintf("transit/keys/%s", keyName))
 	if err != nil {
-		return nil, fmt.Errorf("failed to read transit key: %w", err)
+		return nil, errors.ErrInternal("failed to read transit key").WithError(err)
 	}
 
 	if secret == nil || secret.Data == nil {
-		return nil, fmt.Errorf("key not found")
+		return nil, errors.ErrNotFound("transit key not found")
 	}
 
 	transitKey := &TransitKey{
@@ -264,7 +265,7 @@ func (v *SecureVault) ReadTransitKey(ctx context.Context, keyName string) (*Tran
 func (v *SecureVault) DeleteTransitKey(ctx context.Context, keyName string) error {
 	_, err := v.client.Logical().DeleteWithContext(ctx, fmt.Sprintf("transit/keys/%s", keyName))
 	if err != nil {
-		return fmt.Errorf("failed to delete transit key: %w", err)
+		return errors.ErrInternal("failed to delete transit key").WithError(err)
 	}
 	return nil
 }
@@ -272,7 +273,7 @@ func (v *SecureVault) DeleteTransitKey(ctx context.Context, keyName string) erro
 func (v *SecureVault) RotateTransitKey(ctx context.Context, keyName string) error {
 	_, err := v.client.Logical().WriteWithContext(ctx, fmt.Sprintf("transit/keys/%s/rotate", keyName), nil)
 	if err != nil {
-		return fmt.Errorf("failed to rotate transit key: %w", err)
+		return errors.ErrInternal("failed to rotate transit key").WithError(err)
 	}
 	return nil
 }
@@ -286,16 +287,16 @@ func (v *SecureVault) SignData(ctx context.Context, keyName string, input []byte
 
 	secret, err := v.client.Logical().WriteWithContext(ctx, fmt.Sprintf("transit/sign/%s", keyName), data)
 	if err != nil {
-		return "", fmt.Errorf("failed to sign data: %w", err)
+		return "", errors.ErrInternal("failed to sign data").WithError(err)
 	}
 
 	if secret == nil || secret.Data == nil {
-		return "", fmt.Errorf("empty response from vault")
+		return "", errors.ErrNotFound("vault returned empty response")
 	}
 
 	signature, ok := secret.Data["signature"].(string)
 	if !ok {
-		return "", fmt.Errorf("unexpected signature format")
+		return "", errors.ErrInternal("unexpected signature format")
 	}
 
 	return signature, nil
@@ -311,16 +312,16 @@ func (v *SecureVault) VerifySignature(ctx context.Context, keyName string, input
 
 	secret, err := v.client.Logical().WriteWithContext(ctx, fmt.Sprintf("transit/verify/%s", keyName), data)
 	if err != nil {
-		return false, fmt.Errorf("failed to verify signature: %w", err)
+		return false, errors.ErrInternal("failed to verify signature").WithError(err)
 	}
 
 	if secret == nil || secret.Data == nil {
-		return false, fmt.Errorf("empty response from vault")
+		return false, errors.ErrNotFound("vault returned empty response")
 	}
 
 	valid, ok := secret.Data["valid"].(bool)
 	if !ok {
-		return false, fmt.Errorf("unexpected valid format")
+		return false, errors.ErrInternal("unexpected valid format")
 	}
 
 	return valid, nil
@@ -337,16 +338,16 @@ func (v *SecureVault) GenerateRandomBytes(ctx context.Context, numBytes int, for
 
 	secret, err := v.client.Logical().WriteWithContext(ctx, "transit/random", data)
 	if err != nil {
-		return "", fmt.Errorf("failed to generate random bytes: %w", err)
+		return "", errors.ErrInternal("failed to generate random bytes").WithError(err)
 	}
 
 	if secret == nil || secret.Data == nil {
-		return "", fmt.Errorf("empty response from vault")
+		return "", errors.ErrNotFound("vault returned empty response")
 	}
 
 	randomBytes, ok := secret.Data["random_bytes"].(string)
 	if !ok {
-		return "", fmt.Errorf("unexpected random_bytes format")
+		return "", errors.ErrInternal("unexpected random_bytes format")
 	}
 
 	return randomBytes, nil
@@ -365,16 +366,16 @@ func (v *SecureVault) Hash(ctx context.Context, input []byte, algorithm string) 
 
 	secret, err := v.client.Logical().WriteWithContext(ctx, "transit/hash", data)
 	if err != nil {
-		return "", fmt.Errorf("failed to hash data: %w", err)
+		return "", errors.ErrInternal("failed to hash data").WithError(err)
 	}
 
 	if secret == nil || secret.Data == nil {
-		return "", fmt.Errorf("empty response from vault")
+		return "", errors.ErrNotFound("vault returned empty response")
 	}
 
 	sum, ok := secret.Data["sum"].(string)
 	if !ok {
-		return "", fmt.Errorf("unexpected sum format")
+		return "", errors.ErrInternal("unexpected sum format")
 	}
 
 	return sum, nil
@@ -389,16 +390,16 @@ func (v *SecureVault) GenerateHMAC(ctx context.Context, keyName string, input []
 
 	secret, err := v.client.Logical().WriteWithContext(ctx, fmt.Sprintf("transit/hmac/%s", keyName), data)
 	if err != nil {
-		return "", fmt.Errorf("failed to generate HMAC: %w", err)
+		return "", errors.ErrInternal("failed to generate HMAC").WithError(err)
 	}
 
 	if secret == nil || secret.Data == nil {
-		return "", fmt.Errorf("empty response from vault")
+		return "", errors.ErrNotFound("vault returned empty response")
 	}
 
 	hmac, ok := secret.Data["hmac"].(string)
 	if !ok {
-		return "", fmt.Errorf("unexpected hmac format")
+		return "", errors.ErrInternal("unexpected hmac format")
 	}
 
 	return hmac, nil

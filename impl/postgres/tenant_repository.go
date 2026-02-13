@@ -2,54 +2,49 @@ package postgres
 
 import (
 	"context"
-	"errors"
 
 	"iam-service/entity"
-	"iam-service/internal/auth/contract"
+	"iam-service/iam/auth/contract"
 
 	"github.com/google/uuid"
 	"gorm.io/gorm"
 )
 
 type tenantRepository struct {
-	db *gorm.DB
+	baseRepository
 }
 
 func NewTenantRepository(db *gorm.DB) contract.TenantRepository {
-	return &tenantRepository{db: db}
+	return &tenantRepository{
+		baseRepository: baseRepository{db: db},
+	}
 }
 
 func (r *tenantRepository) GetByID(ctx context.Context, id uuid.UUID) (*entity.Tenant, error) {
 	var tenant entity.Tenant
-	err := r.db.WithContext(ctx).Where("tenant_id = ?", id).First(&tenant).Error
+	err := r.getDB(ctx).Where("id = ?", id).First(&tenant).Error
 	if err != nil {
-		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return nil, nil
-		}
-		return nil, err
+		return nil, translateError(err, "tenant")
 	}
 	return &tenant, nil
 }
 
 func (r *tenantRepository) GetBySlug(ctx context.Context, slug string) (*entity.Tenant, error) {
 	var tenant entity.Tenant
-	err := r.db.WithContext(ctx).Where("slug = ?", slug).First(&tenant).Error
+	err := r.getDB(ctx).Where("slug = ?", slug).First(&tenant).Error
 	if err != nil {
-		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return nil, nil
-		}
-		return nil, err
+		return nil, translateError(err, "tenant")
 	}
 	return &tenant, nil
 }
 
 func (r *tenantRepository) Exists(ctx context.Context, id uuid.UUID) (bool, error) {
 	var count int64
-	err := r.db.WithContext(ctx).Model(&entity.Tenant{}).
-		Where("tenant_id = ? AND status = ?", id, entity.TenantStatusActive).
+	err := r.getDB(ctx).Model(&entity.Tenant{}).
+		Where("id = ?", id).
 		Count(&count).Error
 	if err != nil {
-		return false, err
+		return false, translateError(err, "tenant")
 	}
 	return count > 0, nil
 }

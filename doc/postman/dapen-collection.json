@@ -1,0 +1,2476 @@
+{
+	"info": {
+		"_postman_id": "dapen-collection",
+		"name": "Dapen Collection",
+		"description": "Complete API collection for Dapen IAM Service.\n\n## Health Endpoints\n- GET /health - Basic health check\n- GET /health/ready - Readiness check\n- GET /health/live - Liveness check\n\n## Registration Flow Overview\n```\nCREATED → PENDING_VERIFICATION → VERIFIED → PASSWORD_SET → COMPLETE\n```\n\n## Registration Endpoints\n1. POST /registrations - Initiate registration\n2. POST /registrations/{id}/verify-otp - Verify OTP\n3. POST /registrations/{id}/resend-otp - Resend OTP\n4. POST /registrations/{id}/set-password - Set password\n5. POST /registrations/{id}/complete-profile - Complete profile\n6. GET /registrations/{id}/status - Check status\n\n## Login Flow Overview\n```\nCREDENTIALS → OTP_REQUIRED → OTP_VERIFIED → TOKENS_ISSUED\n```\n\n## Login Endpoints\n1. POST /auth/login - Login with credentials (returns OTP_REQUIRED)\n2. POST /auth/login/verify-otp - Verify OTP and get tokens\n3. POST /auth/login/resend-otp - Resend OTP code\n4. GET /auth/login/{id}/status - Check login session status\n\n## Masterdata Endpoints\n### Categories\n- GET /masterdata/categories - List categories\n- GET /masterdata/categories/{id} - Get category by ID\n- GET /masterdata/categories/code/{code} - Get category by code\n- POST /masterdata/categories - Create category\n- PUT /masterdata/categories/{id} - Update category\n- DELETE /masterdata/categories/{id} - Delete category\n\n### Items\n- GET /masterdata/items - List items\n- GET /masterdata/categories/{code}/items - Get items by category\n- GET /masterdata/categories/{code}/tree - Get category tree\n- GET /masterdata/categories/{code}/default - Get default item\n- GET /masterdata/items/{id} - Get item by ID\n- GET /masterdata/items/{code}/children - Get child items\n- POST /masterdata/items - Create item\n- PUT /masterdata/items/{id} - Update item\n- DELETE /masterdata/items/{id} - Delete item\n\n### Validation\n- POST /masterdata/validate - Validate item code\n- POST /masterdata/validate/batch - Validate multiple codes",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"item": [
+		{
+			"name": "Health",
+			"item": [
+				{
+					"name": "Health Check",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status code is 200', function() {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test('Response has status field', function() {",
+									"    var jsonData = pm.response.json();",
+									"    pm.expect(jsonData.status).to.eql('healthy');",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/v1/health",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "health"]
+						},
+						"description": "Basic health check endpoint."
+					},
+					"response": [
+						{
+							"name": "200 - Healthy",
+							"originalRequest": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{base_url}}/api/v1/health",
+									"host": ["{{base_url}}"],
+									"path": ["api", "v1", "health"]
+								}
+							},
+							"status": "OK",
+							"code": 200,
+							"_postman_previewlanguage": "json",
+							"header": [{"key": "Content-Type", "value": "application/json"}],
+							"body": "{\n    \"status\": \"healthy\",\n    \"timestamp\": \"2026-02-05T10:30:00Z\"\n}"
+						}
+					]
+				},
+				{
+					"name": "Ready Check",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status code is 200', function() {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test('Service is ready', function() {",
+									"    var jsonData = pm.response.json();",
+									"    pm.expect(jsonData.ready).to.be.true;",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/v1/health/ready",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "health", "ready"]
+						},
+						"description": "Readiness check for Kubernetes. Indicates if DB and Redis are connected."
+					},
+					"response": [
+						{
+							"name": "200 - Ready",
+							"originalRequest": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{base_url}}/api/v1/health/ready",
+									"host": ["{{base_url}}"],
+									"path": ["api", "v1", "health", "ready"]
+								}
+							},
+							"status": "OK",
+							"code": 200,
+							"_postman_previewlanguage": "json",
+							"header": [{"key": "Content-Type", "value": "application/json"}],
+							"body": "{\n    \"ready\": true\n}"
+						},
+						{
+							"name": "503 - Not Ready",
+							"originalRequest": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{base_url}}/api/v1/health/ready",
+									"host": ["{{base_url}}"],
+									"path": ["api", "v1", "health", "ready"]
+								}
+							},
+							"status": "Service Unavailable",
+							"code": 503,
+							"_postman_previewlanguage": "json",
+							"header": [{"key": "Content-Type", "value": "application/json"}],
+							"body": "{\n    \"ready\": false,\n    \"error\": \"database connection failed\"\n}"
+						}
+					]
+				},
+				{
+					"name": "Live Check",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status code is 200', function() {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test('Service is alive', function() {",
+									"    var jsonData = pm.response.json();",
+									"    pm.expect(jsonData.alive).to.be.true;",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/v1/health/live",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "health", "live"]
+						},
+						"description": "Liveness check for Kubernetes restart decisions."
+					},
+					"response": [
+						{
+							"name": "200 - Alive",
+							"originalRequest": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{base_url}}/api/v1/health/live",
+									"host": ["{{base_url}}"],
+									"path": ["api", "v1", "health", "live"]
+								}
+							},
+							"status": "OK",
+							"code": 200,
+							"_postman_previewlanguage": "json",
+							"header": [{"key": "Content-Type", "value": "application/json"}],
+							"body": "{\n    \"alive\": true\n}"
+						}
+					]
+				}
+			],
+			"description": "Health check endpoints for monitoring and Kubernetes probes."
+		},
+		{
+			"name": "Registration",
+			"item": [
+				{
+					"name": "Initiate Registration",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status code is 201', function() {",
+									"    pm.response.to.have.status(201);",
+									"});",
+									"",
+									"pm.test('Response has required fields', function() {",
+									"    var jsonData = pm.response.json();",
+									"    pm.expect(jsonData.success).to.be.true;",
+									"    pm.expect(jsonData.data.registration_id).to.exist;",
+									"    pm.expect(jsonData.data.status).to.eql('PENDING_VERIFICATION');",
+									"    pm.expect(jsonData.request_id).to.exist;",
+									"});",
+									"",
+									"if (pm.response.code === 201) {",
+									"    var jsonData = pm.response.json();",
+									"    pm.collectionVariables.set('registration_id', jsonData.data.registration_id);",
+									"    pm.collectionVariables.set('registration_email', jsonData.data.email);",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{"key": "Content-Type", "value": "application/json"},
+							{"key": "X-Tenant-ID", "value": "{{tenant_id}}"}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"email\": \"{{test_email}}\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/iam/registrations",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "iam", "registrations"]
+						},
+						"description": "Initiates registration and sends OTP to email.\n\n**Headers:** X-Tenant-ID required\n**Body:** { email }"
+					},
+					"response": [
+						{
+							"name": "201 - Success",
+							"originalRequest": {
+								"method": "POST",
+								"header": [
+									{"key": "Content-Type", "value": "application/json"},
+									{"key": "X-Tenant-ID", "value": "{{tenant_id}}"}
+								],
+								"body": {"mode": "raw", "raw": "{\n    \"email\": \"newuser@example.com\"\n}"},
+								"url": {"raw": "{{base_url}}/api/v1/iam/registrations", "host": ["{{base_url}}"], "path": ["api", "v1", "iam", "registrations"]}
+							},
+							"status": "Created",
+							"code": 201,
+							"_postman_previewlanguage": "json",
+							"header": [{"key": "Content-Type", "value": "application/json"}],
+							"body": "{\n    \"success\": true,\n    \"message\": \"Verification code sent to your email\",\n    \"data\": {\n        \"registration_id\": \"019462a1-7b3c-7def-8123-456789abcdef\",\n        \"email\": \"newuser@example.com\",\n        \"status\": \"PENDING_VERIFICATION\",\n        \"expires_at\": \"2026-02-04T15:10:00Z\",\n        \"otp_config\": {\n            \"length\": 6,\n            \"expires_in_minutes\": 10,\n            \"max_attempts\": 5,\n            \"resend_cooldown_seconds\": 60,\n            \"max_resends\": 3\n        }\n    },\n    \"request_id\": \"req_abc123xyz\"\n}"
+						},
+						{
+							"name": "400 - Invalid Email Format",
+							"originalRequest": {
+								"method": "POST",
+								"header": [
+									{"key": "Content-Type", "value": "application/json"},
+									{"key": "X-Tenant-ID", "value": "{{tenant_id}}"}
+								],
+								"body": {"mode": "raw", "raw": "{\n    \"email\": \"invalid-email-format\"\n}"},
+								"url": {"raw": "{{base_url}}/api/v1/iam/registrations", "host": ["{{base_url}}"], "path": ["api", "v1", "iam", "registrations"]}
+							},
+							"status": "Bad Request",
+							"code": 400,
+							"_postman_previewlanguage": "json",
+							"header": [{"key": "Content-Type", "value": "application/json"}],
+							"body": "{\n    \"success\": false,\n    \"error\": \"ERR_VALIDATION\",\n    \"message\": \"Validation failed\",\n    \"errors\": [\n        {\n            \"field\": \"email\",\n            \"message\": \"Invalid email format\"\n        }\n    ],\n    \"request_id\": \"req_abc123xyz\"\n}"
+						},
+						{
+							"name": "400 - Empty Email",
+							"originalRequest": {
+								"method": "POST",
+								"header": [
+									{"key": "Content-Type", "value": "application/json"},
+									{"key": "X-Tenant-ID", "value": "{{tenant_id}}"}
+								],
+								"body": {"mode": "raw", "raw": "{\n    \"email\": \"\"\n}"},
+								"url": {"raw": "{{base_url}}/api/v1/iam/registrations", "host": ["{{base_url}}"], "path": ["api", "v1", "iam", "registrations"]}
+							},
+							"status": "Bad Request",
+							"code": 400,
+							"_postman_previewlanguage": "json",
+							"header": [{"key": "Content-Type", "value": "application/json"}],
+							"body": "{\n    \"success\": false,\n    \"error\": \"ERR_VALIDATION\",\n    \"message\": \"Validation failed\",\n    \"errors\": [\n        {\n            \"field\": \"email\",\n            \"message\": \"Email is required\"\n        }\n    ],\n    \"request_id\": \"req_abc123xyz\"\n}"
+						},
+						{
+							"name": "400 - Invalid Tenant",
+							"originalRequest": {
+								"method": "POST",
+								"header": [
+									{"key": "Content-Type", "value": "application/json"},
+									{"key": "X-Tenant-ID", "value": "00000000-0000-0000-0000-000000000000"}
+								],
+								"body": {"mode": "raw", "raw": "{\n    \"email\": \"user@example.com\"\n}"},
+								"url": {"raw": "{{base_url}}/api/v1/iam/registrations", "host": ["{{base_url}}"], "path": ["api", "v1", "iam", "registrations"]}
+							},
+							"status": "Bad Request",
+							"code": 400,
+							"_postman_previewlanguage": "json",
+							"header": [{"key": "Content-Type", "value": "application/json"}],
+							"body": "{\n    \"success\": false,\n    \"error\": \"ERR_INVALID_TENANT\",\n    \"message\": \"Tenant not found or inactive\",\n    \"request_id\": \"req_abc123xyz\"\n}"
+						},
+						{
+							"name": "409 - Email Already Registered",
+							"originalRequest": {
+								"method": "POST",
+								"header": [
+									{"key": "Content-Type", "value": "application/json"},
+									{"key": "X-Tenant-ID", "value": "{{tenant_id}}"}
+								],
+								"body": {"mode": "raw", "raw": "{\n    \"email\": \"existing@example.com\"\n}"},
+								"url": {"raw": "{{base_url}}/api/v1/iam/registrations", "host": ["{{base_url}}"], "path": ["api", "v1", "iam", "registrations"]}
+							},
+							"status": "Conflict",
+							"code": 409,
+							"_postman_previewlanguage": "json",
+							"header": [{"key": "Content-Type", "value": "application/json"}],
+							"body": "{\n    \"success\": false,\n    \"error\": \"ERR_USER_ALREADY_EXISTS\",\n    \"message\": \"User with this email already exists\",\n    \"request_id\": \"req_abc123xyz\"\n}"
+						},
+						{
+							"name": "409 - Registration In Progress",
+							"originalRequest": {
+								"method": "POST",
+								"header": [
+									{"key": "Content-Type", "value": "application/json"},
+									{"key": "X-Tenant-ID", "value": "{{tenant_id}}"}
+								],
+								"body": {"mode": "raw", "raw": "{\n    \"email\": \"pending@example.com\"\n}"},
+								"url": {"raw": "{{base_url}}/api/v1/iam/registrations", "host": ["{{base_url}}"], "path": ["api", "v1", "iam", "registrations"]}
+							},
+							"status": "Conflict",
+							"code": 409,
+							"_postman_previewlanguage": "json",
+							"header": [{"key": "Content-Type", "value": "application/json"}],
+							"body": "{\n    \"success\": false,\n    \"error\": \"ERR_CONFLICT\",\n    \"message\": \"Active registration exists for this email\",\n    \"request_id\": \"req_abc123xyz\"\n}"
+						},
+						{
+							"name": "429 - Rate Limit Exceeded",
+							"originalRequest": {
+								"method": "POST",
+								"header": [
+									{"key": "Content-Type", "value": "application/json"},
+									{"key": "X-Tenant-ID", "value": "{{tenant_id}}"}
+								],
+								"body": {"mode": "raw", "raw": "{\n    \"email\": \"ratelimited@example.com\"\n}"},
+								"url": {"raw": "{{base_url}}/api/v1/iam/registrations", "host": ["{{base_url}}"], "path": ["api", "v1", "iam", "registrations"]}
+							},
+							"status": "Too Many Requests",
+							"code": 429,
+							"_postman_previewlanguage": "json",
+							"header": [
+								{"key": "Content-Type", "value": "application/json"},
+								{"key": "Retry-After", "value": "3600"}
+							],
+							"body": "{\n    \"success\": false,\n    \"error\": \"ERR_TOO_MANY_REQUESTS\",\n    \"message\": \"Too many registration attempts. Please try again later.\",\n    \"request_id\": \"req_abc123xyz\"\n}"
+						}
+					]
+				},
+				{
+					"name": "Verify OTP",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status code is 200', function() {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test('Response has required fields', function() {",
+									"    var jsonData = pm.response.json();",
+									"    pm.expect(jsonData.success).to.be.true;",
+									"    pm.expect(jsonData.data.status).to.eql('VERIFIED');",
+									"    pm.expect(jsonData.data.registration_token).to.exist;",
+									"    pm.expect(jsonData.request_id).to.exist;",
+									"});",
+									"",
+									"if (pm.response.code === 200) {",
+									"    var jsonData = pm.response.json();",
+									"    pm.collectionVariables.set('registration_token', jsonData.data.registration_token);",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{"key": "Content-Type", "value": "application/json"},
+							{"key": "X-Tenant-ID", "value": "{{tenant_id}}"}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"email\": \"{{registration_email}}\",\n    \"otp_code\": \"{{otp_code}}\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/iam/registrations/{{registration_id}}/verify-otp",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "iam", "registrations", "{{registration_id}}", "verify-otp"]
+						},
+						"description": "Verifies OTP code sent to email.\n\n**Headers:** X-Tenant-ID required\n**Body:** { email, otp_code }"
+					},
+					"response": [
+						{
+							"name": "200 - OTP Verified",
+							"originalRequest": {
+								"method": "POST",
+								"header": [
+									{"key": "Content-Type", "value": "application/json"},
+									{"key": "X-Tenant-ID", "value": "{{tenant_id}}"}
+								],
+								"body": {"mode": "raw", "raw": "{\n    \"email\": \"user@example.com\",\n    \"otp_code\": \"123456\"\n}"},
+								"url": {"raw": "{{base_url}}/api/v1/iam/registrations/{{registration_id}}/verify-otp", "host": ["{{base_url}}"], "path": ["api", "v1", "iam", "registrations", "{{registration_id}}", "verify-otp"]}
+							},
+							"status": "OK",
+							"code": 200,
+							"_postman_previewlanguage": "json",
+							"header": [{"key": "Content-Type", "value": "application/json"}],
+							"body": "{\n    \"success\": true,\n    \"message\": \"Email verified successfully\",\n    \"data\": {\n        \"registration_id\": \"019462a1-7b3c-7def-8123-456789abcdef\",\n        \"status\": \"VERIFIED\",\n        \"registration_token\": \"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...\",\n        \"token_expires_at\": \"2026-02-04T15:25:00Z\",\n        \"next_step\": {\n            \"action\": \"set_password\",\n            \"endpoint\": \"/api/v1/iam/registrations/{id}/set-password\",\n            \"required_fields\": [\"password\", \"password_confirmation\"]\n        }\n    },\n    \"request_id\": \"req_abc123xyz\"\n}"
+						},
+						{
+							"name": "400 - Invalid OTP Format",
+							"originalRequest": {
+								"method": "POST",
+								"header": [
+									{"key": "Content-Type", "value": "application/json"},
+									{"key": "X-Tenant-ID", "value": "{{tenant_id}}"}
+								],
+								"body": {"mode": "raw", "raw": "{\n    \"email\": \"user@example.com\",\n    \"otp_code\": \"12345\"\n}"},
+								"url": {"raw": "{{base_url}}/api/v1/iam/registrations/{{registration_id}}/verify-otp", "host": ["{{base_url}}"], "path": ["api", "v1", "iam", "registrations", "{{registration_id}}", "verify-otp"]}
+							},
+							"status": "Bad Request",
+							"code": 400,
+							"_postman_previewlanguage": "json",
+							"header": [{"key": "Content-Type", "value": "application/json"}],
+							"body": "{\n    \"success\": false,\n    \"error\": \"ERR_VALIDATION\",\n    \"message\": \"Validation failed\",\n    \"errors\": [\n        {\n            \"field\": \"otp_code\",\n            \"message\": \"OTP must be exactly 6 digits\"\n        }\n    ],\n    \"request_id\": \"req_abc123xyz\"\n}"
+						},
+						{
+							"name": "400 - Invalid OTP (Wrong Code)",
+							"originalRequest": {
+								"method": "POST",
+								"header": [
+									{"key": "Content-Type", "value": "application/json"},
+									{"key": "X-Tenant-ID", "value": "{{tenant_id}}"}
+								],
+								"body": {"mode": "raw", "raw": "{\n    \"email\": \"user@example.com\",\n    \"otp_code\": \"000000\"\n}"},
+								"url": {"raw": "{{base_url}}/api/v1/iam/registrations/{{registration_id}}/verify-otp", "host": ["{{base_url}}"], "path": ["api", "v1", "iam", "registrations", "{{registration_id}}", "verify-otp"]}
+							},
+							"status": "Bad Request",
+							"code": 400,
+							"_postman_previewlanguage": "json",
+							"header": [{"key": "Content-Type", "value": "application/json"}],
+							"body": "{\n    \"success\": false,\n    \"error\": \"ERR_OTP_INVALID\",\n    \"message\": \"Invalid OTP code\",\n    \"request_id\": \"req_abc123xyz\"\n}"
+						},
+						{
+							"name": "404 - Registration Not Found",
+							"originalRequest": {
+								"method": "POST",
+								"header": [
+									{"key": "Content-Type", "value": "application/json"},
+									{"key": "X-Tenant-ID", "value": "{{tenant_id}}"}
+								],
+								"body": {"mode": "raw", "raw": "{\n    \"email\": \"user@example.com\",\n    \"otp_code\": \"123456\"\n}"},
+								"url": {"raw": "{{base_url}}/api/v1/iam/registrations/invalid-id/verify-otp", "host": ["{{base_url}}"], "path": ["api", "v1", "iam", "registrations", "invalid-id", "verify-otp"]}
+							},
+							"status": "Not Found",
+							"code": 404,
+							"_postman_previewlanguage": "json",
+							"header": [{"key": "Content-Type", "value": "application/json"}],
+							"body": "{\n    \"success\": false,\n    \"error\": \"ERR_NOT_FOUND\",\n    \"message\": \"Registration not found\",\n    \"request_id\": \"req_abc123xyz\"\n}"
+						},
+						{
+							"name": "410 - Session Expired",
+							"originalRequest": {
+								"method": "POST",
+								"header": [
+									{"key": "Content-Type", "value": "application/json"},
+									{"key": "X-Tenant-ID", "value": "{{tenant_id}}"}
+								],
+								"body": {"mode": "raw", "raw": "{\n    \"email\": \"user@example.com\",\n    \"otp_code\": \"123456\"\n}"},
+								"url": {"raw": "{{base_url}}/api/v1/iam/registrations/{{registration_id}}/verify-otp", "host": ["{{base_url}}"], "path": ["api", "v1", "iam", "registrations", "{{registration_id}}", "verify-otp"]}
+							},
+							"status": "Gone",
+							"code": 410,
+							"_postman_previewlanguage": "json",
+							"header": [{"key": "Content-Type", "value": "application/json"}],
+							"body": "{\n    \"success\": false,\n    \"error\": \"ERR_SESSION_EXPIRED\",\n    \"message\": \"Registration session has expired\",\n    \"request_id\": \"req_abc123xyz\"\n}"
+						},
+						{
+							"name": "410 - OTP Expired",
+							"originalRequest": {
+								"method": "POST",
+								"header": [
+									{"key": "Content-Type", "value": "application/json"},
+									{"key": "X-Tenant-ID", "value": "{{tenant_id}}"}
+								],
+								"body": {"mode": "raw", "raw": "{\n    \"email\": \"user@example.com\",\n    \"otp_code\": \"123456\"\n}"},
+								"url": {"raw": "{{base_url}}/api/v1/iam/registrations/{{registration_id}}/verify-otp", "host": ["{{base_url}}"], "path": ["api", "v1", "iam", "registrations", "{{registration_id}}", "verify-otp"]}
+							},
+							"status": "Gone",
+							"code": 410,
+							"_postman_previewlanguage": "json",
+							"header": [{"key": "Content-Type", "value": "application/json"}],
+							"body": "{\n    \"success\": false,\n    \"error\": \"ERR_OTP_EXPIRED\",\n    \"message\": \"OTP code has expired\",\n    \"request_id\": \"req_abc123xyz\"\n}"
+						},
+						{
+							"name": "429 - Max Attempts Exceeded",
+							"originalRequest": {
+								"method": "POST",
+								"header": [
+									{"key": "Content-Type", "value": "application/json"},
+									{"key": "X-Tenant-ID", "value": "{{tenant_id}}"}
+								],
+								"body": {"mode": "raw", "raw": "{\n    \"email\": \"user@example.com\",\n    \"otp_code\": \"000000\"\n}"},
+								"url": {"raw": "{{base_url}}/api/v1/iam/registrations/{{registration_id}}/verify-otp", "host": ["{{base_url}}"], "path": ["api", "v1", "iam", "registrations", "{{registration_id}}", "verify-otp"]}
+							},
+							"status": "Too Many Requests",
+							"code": 429,
+							"_postman_previewlanguage": "json",
+							"header": [{"key": "Content-Type", "value": "application/json"}],
+							"body": "{\n    \"success\": false,\n    \"error\": \"ERR_TOO_MANY_REQUESTS\",\n    \"message\": \"Too many failed OTP attempts. Registration has been invalidated.\",\n    \"request_id\": \"req_abc123xyz\"\n}"
+						}
+					]
+				},
+				{
+					"name": "Resend OTP",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status code is 200', function() {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test('Response has required fields', function() {",
+									"    var jsonData = pm.response.json();",
+									"    pm.expect(jsonData.success).to.be.true;",
+									"    pm.expect(jsonData.data.resends_remaining).to.exist;",
+									"    pm.expect(jsonData.request_id).to.exist;",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{"key": "Content-Type", "value": "application/json"},
+							{"key": "X-Tenant-ID", "value": "{{tenant_id}}"}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"email\": \"{{registration_email}}\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/iam/registrations/{{registration_id}}/resend-otp",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "iam", "registrations", "{{registration_id}}", "resend-otp"]
+						},
+						"description": "Resends OTP code. Previous OTP is invalidated.\n\n**Headers:** X-Tenant-ID required\n**Body:** { email }"
+					},
+					"response": [
+						{
+							"name": "200 - OTP Resent",
+							"originalRequest": {
+								"method": "POST",
+								"header": [
+									{"key": "Content-Type", "value": "application/json"},
+									{"key": "X-Tenant-ID", "value": "{{tenant_id}}"}
+								],
+								"body": {"mode": "raw", "raw": "{\n    \"email\": \"user@example.com\"\n}"},
+								"url": {"raw": "{{base_url}}/api/v1/iam/registrations/{{registration_id}}/resend-otp", "host": ["{{base_url}}"], "path": ["api", "v1", "iam", "registrations", "{{registration_id}}", "resend-otp"]}
+							},
+							"status": "OK",
+							"code": 200,
+							"_postman_previewlanguage": "json",
+							"header": [{"key": "Content-Type", "value": "application/json"}],
+							"body": "{\n    \"success\": true,\n    \"message\": \"New verification code sent to your email\",\n    \"data\": {\n        \"registration_id\": \"019462a1-7b3c-7def-8123-456789abcdef\",\n        \"expires_at\": \"2026-02-04T15:20:00Z\",\n        \"resends_remaining\": 2,\n        \"next_resend_available_at\": \"2026-02-04T15:11:00Z\"\n    },\n    \"request_id\": \"req_abc123xyz\"\n}"
+						},
+						{
+							"name": "404 - Registration Not Found",
+							"originalRequest": {
+								"method": "POST",
+								"header": [
+									{"key": "Content-Type", "value": "application/json"},
+									{"key": "X-Tenant-ID", "value": "{{tenant_id}}"}
+								],
+								"body": {"mode": "raw", "raw": "{\n    \"email\": \"user@example.com\"\n}"},
+								"url": {"raw": "{{base_url}}/api/v1/iam/registrations/invalid-id/resend-otp", "host": ["{{base_url}}"], "path": ["api", "v1", "iam", "registrations", "invalid-id", "resend-otp"]}
+							},
+							"status": "Not Found",
+							"code": 404,
+							"_postman_previewlanguage": "json",
+							"header": [{"key": "Content-Type", "value": "application/json"}],
+							"body": "{\n    \"success\": false,\n    \"error\": \"ERR_NOT_FOUND\",\n    \"message\": \"Registration not found\",\n    \"request_id\": \"req_abc123xyz\"\n}"
+						},
+						{
+							"name": "409 - Already Verified",
+							"originalRequest": {
+								"method": "POST",
+								"header": [
+									{"key": "Content-Type", "value": "application/json"},
+									{"key": "X-Tenant-ID", "value": "{{tenant_id}}"}
+								],
+								"body": {"mode": "raw", "raw": "{\n    \"email\": \"user@example.com\"\n}"},
+								"url": {"raw": "{{base_url}}/api/v1/iam/registrations/{{registration_id}}/resend-otp", "host": ["{{base_url}}"], "path": ["api", "v1", "iam", "registrations", "{{registration_id}}", "resend-otp"]}
+							},
+							"status": "Conflict",
+							"code": 409,
+							"_postman_previewlanguage": "json",
+							"header": [{"key": "Content-Type", "value": "application/json"}],
+							"body": "{\n    \"success\": false,\n    \"error\": \"ERR_CONFLICT\",\n    \"message\": \"Registration is already verified\",\n    \"request_id\": \"req_abc123xyz\"\n}"
+						},
+						{
+							"name": "429 - Resend Cooldown",
+							"originalRequest": {
+								"method": "POST",
+								"header": [
+									{"key": "Content-Type", "value": "application/json"},
+									{"key": "X-Tenant-ID", "value": "{{tenant_id}}"}
+								],
+								"body": {"mode": "raw", "raw": "{\n    \"email\": \"user@example.com\"\n}"},
+								"url": {"raw": "{{base_url}}/api/v1/iam/registrations/{{registration_id}}/resend-otp", "host": ["{{base_url}}"], "path": ["api", "v1", "iam", "registrations", "{{registration_id}}", "resend-otp"]}
+							},
+							"status": "Too Many Requests",
+							"code": 429,
+							"_postman_previewlanguage": "json",
+							"header": [
+								{"key": "Content-Type", "value": "application/json"},
+								{"key": "Retry-After", "value": "45"}
+							],
+							"body": "{\n    \"success\": false,\n    \"error\": \"ERR_TOO_MANY_REQUESTS\",\n    \"message\": \"Please wait before requesting another code\",\n    \"request_id\": \"req_abc123xyz\"\n}"
+						}
+					]
+				},
+				{
+					"name": "Set Password",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status code is 200', function() {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test('Response has required fields', function() {",
+									"    var jsonData = pm.response.json();",
+									"    pm.expect(jsonData.success).to.be.true;",
+									"    pm.expect(jsonData.data.status).to.eql('PASSWORD_SET');",
+									"    pm.expect(jsonData.data.next_step).to.exist;",
+									"    pm.expect(jsonData.request_id).to.exist;",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{"key": "Content-Type", "value": "application/json"},
+							{"key": "X-Tenant-ID", "value": "{{tenant_id}}"},
+							{"key": "Authorization", "value": "Bearer {{registration_token}}"}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"password\": \"SecureP@ssw0rd!\",\n    \"password_confirmation\": \"SecureP@ssw0rd!\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/iam/registrations/{{registration_id}}/set-password",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "iam", "registrations", "{{registration_id}}", "set-password"]
+						},
+						"description": "Sets the password after OTP verification.\n\n**Headers:** X-Tenant-ID, Authorization (Bearer token from verify)\n**Body:** { password, password_confirmation }"
+					},
+					"response": [
+						{
+							"name": "200 - Password Set",
+							"originalRequest": {
+								"method": "POST",
+								"header": [
+									{"key": "Content-Type", "value": "application/json"},
+									{"key": "X-Tenant-ID", "value": "{{tenant_id}}"},
+									{"key": "Authorization", "value": "Bearer {{registration_token}}"}
+								],
+								"body": {"mode": "raw", "raw": "{\n    \"password\": \"SecureP@ssw0rd!\",\n    \"password_confirmation\": \"SecureP@ssw0rd!\"\n}"},
+								"url": {"raw": "{{base_url}}/api/v1/iam/registrations/{{registration_id}}/set-password", "host": ["{{base_url}}"], "path": ["api", "v1", "iam", "registrations", "{{registration_id}}", "set-password"]}
+							},
+							"status": "OK",
+							"code": 200,
+							"_postman_previewlanguage": "json",
+							"header": [{"key": "Content-Type", "value": "application/json"}],
+							"body": "{\n    \"success\": true,\n    \"message\": \"Password set successfully\",\n    \"data\": {\n        \"registration_id\": \"019462a1-7b3c-7def-8123-456789abcdef\",\n        \"status\": \"PASSWORD_SET\",\n        \"next_step\": {\n            \"action\": \"complete_profile\",\n            \"endpoint\": \"/api/v1/iam/registrations/{id}/complete-profile\",\n            \"required_fields\": [\"first_name\", \"last_name\", \"gender\", \"date_of_birth\"],\n            \"optional_fields\": [\"phone_number\"]\n        },\n        \"gender_options\": {\n            \"fetch_from\": \"/api/masterdata/v1/items?category=GENDER&status=ACTIVE\",\n            \"values\": [\"MALE\", \"FEMALE\", \"NOT_SPECIFIED\"]\n        }\n    },\n    \"request_id\": \"req_abc123xyz\"\n}"
+						},
+						{
+							"name": "400 - Password Mismatch",
+							"originalRequest": {
+								"method": "POST",
+								"header": [
+									{"key": "Content-Type", "value": "application/json"},
+									{"key": "X-Tenant-ID", "value": "{{tenant_id}}"},
+									{"key": "Authorization", "value": "Bearer {{registration_token}}"}
+								],
+								"body": {"mode": "raw", "raw": "{\n    \"password\": \"SecureP@ssw0rd!\",\n    \"password_confirmation\": \"DifferentP@ssw0rd!\"\n}"},
+								"url": {"raw": "{{base_url}}/api/v1/iam/registrations/{{registration_id}}/set-password", "host": ["{{base_url}}"], "path": ["api", "v1", "iam", "registrations", "{{registration_id}}", "set-password"]}
+							},
+							"status": "Bad Request",
+							"code": 400,
+							"_postman_previewlanguage": "json",
+							"header": [{"key": "Content-Type", "value": "application/json"}],
+							"body": "{\n    \"success\": false,\n    \"error\": \"ERR_VALIDATION\",\n    \"message\": \"Validation failed\",\n    \"errors\": [\n        {\n            \"field\": \"password_confirmation\",\n            \"message\": \"Passwords do not match\"\n        }\n    ],\n    \"request_id\": \"req_abc123xyz\"\n}"
+						},
+						{
+							"name": "400 - Password Too Weak",
+							"originalRequest": {
+								"method": "POST",
+								"header": [
+									{"key": "Content-Type", "value": "application/json"},
+									{"key": "X-Tenant-ID", "value": "{{tenant_id}}"},
+									{"key": "Authorization", "value": "Bearer {{registration_token}}"}
+								],
+								"body": {"mode": "raw", "raw": "{\n    \"password\": \"weakpassword\",\n    \"password_confirmation\": \"weakpassword\"\n}"},
+								"url": {"raw": "{{base_url}}/api/v1/iam/registrations/{{registration_id}}/set-password", "host": ["{{base_url}}"], "path": ["api", "v1", "iam", "registrations", "{{registration_id}}", "set-password"]}
+							},
+							"status": "Bad Request",
+							"code": 400,
+							"_postman_previewlanguage": "json",
+							"header": [{"key": "Content-Type", "value": "application/json"}],
+							"body": "{\n    \"success\": false,\n    \"error\": \"ERR_VALIDATION\",\n    \"message\": \"Validation failed\",\n    \"errors\": [\n        {\n            \"field\": \"password\",\n            \"message\": \"Must contain at least one special character\"\n        }\n    ],\n    \"request_id\": \"req_abc123xyz\"\n}"
+						},
+						{
+							"name": "401 - Invalid Token",
+							"originalRequest": {
+								"method": "POST",
+								"header": [
+									{"key": "Content-Type", "value": "application/json"},
+									{"key": "X-Tenant-ID", "value": "{{tenant_id}}"},
+									{"key": "Authorization", "value": "Bearer invalid-token"}
+								],
+								"body": {"mode": "raw", "raw": "{\n    \"password\": \"SecureP@ssw0rd!\",\n    \"password_confirmation\": \"SecureP@ssw0rd!\"\n}"},
+								"url": {"raw": "{{base_url}}/api/v1/iam/registrations/{{registration_id}}/set-password", "host": ["{{base_url}}"], "path": ["api", "v1", "iam", "registrations", "{{registration_id}}", "set-password"]}
+							},
+							"status": "Unauthorized",
+							"code": 401,
+							"_postman_previewlanguage": "json",
+							"header": [{"key": "Content-Type", "value": "application/json"}],
+							"body": "{\n    \"success\": false,\n    \"error\": \"ERR_TOKEN_INVALID\",\n    \"message\": \"Invalid token\",\n    \"request_id\": \"req_abc123xyz\"\n}"
+						},
+						{
+							"name": "403 - Not Verified",
+							"originalRequest": {
+								"method": "POST",
+								"header": [
+									{"key": "Content-Type", "value": "application/json"},
+									{"key": "X-Tenant-ID", "value": "{{tenant_id}}"},
+									{"key": "Authorization", "value": "Bearer {{registration_token}}"}
+								],
+								"body": {"mode": "raw", "raw": "{\n    \"password\": \"SecureP@ssw0rd!\",\n    \"password_confirmation\": \"SecureP@ssw0rd!\"\n}"},
+								"url": {"raw": "{{base_url}}/api/v1/iam/registrations/{{registration_id}}/set-password", "host": ["{{base_url}}"], "path": ["api", "v1", "iam", "registrations", "{{registration_id}}", "set-password"]}
+							},
+							"status": "Forbidden",
+							"code": 403,
+							"_postman_previewlanguage": "json",
+							"header": [{"key": "Content-Type", "value": "application/json"}],
+							"body": "{\n    \"success\": false,\n    \"error\": \"ERR_FORBIDDEN\",\n    \"message\": \"Email has not been verified yet\",\n    \"request_id\": \"req_abc123xyz\"\n}"
+						},
+						{
+							"name": "409 - Password Already Set",
+							"originalRequest": {
+								"method": "POST",
+								"header": [
+									{"key": "Content-Type", "value": "application/json"},
+									{"key": "X-Tenant-ID", "value": "{{tenant_id}}"},
+									{"key": "Authorization", "value": "Bearer {{registration_token}}"}
+								],
+								"body": {"mode": "raw", "raw": "{\n    \"password\": \"SecureP@ssw0rd!\",\n    \"password_confirmation\": \"SecureP@ssw0rd!\"\n}"},
+								"url": {"raw": "{{base_url}}/api/v1/iam/registrations/{{registration_id}}/set-password", "host": ["{{base_url}}"], "path": ["api", "v1", "iam", "registrations", "{{registration_id}}", "set-password"]}
+							},
+							"status": "Conflict",
+							"code": 409,
+							"_postman_previewlanguage": "json",
+							"header": [{"key": "Content-Type", "value": "application/json"}],
+							"body": "{\n    \"success\": false,\n    \"error\": \"ERR_CONFLICT\",\n    \"message\": \"Password already set for this registration\",\n    \"request_id\": \"req_abc123xyz\"\n}"
+						}
+					]
+				},
+				{
+					"name": "Complete Profile",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status code is 201', function() {",
+									"    pm.response.to.have.status(201);",
+									"});",
+									"",
+									"pm.test('Response has required fields', function() {",
+									"    var jsonData = pm.response.json();",
+									"    pm.expect(jsonData.success).to.be.true;",
+									"    pm.expect(jsonData.data.user_id).to.exist;",
+									"    pm.expect(jsonData.request_id).to.exist;",
+									"});",
+									"",
+									"if (pm.response.code === 201) {",
+									"    var jsonData = pm.response.json();",
+									"    pm.collectionVariables.set('user_id', jsonData.data.user_id);",
+									"    if (jsonData.data.access_token) {",
+									"        pm.collectionVariables.set('access_token', jsonData.data.access_token);",
+									"        pm.collectionVariables.set('refresh_token', jsonData.data.refresh_token);",
+									"    }",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{"key": "Content-Type", "value": "application/json"},
+							{"key": "X-Tenant-ID", "value": "{{tenant_id}}"},
+							{"key": "Authorization", "value": "Bearer {{registration_token}}"}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"first_name\": \"John\",\n    \"last_name\": \"Doe\",\n    \"gender\": \"MALE\",\n    \"date_of_birth\": \"1990-05-15\",\n    \"phone_number\": \"+6281234567890\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/iam/registrations/{{registration_id}}/complete-profile",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "iam", "registrations", "{{registration_id}}", "complete-profile"]
+						},
+						"description": "Completes the profile and creates the user account.\n\n**Headers:** X-Tenant-ID, Authorization (Bearer token from verify)\n**Body:** { first_name, last_name, gender, date_of_birth, phone_number? }\n\n**Gender values:** MALE, FEMALE, NOT_SPECIFIED (from Masterdata)"
+					},
+					"response": [
+						{
+							"name": "201 - Active User (Auto-Login)",
+							"originalRequest": {
+								"method": "POST",
+								"header": [
+									{"key": "Content-Type", "value": "application/json"},
+									{"key": "X-Tenant-ID", "value": "{{tenant_id}}"},
+									{"key": "Authorization", "value": "Bearer {{registration_token}}"}
+								],
+								"body": {"mode": "raw", "raw": "{\n    \"first_name\": \"John\",\n    \"last_name\": \"Doe\",\n    \"gender\": \"MALE\",\n    \"date_of_birth\": \"1990-05-15\",\n    \"phone_number\": \"+6281234567890\"\n}"},
+								"url": {"raw": "{{base_url}}/api/v1/iam/registrations/{{registration_id}}/complete-profile", "host": ["{{base_url}}"], "path": ["api", "v1", "iam", "registrations", "{{registration_id}}", "complete-profile"]}
+							},
+							"status": "Created",
+							"code": 201,
+							"_postman_previewlanguage": "json",
+							"header": [{"key": "Content-Type", "value": "application/json"}],
+							"body": "{\n    \"success\": true,\n    \"message\": \"Registration completed successfully. You are now logged in.\",\n    \"data\": {\n        \"user_id\": \"019462a1-8888-7def-8123-456789abcdef\",\n        \"email\": \"user@example.com\",\n        \"status\": \"ACTIVE\",\n        \"profile\": {\n            \"first_name\": \"John\",\n            \"last_name\": \"Doe\",\n            \"gender\": \"MALE\",\n            \"date_of_birth\": \"1990-05-15\"\n        },\n        \"access_token\": \"eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9...\",\n        \"refresh_token\": \"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...\",\n        \"token_type\": \"Bearer\",\n        \"expires_in\": 900\n    },\n    \"request_id\": \"req_abc123xyz\"\n}"
+						},
+						{
+							"name": "201 - Pending Approval (No Tokens)",
+							"originalRequest": {
+								"method": "POST",
+								"header": [
+									{"key": "Content-Type", "value": "application/json"},
+									{"key": "X-Tenant-ID", "value": "{{tenant_with_approval_id}}"},
+									{"key": "Authorization", "value": "Bearer {{registration_token}}"}
+								],
+								"body": {"mode": "raw", "raw": "{\n    \"first_name\": \"Jane\",\n    \"last_name\": \"Smith\",\n    \"gender\": \"FEMALE\",\n    \"date_of_birth\": \"1985-03-20\"\n}"},
+								"url": {"raw": "{{base_url}}/api/v1/iam/registrations/{{registration_id}}/complete-profile", "host": ["{{base_url}}"], "path": ["api", "v1", "iam", "registrations", "{{registration_id}}", "complete-profile"]}
+							},
+							"status": "Created",
+							"code": 201,
+							"_postman_previewlanguage": "json",
+							"header": [{"key": "Content-Type", "value": "application/json"}],
+							"body": "{\n    \"success\": true,\n    \"message\": \"Registration submitted. Your account is pending administrator approval.\",\n    \"data\": {\n        \"user_id\": \"019462a1-9999-7def-8123-456789abcdef\",\n        \"email\": \"user@example.com\",\n        \"status\": \"PENDING_APPROVAL\",\n        \"profile\": {\n            \"first_name\": \"Jane\",\n            \"last_name\": \"Smith\",\n            \"gender\": \"FEMALE\",\n            \"date_of_birth\": \"1985-03-20\"\n        }\n    },\n    \"request_id\": \"req_abc123xyz\"\n}"
+						},
+						{
+							"name": "400 - Invalid Gender",
+							"originalRequest": {
+								"method": "POST",
+								"header": [
+									{"key": "Content-Type", "value": "application/json"},
+									{"key": "X-Tenant-ID", "value": "{{tenant_id}}"},
+									{"key": "Authorization", "value": "Bearer {{registration_token}}"}
+								],
+								"body": {"mode": "raw", "raw": "{\n    \"first_name\": \"John\",\n    \"last_name\": \"Doe\",\n    \"gender\": \"OTHER\",\n    \"date_of_birth\": \"1990-05-15\"\n}"},
+								"url": {"raw": "{{base_url}}/api/v1/iam/registrations/{{registration_id}}/complete-profile", "host": ["{{base_url}}"], "path": ["api", "v1", "iam", "registrations", "{{registration_id}}", "complete-profile"]}
+							},
+							"status": "Bad Request",
+							"code": 400,
+							"_postman_previewlanguage": "json",
+							"header": [{"key": "Content-Type", "value": "application/json"}],
+							"body": "{\n    \"success\": false,\n    \"error\": \"ERR_VALIDATION\",\n    \"message\": \"Validation failed\",\n    \"errors\": [\n        {\n            \"field\": \"gender\",\n            \"message\": \"Invalid gender code. Valid options: MALE, FEMALE, NOT_SPECIFIED\"\n        }\n    ],\n    \"request_id\": \"req_abc123xyz\"\n}"
+						},
+						{
+							"name": "400 - Invalid Date of Birth",
+							"originalRequest": {
+								"method": "POST",
+								"header": [
+									{"key": "Content-Type", "value": "application/json"},
+									{"key": "X-Tenant-ID", "value": "{{tenant_id}}"},
+									{"key": "Authorization", "value": "Bearer {{registration_token}}"}
+								],
+								"body": {"mode": "raw", "raw": "{\n    \"first_name\": \"John\",\n    \"last_name\": \"Doe\",\n    \"gender\": \"MALE\",\n    \"date_of_birth\": \"2030-05-15\"\n}"},
+								"url": {"raw": "{{base_url}}/api/v1/iam/registrations/{{registration_id}}/complete-profile", "host": ["{{base_url}}"], "path": ["api", "v1", "iam", "registrations", "{{registration_id}}", "complete-profile"]}
+							},
+							"status": "Bad Request",
+							"code": 400,
+							"_postman_previewlanguage": "json",
+							"header": [{"key": "Content-Type", "value": "application/json"}],
+							"body": "{\n    \"success\": false,\n    \"error\": \"ERR_VALIDATION\",\n    \"message\": \"Validation failed\",\n    \"errors\": [\n        {\n            \"field\": \"date_of_birth\",\n            \"message\": \"Date of birth must be in the past\"\n        }\n    ],\n    \"request_id\": \"req_abc123xyz\"\n}"
+						},
+						{
+							"name": "400 - Invalid Phone Format",
+							"originalRequest": {
+								"method": "POST",
+								"header": [
+									{"key": "Content-Type", "value": "application/json"},
+									{"key": "X-Tenant-ID", "value": "{{tenant_id}}"},
+									{"key": "Authorization", "value": "Bearer {{registration_token}}"}
+								],
+								"body": {"mode": "raw", "raw": "{\n    \"first_name\": \"John\",\n    \"last_name\": \"Doe\",\n    \"gender\": \"MALE\",\n    \"date_of_birth\": \"1990-05-15\",\n    \"phone_number\": \"invalid-phone\"\n}"},
+								"url": {"raw": "{{base_url}}/api/v1/iam/registrations/{{registration_id}}/complete-profile", "host": ["{{base_url}}"], "path": ["api", "v1", "iam", "registrations", "{{registration_id}}", "complete-profile"]}
+							},
+							"status": "Bad Request",
+							"code": 400,
+							"_postman_previewlanguage": "json",
+							"header": [{"key": "Content-Type", "value": "application/json"}],
+							"body": "{\n    \"success\": false,\n    \"error\": \"ERR_VALIDATION\",\n    \"message\": \"Validation failed\",\n    \"errors\": [\n        {\n            \"field\": \"phone_number\",\n            \"message\": \"Phone number must be in E.164 format (e.g., +6281234567890)\"\n        }\n    ],\n    \"request_id\": \"req_abc123xyz\"\n}"
+						},
+						{
+							"name": "401 - Invalid Token",
+							"originalRequest": {
+								"method": "POST",
+								"header": [
+									{"key": "Content-Type", "value": "application/json"},
+									{"key": "X-Tenant-ID", "value": "{{tenant_id}}"},
+									{"key": "Authorization", "value": "Bearer invalid-token"}
+								],
+								"body": {"mode": "raw", "raw": "{\n    \"first_name\": \"John\",\n    \"last_name\": \"Doe\",\n    \"gender\": \"MALE\",\n    \"date_of_birth\": \"1990-05-15\"\n}"},
+								"url": {"raw": "{{base_url}}/api/v1/iam/registrations/{{registration_id}}/complete-profile", "host": ["{{base_url}}"], "path": ["api", "v1", "iam", "registrations", "{{registration_id}}", "complete-profile"]}
+							},
+							"status": "Unauthorized",
+							"code": 401,
+							"_postman_previewlanguage": "json",
+							"header": [{"key": "Content-Type", "value": "application/json"}],
+							"body": "{\n    \"success\": false,\n    \"error\": \"ERR_TOKEN_INVALID\",\n    \"message\": \"Invalid token\",\n    \"request_id\": \"req_abc123xyz\"\n}"
+						},
+						{
+							"name": "403 - Password Not Set",
+							"originalRequest": {
+								"method": "POST",
+								"header": [
+									{"key": "Content-Type", "value": "application/json"},
+									{"key": "X-Tenant-ID", "value": "{{tenant_id}}"},
+									{"key": "Authorization", "value": "Bearer {{registration_token}}"}
+								],
+								"body": {"mode": "raw", "raw": "{\n    \"first_name\": \"John\",\n    \"last_name\": \"Doe\",\n    \"gender\": \"MALE\",\n    \"date_of_birth\": \"1990-05-15\"\n}"},
+								"url": {"raw": "{{base_url}}/api/v1/iam/registrations/{{registration_id}}/complete-profile", "host": ["{{base_url}}"], "path": ["api", "v1", "iam", "registrations", "{{registration_id}}", "complete-profile"]}
+							},
+							"status": "Forbidden",
+							"code": 403,
+							"_postman_previewlanguage": "json",
+							"header": [{"key": "Content-Type", "value": "application/json"}],
+							"body": "{\n    \"success\": false,\n    \"error\": \"ERR_FORBIDDEN\",\n    \"message\": \"Password must be set first\",\n    \"request_id\": \"req_abc123xyz\"\n}"
+						},
+						{
+							"name": "409 - Email Exists (Race Condition)",
+							"originalRequest": {
+								"method": "POST",
+								"header": [
+									{"key": "Content-Type", "value": "application/json"},
+									{"key": "X-Tenant-ID", "value": "{{tenant_id}}"},
+									{"key": "Authorization", "value": "Bearer {{registration_token}}"}
+								],
+								"body": {"mode": "raw", "raw": "{\n    \"first_name\": \"John\",\n    \"last_name\": \"Doe\",\n    \"gender\": \"MALE\",\n    \"date_of_birth\": \"1990-05-15\"\n}"},
+								"url": {"raw": "{{base_url}}/api/v1/iam/registrations/{{registration_id}}/complete-profile", "host": ["{{base_url}}"], "path": ["api", "v1", "iam", "registrations", "{{registration_id}}", "complete-profile"]}
+							},
+							"status": "Conflict",
+							"code": 409,
+							"_postman_previewlanguage": "json",
+							"header": [{"key": "Content-Type", "value": "application/json"}],
+							"body": "{\n    \"success\": false,\n    \"error\": \"ERR_USER_ALREADY_EXISTS\",\n    \"message\": \"User with this email already exists\",\n    \"request_id\": \"req_abc123xyz\"\n}"
+						},
+						{
+							"name": "503 - Masterdata Unavailable",
+							"originalRequest": {
+								"method": "POST",
+								"header": [
+									{"key": "Content-Type", "value": "application/json"},
+									{"key": "X-Tenant-ID", "value": "{{tenant_id}}"},
+									{"key": "Authorization", "value": "Bearer {{registration_token}}"}
+								],
+								"body": {"mode": "raw", "raw": "{\n    \"first_name\": \"John\",\n    \"last_name\": \"Doe\",\n    \"gender\": \"MALE\",\n    \"date_of_birth\": \"1990-05-15\"\n}"},
+								"url": {"raw": "{{base_url}}/api/v1/iam/registrations/{{registration_id}}/complete-profile", "host": ["{{base_url}}"], "path": ["api", "v1", "iam", "registrations", "{{registration_id}}", "complete-profile"]}
+							},
+							"status": "Service Unavailable",
+							"code": 503,
+							"_postman_previewlanguage": "json",
+							"header": [{"key": "Content-Type", "value": "application/json"}],
+							"body": "{\n    \"success\": false,\n    \"error\": \"ERR_SERVICE_UNAVAILABLE\",\n    \"message\": \"Unable to validate gender. Please try again later.\",\n    \"request_id\": \"req_abc123xyz\"\n}"
+						}
+					]
+				},
+				{
+					"name": "Check Registration Status",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status code is 200', function() {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test('Response has required fields', function() {",
+									"    var jsonData = pm.response.json();",
+									"    pm.expect(jsonData.success).to.be.true;",
+									"    pm.expect(jsonData.data.status).to.exist;",
+									"    pm.expect(jsonData.request_id).to.exist;",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [
+							{"key": "X-Tenant-ID", "value": "{{tenant_id}}"}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/v1/iam/registrations/{{registration_id}}/status?email={{registration_email}}",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "iam", "registrations", "{{registration_id}}", "status"],
+							"query": [{"key": "email", "value": "{{registration_email}}"}]
+						},
+						"description": "Returns current registration status.\n\n**Headers:** X-Tenant-ID required\n**Query:** email (required)"
+					},
+					"response": [
+						{
+							"name": "200 - Pending Verification",
+							"originalRequest": {
+								"method": "GET",
+								"header": [{"key": "X-Tenant-ID", "value": "{{tenant_id}}"}],
+								"url": {"raw": "{{base_url}}/api/v1/iam/registrations/{{registration_id}}/status?email=user@example.com", "host": ["{{base_url}}"], "path": ["api", "v1", "iam", "registrations", "{{registration_id}}", "status"], "query": [{"key": "email", "value": "user@example.com"}]}
+							},
+							"status": "OK",
+							"code": 200,
+							"_postman_previewlanguage": "json",
+							"header": [{"key": "Content-Type", "value": "application/json"}],
+							"body": "{\n    \"success\": true,\n    \"message\": \"Registration status retrieved\",\n    \"data\": {\n        \"registration_id\": \"019462a1-7b3c-7def-8123-456789abcdef\",\n        \"email\": \"u***@example.com\",\n        \"status\": \"PENDING_VERIFICATION\",\n        \"current_step\": \"verify_otp\",\n        \"expires_at\": \"2026-02-04T15:10:00Z\",\n        \"otp_attempts_remaining\": 5,\n        \"resends_remaining\": 3\n    },\n    \"request_id\": \"req_abc123xyz\"\n}"
+						},
+						{
+							"name": "200 - Password Set",
+							"originalRequest": {
+								"method": "GET",
+								"header": [{"key": "X-Tenant-ID", "value": "{{tenant_id}}"}],
+								"url": {"raw": "{{base_url}}/api/v1/iam/registrations/{{registration_id}}/status?email=user@example.com", "host": ["{{base_url}}"], "path": ["api", "v1", "iam", "registrations", "{{registration_id}}", "status"], "query": [{"key": "email", "value": "user@example.com"}]}
+							},
+							"status": "OK",
+							"code": 200,
+							"_postman_previewlanguage": "json",
+							"header": [{"key": "Content-Type", "value": "application/json"}],
+							"body": "{\n    \"success\": true,\n    \"message\": \"Registration status retrieved\",\n    \"data\": {\n        \"registration_id\": \"019462a1-7b3c-7def-8123-456789abcdef\",\n        \"email\": \"u***@example.com\",\n        \"status\": \"PASSWORD_SET\",\n        \"current_step\": \"complete_profile\",\n        \"expires_at\": \"2026-02-04T15:25:00Z\",\n        \"otp_attempts_remaining\": 0,\n        \"resends_remaining\": 2\n    },\n    \"request_id\": \"req_abc123xyz\"\n}"
+						},
+						{
+							"name": "404 - Registration Not Found",
+							"originalRequest": {
+								"method": "GET",
+								"header": [{"key": "X-Tenant-ID", "value": "{{tenant_id}}"}],
+								"url": {"raw": "{{base_url}}/api/v1/iam/registrations/invalid-id/status?email=user@example.com", "host": ["{{base_url}}"], "path": ["api", "v1", "iam", "registrations", "invalid-id", "status"], "query": [{"key": "email", "value": "user@example.com"}]}
+							},
+							"status": "Not Found",
+							"code": 404,
+							"_postman_previewlanguage": "json",
+							"header": [{"key": "Content-Type", "value": "application/json"}],
+							"body": "{\n    \"success\": false,\n    \"error\": \"ERR_NOT_FOUND\",\n    \"message\": \"Registration not found\",\n    \"request_id\": \"req_abc123xyz\"\n}"
+						}
+					]
+				}
+			],
+			"description": "Registration flow endpoints: initiate, verify OTP, resend OTP, set password, complete profile, check status."
+		},
+		{
+			"name": "Login",
+			"item": [
+				{
+					"name": "Login with Credentials",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status code is 200', function() {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test('Response has required fields', function() {",
+									"    var jsonData = pm.response.json();",
+									"    pm.expect(jsonData.success).to.be.true;",
+									"    pm.expect(jsonData.data.login_session_id).to.exist;",
+									"    pm.expect(jsonData.data.status).to.eql('OTP_REQUIRED');",
+									"    pm.expect(jsonData.request_id).to.exist;",
+									"});",
+									"",
+									"if (pm.response.code === 200) {",
+									"    var jsonData = pm.response.json();",
+									"    pm.collectionVariables.set('login_session_id', jsonData.data.login_session_id);",
+									"    pm.collectionVariables.set('login_email', jsonData.data.masked_email);",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{"key": "Content-Type", "value": "application/json"},
+							{"key": "X-Tenant-ID", "value": "{{tenant_id}}"}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"email\": \"{{existing_user_email}}\",\n    \"password\": \"{{user_password}}\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/iam/auth/login",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "iam", "auth", "login"]
+						},
+						"description": "Step 1: Login with email and password. On success, OTP is sent to email.\n\n**Headers:** X-Tenant-ID required\n**Body:** { email, password }\n\n**Flow:**\n1. Validate credentials\n2. Generate 6-digit OTP\n3. Send OTP to email\n4. Return login_session_id with status OTP_REQUIRED"
+					},
+					"response": [
+						{
+							"name": "200 - OTP Required",
+							"originalRequest": {
+								"method": "POST",
+								"header": [
+									{"key": "Content-Type", "value": "application/json"},
+									{"key": "X-Tenant-ID", "value": "{{tenant_id}}"}
+								],
+								"body": {"mode": "raw", "raw": "{\n    \"email\": \"user@example.com\",\n    \"password\": \"SecureP@ssw0rd!\"\n}"},
+								"url": {"raw": "{{base_url}}/api/v1/iam/auth/login", "host": ["{{base_url}}"], "path": ["api", "v1", "iam", "auth", "login"]}
+							},
+							"status": "OK",
+							"code": 200,
+							"_postman_previewlanguage": "json",
+							"header": [{"key": "Content-Type", "value": "application/json"}],
+							"body": "{\n    \"success\": true,\n    \"message\": \"Verification code sent to your email\",\n    \"data\": {\n        \"login_session_id\": \"019462a1-7b3c-7def-8123-456789abcdef\",\n        \"status\": \"OTP_REQUIRED\",\n        \"masked_email\": \"u***@example.com\",\n        \"expires_at\": \"2026-02-08T15:10:00Z\",\n        \"otp_config\": {\n            \"length\": 6,\n            \"expires_in_minutes\": 10,\n            \"max_attempts\": 5,\n            \"resend_cooldown_seconds\": 60,\n            \"max_resends\": 3\n        }\n    },\n    \"request_id\": \"req_abc123xyz\"\n}"
+						},
+						{
+							"name": "401 - Invalid Credentials",
+							"originalRequest": {
+								"method": "POST",
+								"header": [
+									{"key": "Content-Type", "value": "application/json"},
+									{"key": "X-Tenant-ID", "value": "{{tenant_id}}"}
+								],
+								"body": {"mode": "raw", "raw": "{\n    \"email\": \"user@example.com\",\n    \"password\": \"wrongpassword\"\n}"},
+								"url": {"raw": "{{base_url}}/api/v1/iam/auth/login", "host": ["{{base_url}}"], "path": ["api", "v1", "iam", "auth", "login"]}
+							},
+							"status": "Unauthorized",
+							"code": 401,
+							"_postman_previewlanguage": "json",
+							"header": [{"key": "Content-Type", "value": "application/json"}],
+							"body": "{\n    \"success\": false,\n    \"error\": \"ERR_INVALID_CREDENTIALS\",\n    \"message\": \"Invalid email or password\",\n    \"request_id\": \"req_abc123xyz\"\n}"
+						},
+						{
+							"name": "403 - Account Locked",
+							"originalRequest": {
+								"method": "POST",
+								"header": [
+									{"key": "Content-Type", "value": "application/json"},
+									{"key": "X-Tenant-ID", "value": "{{tenant_id}}"}
+								],
+								"body": {"mode": "raw", "raw": "{\n    \"email\": \"locked@example.com\",\n    \"password\": \"anypassword\"\n}"},
+								"url": {"raw": "{{base_url}}/api/v1/iam/auth/login", "host": ["{{base_url}}"], "path": ["api", "v1", "iam", "auth", "login"]}
+							},
+							"status": "Forbidden",
+							"code": 403,
+							"_postman_previewlanguage": "json",
+							"header": [{"key": "Content-Type", "value": "application/json"}],
+							"body": "{\n    \"success\": false,\n    \"error\": \"ERR_FORBIDDEN\",\n    \"message\": \"Account locked due to too many failed attempts. Try again in 15 minutes.\",\n    \"data\": {\n        \"locked_until\": \"2026-02-08T15:30:00Z\",\n        \"remaining_seconds\": 900\n    },\n    \"request_id\": \"req_abc123xyz\"\n}"
+						},
+						{
+							"name": "400 - Validation Error",
+							"originalRequest": {
+								"method": "POST",
+								"header": [
+									{"key": "Content-Type", "value": "application/json"},
+									{"key": "X-Tenant-ID", "value": "{{tenant_id}}"}
+								],
+								"body": {"mode": "raw", "raw": "{\n    \"email\": \"\",\n    \"password\": \"\"\n}"},
+								"url": {"raw": "{{base_url}}/api/v1/iam/auth/login", "host": ["{{base_url}}"], "path": ["api", "v1", "iam", "auth", "login"]}
+							},
+							"status": "Bad Request",
+							"code": 400,
+							"_postman_previewlanguage": "json",
+							"header": [{"key": "Content-Type", "value": "application/json"}],
+							"body": "{\n    \"success\": false,\n    \"error\": \"ERR_VALIDATION\",\n    \"message\": \"Validation failed\",\n    \"errors\": [\n        {\n            \"field\": \"email\",\n            \"message\": \"Email is required\"\n        },\n        {\n            \"field\": \"password\",\n            \"message\": \"Password is required\"\n        }\n    ],\n    \"request_id\": \"req_abc123xyz\"\n}"
+						},
+						{
+							"name": "429 - Rate Limited",
+							"originalRequest": {
+								"method": "POST",
+								"header": [
+									{"key": "Content-Type", "value": "application/json"},
+									{"key": "X-Tenant-ID", "value": "{{tenant_id}}"}
+								],
+								"body": {"mode": "raw", "raw": "{\n    \"email\": \"user@example.com\",\n    \"password\": \"anypassword\"\n}"},
+								"url": {"raw": "{{base_url}}/api/v1/iam/auth/login", "host": ["{{base_url}}"], "path": ["api", "v1", "iam", "auth", "login"]}
+							},
+							"status": "Too Many Requests",
+							"code": 429,
+							"_postman_previewlanguage": "json",
+							"header": [
+								{"key": "Content-Type", "value": "application/json"},
+								{"key": "Retry-After", "value": "60"}
+							],
+							"body": "{\n    \"success\": false,\n    \"error\": \"ERR_TOO_MANY_REQUESTS\",\n    \"message\": \"Too many login attempts. Please try again later.\",\n    \"request_id\": \"req_abc123xyz\"\n}"
+						}
+					]
+				},
+				{
+					"name": "Verify Login OTP",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status code is 200', function() {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test('Response has required fields', function() {",
+									"    var jsonData = pm.response.json();",
+									"    pm.expect(jsonData.success).to.be.true;",
+									"    pm.expect(jsonData.data.access_token).to.exist;",
+									"    pm.expect(jsonData.data.refresh_token).to.exist;",
+									"    pm.expect(jsonData.data.user).to.exist;",
+									"    pm.expect(jsonData.request_id).to.exist;",
+									"});",
+									"",
+									"if (pm.response.code === 200) {",
+									"    var jsonData = pm.response.json();",
+									"    pm.collectionVariables.set('access_token', jsonData.data.access_token);",
+									"    pm.collectionVariables.set('refresh_token', jsonData.data.refresh_token);",
+									"    pm.collectionVariables.set('user_id', jsonData.data.user.id);",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{"key": "Content-Type", "value": "application/json"},
+							{"key": "X-Tenant-ID", "value": "{{tenant_id}}"}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"login_session_id\": \"{{login_session_id}}\",\n    \"email\": \"{{existing_user_email}}\",\n    \"otp_code\": \"{{otp_code}}\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/iam/auth/login/verify-otp",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "iam", "auth", "login", "verify-otp"]
+						},
+						"description": "Step 2: Verify OTP to complete login and get tokens.\n\n**Headers:** X-Tenant-ID required\n**Body:** { login_session_id, email, otp_code }\n\n**On Success:**\n- Returns access_token and refresh_token\n- Login session is deleted from Redis\n- User's last_login_at is updated"
+					},
+					"response": [
+						{
+							"name": "200 - Login Success",
+							"originalRequest": {
+								"method": "POST",
+								"header": [
+									{"key": "Content-Type", "value": "application/json"},
+									{"key": "X-Tenant-ID", "value": "{{tenant_id}}"}
+								],
+								"body": {"mode": "raw", "raw": "{\n    \"login_session_id\": \"019462a1-7b3c-7def-8123-456789abcdef\",\n    \"email\": \"user@example.com\",\n    \"otp_code\": \"123456\"\n}"},
+								"url": {"raw": "{{base_url}}/api/v1/iam/auth/login/verify-otp", "host": ["{{base_url}}"], "path": ["api", "v1", "iam", "auth", "login", "verify-otp"]}
+							},
+							"status": "OK",
+							"code": 200,
+							"_postman_previewlanguage": "json",
+							"header": [{"key": "Content-Type", "value": "application/json"}],
+							"body": "{\n    \"success\": true,\n    \"message\": \"Login successful\",\n    \"data\": {\n        \"access_token\": \"eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9...\",\n        \"refresh_token\": \"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...\",\n        \"token_type\": \"Bearer\",\n        \"expires_in\": 900,\n        \"user\": {\n            \"id\": \"019462a1-8888-7def-8123-456789abcdef\",\n            \"email\": \"user@example.com\",\n            \"first_name\": \"John\",\n            \"last_name\": \"Doe\",\n            \"status\": \"ACTIVE\"\n        }\n    },\n    \"request_id\": \"req_abc123xyz\"\n}"
+						},
+						{
+							"name": "400 - Invalid OTP",
+							"originalRequest": {
+								"method": "POST",
+								"header": [
+									{"key": "Content-Type", "value": "application/json"},
+									{"key": "X-Tenant-ID", "value": "{{tenant_id}}"}
+								],
+								"body": {"mode": "raw", "raw": "{\n    \"login_session_id\": \"019462a1-7b3c-7def-8123-456789abcdef\",\n    \"email\": \"user@example.com\",\n    \"otp_code\": \"000000\"\n}"},
+								"url": {"raw": "{{base_url}}/api/v1/iam/auth/login/verify-otp", "host": ["{{base_url}}"], "path": ["api", "v1", "iam", "auth", "login", "verify-otp"]}
+							},
+							"status": "Bad Request",
+							"code": 400,
+							"_postman_previewlanguage": "json",
+							"header": [{"key": "Content-Type", "value": "application/json"}],
+							"body": "{\n    \"success\": false,\n    \"error\": \"ERR_OTP_INVALID\",\n    \"message\": \"Invalid OTP code\",\n    \"data\": {\n        \"attempts_remaining\": 4\n    },\n    \"request_id\": \"req_abc123xyz\"\n}"
+						},
+						{
+							"name": "400 - OTP Expired",
+							"originalRequest": {
+								"method": "POST",
+								"header": [
+									{"key": "Content-Type", "value": "application/json"},
+									{"key": "X-Tenant-ID", "value": "{{tenant_id}}"}
+								],
+								"body": {"mode": "raw", "raw": "{\n    \"login_session_id\": \"019462a1-7b3c-7def-8123-456789abcdef\",\n    \"email\": \"user@example.com\",\n    \"otp_code\": \"123456\"\n}"},
+								"url": {"raw": "{{base_url}}/api/v1/iam/auth/login/verify-otp", "host": ["{{base_url}}"], "path": ["api", "v1", "iam", "auth", "login", "verify-otp"]}
+							},
+							"status": "Bad Request",
+							"code": 400,
+							"_postman_previewlanguage": "json",
+							"header": [{"key": "Content-Type", "value": "application/json"}],
+							"body": "{\n    \"success\": false,\n    \"error\": \"ERR_OTP_EXPIRED\",\n    \"message\": \"OTP code has expired. Please request a new one.\",\n    \"request_id\": \"req_abc123xyz\"\n}"
+						},
+						{
+							"name": "404 - Session Not Found",
+							"originalRequest": {
+								"method": "POST",
+								"header": [
+									{"key": "Content-Type", "value": "application/json"},
+									{"key": "X-Tenant-ID", "value": "{{tenant_id}}"}
+								],
+								"body": {"mode": "raw", "raw": "{\n    \"login_session_id\": \"00000000-0000-0000-0000-000000000000\",\n    \"email\": \"user@example.com\",\n    \"otp_code\": \"123456\"\n}"},
+								"url": {"raw": "{{base_url}}/api/v1/iam/auth/login/verify-otp", "host": ["{{base_url}}"], "path": ["api", "v1", "iam", "auth", "login", "verify-otp"]}
+							},
+							"status": "Not Found",
+							"code": 404,
+							"_postman_previewlanguage": "json",
+							"header": [{"key": "Content-Type", "value": "application/json"}],
+							"body": "{\n    \"success\": false,\n    \"error\": \"ERR_NOT_FOUND\",\n    \"message\": \"Login session not found or expired\",\n    \"request_id\": \"req_abc123xyz\"\n}"
+						},
+						{
+							"name": "429 - Max Attempts Exceeded",
+							"originalRequest": {
+								"method": "POST",
+								"header": [
+									{"key": "Content-Type", "value": "application/json"},
+									{"key": "X-Tenant-ID", "value": "{{tenant_id}}"}
+								],
+								"body": {"mode": "raw", "raw": "{\n    \"login_session_id\": \"019462a1-7b3c-7def-8123-456789abcdef\",\n    \"email\": \"user@example.com\",\n    \"otp_code\": \"000000\"\n}"},
+								"url": {"raw": "{{base_url}}/api/v1/iam/auth/login/verify-otp", "host": ["{{base_url}}"], "path": ["api", "v1", "iam", "auth", "login", "verify-otp"]}
+							},
+							"status": "Too Many Requests",
+							"code": 429,
+							"_postman_previewlanguage": "json",
+							"header": [{"key": "Content-Type", "value": "application/json"}],
+							"body": "{\n    \"success\": false,\n    \"error\": \"ERR_TOO_MANY_REQUESTS\",\n    \"message\": \"Too many failed OTP attempts. Login session has been invalidated.\",\n    \"request_id\": \"req_abc123xyz\"\n}"
+						}
+					]
+				},
+				{
+					"name": "Resend Login OTP",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status code is 200', function() {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test('Response has required fields', function() {",
+									"    var jsonData = pm.response.json();",
+									"    pm.expect(jsonData.success).to.be.true;",
+									"    pm.expect(jsonData.data.resends_remaining).to.exist;",
+									"    pm.expect(jsonData.request_id).to.exist;",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{"key": "Content-Type", "value": "application/json"},
+							{"key": "X-Tenant-ID", "value": "{{tenant_id}}"}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"login_session_id\": \"{{login_session_id}}\",\n    \"email\": \"{{existing_user_email}}\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/iam/auth/login/resend-otp",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "iam", "auth", "login", "resend-otp"]
+						},
+						"description": "Resend OTP code to email. Previous OTP is invalidated.\n\n**Headers:** X-Tenant-ID required\n**Body:** { login_session_id, email }\n\n**Limits:**\n- 60 second cooldown between resends\n- Maximum 3 resends per session"
+					},
+					"response": [
+						{
+							"name": "200 - OTP Resent",
+							"originalRequest": {
+								"method": "POST",
+								"header": [
+									{"key": "Content-Type", "value": "application/json"},
+									{"key": "X-Tenant-ID", "value": "{{tenant_id}}"}
+								],
+								"body": {"mode": "raw", "raw": "{\n    \"login_session_id\": \"019462a1-7b3c-7def-8123-456789abcdef\",\n    \"email\": \"user@example.com\"\n}"},
+								"url": {"raw": "{{base_url}}/api/v1/iam/auth/login/resend-otp", "host": ["{{base_url}}"], "path": ["api", "v1", "iam", "auth", "login", "resend-otp"]}
+							},
+							"status": "OK",
+							"code": 200,
+							"_postman_previewlanguage": "json",
+							"header": [{"key": "Content-Type", "value": "application/json"}],
+							"body": "{\n    \"success\": true,\n    \"message\": \"New verification code sent to your email\",\n    \"data\": {\n        \"login_session_id\": \"019462a1-7b3c-7def-8123-456789abcdef\",\n        \"status\": \"OTP_SENT\",\n        \"masked_email\": \"u***@example.com\",\n        \"expires_at\": \"2026-02-08T15:20:00Z\",\n        \"resends_remaining\": 2,\n        \"next_resend_available_at\": \"2026-02-08T15:11:00Z\"\n    },\n    \"request_id\": \"req_abc123xyz\"\n}"
+						},
+						{
+							"name": "404 - Session Not Found",
+							"originalRequest": {
+								"method": "POST",
+								"header": [
+									{"key": "Content-Type", "value": "application/json"},
+									{"key": "X-Tenant-ID", "value": "{{tenant_id}}"}
+								],
+								"body": {"mode": "raw", "raw": "{\n    \"login_session_id\": \"00000000-0000-0000-0000-000000000000\",\n    \"email\": \"user@example.com\"\n}"},
+								"url": {"raw": "{{base_url}}/api/v1/iam/auth/login/resend-otp", "host": ["{{base_url}}"], "path": ["api", "v1", "iam", "auth", "login", "resend-otp"]}
+							},
+							"status": "Not Found",
+							"code": 404,
+							"_postman_previewlanguage": "json",
+							"header": [{"key": "Content-Type", "value": "application/json"}],
+							"body": "{\n    \"success\": false,\n    \"error\": \"ERR_NOT_FOUND\",\n    \"message\": \"Login session not found or expired\",\n    \"request_id\": \"req_abc123xyz\"\n}"
+						},
+						{
+							"name": "429 - Resend Cooldown",
+							"originalRequest": {
+								"method": "POST",
+								"header": [
+									{"key": "Content-Type", "value": "application/json"},
+									{"key": "X-Tenant-ID", "value": "{{tenant_id}}"}
+								],
+								"body": {"mode": "raw", "raw": "{\n    \"login_session_id\": \"019462a1-7b3c-7def-8123-456789abcdef\",\n    \"email\": \"user@example.com\"\n}"},
+								"url": {"raw": "{{base_url}}/api/v1/iam/auth/login/resend-otp", "host": ["{{base_url}}"], "path": ["api", "v1", "iam", "auth", "login", "resend-otp"]}
+							},
+							"status": "Too Many Requests",
+							"code": 429,
+							"_postman_previewlanguage": "json",
+							"header": [
+								{"key": "Content-Type", "value": "application/json"},
+								{"key": "Retry-After", "value": "45"}
+							],
+							"body": "{\n    \"success\": false,\n    \"error\": \"ERR_TOO_MANY_REQUESTS\",\n    \"message\": \"Please wait before requesting another code\",\n    \"data\": {\n        \"retry_after_seconds\": 45\n    },\n    \"request_id\": \"req_abc123xyz\"\n}"
+						},
+						{
+							"name": "429 - Max Resends Exceeded",
+							"originalRequest": {
+								"method": "POST",
+								"header": [
+									{"key": "Content-Type", "value": "application/json"},
+									{"key": "X-Tenant-ID", "value": "{{tenant_id}}"}
+								],
+								"body": {"mode": "raw", "raw": "{\n    \"login_session_id\": \"019462a1-7b3c-7def-8123-456789abcdef\",\n    \"email\": \"user@example.com\"\n}"},
+								"url": {"raw": "{{base_url}}/api/v1/iam/auth/login/resend-otp", "host": ["{{base_url}}"], "path": ["api", "v1", "iam", "auth", "login", "resend-otp"]}
+							},
+							"status": "Too Many Requests",
+							"code": 429,
+							"_postman_previewlanguage": "json",
+							"header": [{"key": "Content-Type", "value": "application/json"}],
+							"body": "{\n    \"success\": false,\n    \"error\": \"ERR_TOO_MANY_REQUESTS\",\n    \"message\": \"Maximum resend limit reached. Please start a new login.\",\n    \"request_id\": \"req_abc123xyz\"\n}"
+						}
+					]
+				},
+				{
+					"name": "Check Login Session Status",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status code is 200', function() {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test('Response has required fields', function() {",
+									"    var jsonData = pm.response.json();",
+									"    pm.expect(jsonData.success).to.be.true;",
+									"    pm.expect(jsonData.data.status).to.exist;",
+									"    pm.expect(jsonData.request_id).to.exist;",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [
+							{"key": "X-Tenant-ID", "value": "{{tenant_id}}"}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/v1/iam/auth/login/{{login_session_id}}/status?email={{existing_user_email}}",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "iam", "auth", "login", "{{login_session_id}}", "status"],
+							"query": [{"key": "email", "value": "{{existing_user_email}}"}]
+						},
+						"description": "Check status of a login session.\n\n**Headers:** X-Tenant-ID required\n**Query:** email (required for verification)\n\n**Returns:**\n- Current status (OTP_REQUIRED, LOCKED)\n- Attempts remaining\n- Resends remaining\n- Expiration time"
+					},
+					"response": [
+						{
+							"name": "200 - Session Active",
+							"originalRequest": {
+								"method": "GET",
+								"header": [{"key": "X-Tenant-ID", "value": "{{tenant_id}}"}],
+								"url": {"raw": "{{base_url}}/api/v1/iam/auth/login/{{login_session_id}}/status?email=user@example.com", "host": ["{{base_url}}"], "path": ["api", "v1", "iam", "auth", "login", "{{login_session_id}}", "status"], "query": [{"key": "email", "value": "user@example.com"}]}
+							},
+							"status": "OK",
+							"code": 200,
+							"_postman_previewlanguage": "json",
+							"header": [{"key": "Content-Type", "value": "application/json"}],
+							"body": "{\n    \"success\": true,\n    \"message\": \"Login session status retrieved\",\n    \"data\": {\n        \"login_session_id\": \"019462a1-7b3c-7def-8123-456789abcdef\",\n        \"status\": \"OTP_REQUIRED\",\n        \"masked_email\": \"u***@example.com\",\n        \"expires_at\": \"2026-02-08T15:10:00Z\",\n        \"otp_attempts_remaining\": 5,\n        \"resends_remaining\": 3\n    },\n    \"request_id\": \"req_abc123xyz\"\n}"
+						},
+						{
+							"name": "200 - Session Locked",
+							"originalRequest": {
+								"method": "GET",
+								"header": [{"key": "X-Tenant-ID", "value": "{{tenant_id}}"}],
+								"url": {"raw": "{{base_url}}/api/v1/iam/auth/login/{{login_session_id}}/status?email=user@example.com", "host": ["{{base_url}}"], "path": ["api", "v1", "iam", "auth", "login", "{{login_session_id}}", "status"], "query": [{"key": "email", "value": "user@example.com"}]}
+							},
+							"status": "OK",
+							"code": 200,
+							"_postman_previewlanguage": "json",
+							"header": [{"key": "Content-Type", "value": "application/json"}],
+							"body": "{\n    \"success\": true,\n    \"message\": \"Login session status retrieved\",\n    \"data\": {\n        \"login_session_id\": \"019462a1-7b3c-7def-8123-456789abcdef\",\n        \"status\": \"LOCKED\",\n        \"masked_email\": \"u***@example.com\",\n        \"otp_attempts_remaining\": 0,\n        \"resends_remaining\": 0,\n        \"message\": \"Session locked due to too many failed attempts\"\n    },\n    \"request_id\": \"req_abc123xyz\"\n}"
+						},
+						{
+							"name": "404 - Session Not Found",
+							"originalRequest": {
+								"method": "GET",
+								"header": [{"key": "X-Tenant-ID", "value": "{{tenant_id}}"}],
+								"url": {"raw": "{{base_url}}/api/v1/iam/auth/login/invalid-id/status?email=user@example.com", "host": ["{{base_url}}"], "path": ["api", "v1", "iam", "auth", "login", "invalid-id", "status"], "query": [{"key": "email", "value": "user@example.com"}]}
+							},
+							"status": "Not Found",
+							"code": 404,
+							"_postman_previewlanguage": "json",
+							"header": [{"key": "Content-Type", "value": "application/json"}],
+							"body": "{\n    \"success\": false,\n    \"error\": \"ERR_NOT_FOUND\",\n    \"message\": \"Login session not found or expired\",\n    \"request_id\": \"req_abc123xyz\"\n}"
+						}
+					]
+				}
+			],
+			"description": "Email OTP Login flow: authenticate with credentials, verify OTP, and receive tokens."
+		},
+		{
+			"name": "Masterdata",
+			"item": [
+				{
+					"name": "Categories",
+					"item": [
+						{
+							"name": "List Categories",
+							"event": [
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											"pm.test('Status code is 200', function() {",
+											"    pm.response.to.have.status(200);",
+											"});",
+											"",
+											"pm.test('Response has required fields', function() {",
+											"    var jsonData = pm.response.json();",
+											"    pm.expect(jsonData.success).to.be.true;",
+											"    pm.expect(jsonData.data).to.be.an('array');",
+											"    pm.expect(jsonData.meta).to.exist;",
+											"});"
+										],
+										"type": "text/javascript"
+									}
+								}
+							],
+							"request": {
+								"method": "GET",
+								"header": [
+									{"key": "X-Tenant-ID", "value": "{{tenant_id}}"}
+								],
+								"url": {
+									"raw": "{{base_url}}/api/v1/masterdata/categories?status=ACTIVE&page=1&per_page=20",
+									"host": ["{{base_url}}"],
+									"path": ["api", "v1", "masterdata", "categories"],
+									"query": [
+										{"key": "status", "value": "ACTIVE", "description": "Filter by status (ACTIVE, INACTIVE)"},
+										{"key": "is_system", "value": "true", "disabled": true, "description": "Filter by system flag"},
+										{"key": "parent_id", "value": "", "disabled": true, "description": "Filter by parent category ID"},
+										{"key": "page", "value": "1", "description": "Page number"},
+										{"key": "per_page", "value": "20", "description": "Items per page"},
+										{"key": "sort_by", "value": "sort_order", "disabled": true, "description": "Sort field (code, name, sort_order, created_at)"},
+										{"key": "sort_order", "value": "asc", "disabled": true, "description": "Sort order (asc, desc)"}
+									]
+								},
+								"description": "List all masterdata categories with optional filtering and pagination.\n\n**Query Parameters:**\n- `status`: Filter by ACTIVE or INACTIVE\n- `is_system`: Filter by system flag (true/false)\n- `parent_id`: Filter by parent category UUID\n- `page`: Page number (default: 1)\n- `per_page`: Items per page (default: 20, max: 100)\n- `sort_by`: Sort field\n- `sort_order`: asc or desc"
+							},
+							"response": [
+								{
+									"name": "200 - Categories List",
+									"originalRequest": {
+										"method": "GET",
+										"header": [{"key": "X-Tenant-ID", "value": "{{tenant_id}}"}],
+										"url": {"raw": "{{base_url}}/api/v1/masterdata/categories?status=ACTIVE", "host": ["{{base_url}}"], "path": ["api", "v1", "masterdata", "categories"], "query": [{"key": "status", "value": "ACTIVE"}]}
+									},
+									"status": "OK",
+									"code": 200,
+									"_postman_previewlanguage": "json",
+									"header": [{"key": "Content-Type", "value": "application/json"}],
+									"body": "{\n    \"success\": true,\n    \"data\": [\n        {\n            \"id\": \"019462a1-7b3c-7def-8123-000000000001\",\n            \"code\": \"GENDER\",\n            \"name\": \"Gender\",\n            \"description\": \"Gender classification\",\n            \"parent_category_id\": null,\n            \"is_system\": true,\n            \"is_tenant_extensible\": false,\n            \"sort_order\": 1,\n            \"status\": \"ACTIVE\",\n            \"version\": 1,\n            \"created_at\": \"2026-02-08T10:00:00Z\",\n            \"updated_at\": \"2026-02-08T10:00:00Z\"\n        },\n        {\n            \"id\": \"019462a1-7b3c-7def-8123-000000000002\",\n            \"code\": \"MARITAL_STATUS\",\n            \"name\": \"Marital Status\",\n            \"description\": \"Marital status classification\",\n            \"parent_category_id\": null,\n            \"is_system\": true,\n            \"is_tenant_extensible\": false,\n            \"sort_order\": 2,\n            \"status\": \"ACTIVE\",\n            \"version\": 1,\n            \"created_at\": \"2026-02-08T10:00:00Z\",\n            \"updated_at\": \"2026-02-08T10:00:00Z\"\n        },\n        {\n            \"id\": \"019462a1-7b3c-7def-8123-000000000003\",\n            \"code\": \"LOCATION\",\n            \"name\": \"Location\",\n            \"description\": \"Hierarchical location data (Country > Province > City > District)\",\n            \"parent_category_id\": null,\n            \"is_system\": true,\n            \"is_tenant_extensible\": true,\n            \"sort_order\": 3,\n            \"status\": \"ACTIVE\",\n            \"version\": 1,\n            \"created_at\": \"2026-02-08T10:00:00Z\",\n            \"updated_at\": \"2026-02-08T10:00:00Z\"\n        }\n    ],\n    \"meta\": {\n        \"page\": 1,\n        \"per_page\": 20,\n        \"total\": 3,\n        \"total_pages\": 1\n    },\n    \"request_id\": \"req_abc123xyz\"\n}"
+								}
+							]
+						},
+						{
+							"name": "Get Category by ID",
+							"event": [
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											"pm.test('Status code is 200', function() {",
+											"    pm.response.to.have.status(200);",
+											"});",
+											"",
+											"pm.test('Response has category data', function() {",
+											"    var jsonData = pm.response.json();",
+											"    pm.expect(jsonData.success).to.be.true;",
+											"    pm.expect(jsonData.data.id).to.exist;",
+											"    pm.expect(jsonData.data.code).to.exist;",
+											"});"
+										],
+										"type": "text/javascript"
+									}
+								}
+							],
+							"request": {
+								"method": "GET",
+								"header": [
+									{"key": "X-Tenant-ID", "value": "{{tenant_id}}"}
+								],
+								"url": {
+									"raw": "{{base_url}}/api/v1/masterdata/categories/{{category_id}}",
+									"host": ["{{base_url}}"],
+									"path": ["api", "v1", "masterdata", "categories", "{{category_id}}"]
+								},
+								"description": "Get a single masterdata category by its UUID."
+							},
+							"response": [
+								{
+									"name": "200 - Category Found",
+									"originalRequest": {
+										"method": "GET",
+										"header": [{"key": "X-Tenant-ID", "value": "{{tenant_id}}"}],
+										"url": {"raw": "{{base_url}}/api/v1/masterdata/categories/019462a1-7b3c-7def-8123-000000000001", "host": ["{{base_url}}"], "path": ["api", "v1", "masterdata", "categories", "019462a1-7b3c-7def-8123-000000000001"]}
+									},
+									"status": "OK",
+									"code": 200,
+									"_postman_previewlanguage": "json",
+									"header": [{"key": "Content-Type", "value": "application/json"}],
+									"body": "{\n    \"success\": true,\n    \"data\": {\n        \"id\": \"019462a1-7b3c-7def-8123-000000000001\",\n        \"code\": \"GENDER\",\n        \"name\": \"Gender\",\n        \"description\": \"Gender classification\",\n        \"parent_category_id\": null,\n        \"is_system\": true,\n        \"is_tenant_extensible\": false,\n        \"sort_order\": 1,\n        \"status\": \"ACTIVE\",\n        \"metadata\": {},\n        \"version\": 1,\n        \"created_at\": \"2026-02-08T10:00:00Z\",\n        \"updated_at\": \"2026-02-08T10:00:00Z\"\n    },\n    \"request_id\": \"req_abc123xyz\"\n}"
+								},
+								{
+									"name": "404 - Category Not Found",
+									"originalRequest": {
+										"method": "GET",
+										"header": [{"key": "X-Tenant-ID", "value": "{{tenant_id}}"}],
+										"url": {"raw": "{{base_url}}/api/v1/masterdata/categories/00000000-0000-0000-0000-000000000000", "host": ["{{base_url}}"], "path": ["api", "v1", "masterdata", "categories", "00000000-0000-0000-0000-000000000000"]}
+									},
+									"status": "Not Found",
+									"code": 404,
+									"_postman_previewlanguage": "json",
+									"header": [{"key": "Content-Type", "value": "application/json"}],
+									"body": "{\n    \"success\": false,\n    \"error\": \"ERR_NOT_FOUND\",\n    \"message\": \"Category not found\",\n    \"request_id\": \"req_abc123xyz\"\n}"
+								}
+							]
+						},
+						{
+							"name": "Get Category by Code",
+							"request": {
+								"method": "GET",
+								"header": [
+									{"key": "X-Tenant-ID", "value": "{{tenant_id}}"}
+								],
+								"url": {
+									"raw": "{{base_url}}/api/v1/masterdata/categories/code/{{category_code}}",
+									"host": ["{{base_url}}"],
+									"path": ["api", "v1", "masterdata", "categories", "code", "{{category_code}}"]
+								},
+								"description": "Get a masterdata category by its code (e.g., GENDER, MARITAL_STATUS)."
+							},
+							"response": [
+								{
+									"name": "200 - Category Found",
+									"originalRequest": {
+										"method": "GET",
+										"header": [{"key": "X-Tenant-ID", "value": "{{tenant_id}}"}],
+										"url": {"raw": "{{base_url}}/api/v1/masterdata/categories/code/GENDER", "host": ["{{base_url}}"], "path": ["api", "v1", "masterdata", "categories", "code", "GENDER"]}
+									},
+									"status": "OK",
+									"code": 200,
+									"_postman_previewlanguage": "json",
+									"header": [{"key": "Content-Type", "value": "application/json"}],
+									"body": "{\n    \"success\": true,\n    \"data\": {\n        \"id\": \"019462a1-7b3c-7def-8123-000000000001\",\n        \"code\": \"GENDER\",\n        \"name\": \"Gender\",\n        \"description\": \"Gender classification\",\n        \"parent_category_id\": null,\n        \"is_system\": true,\n        \"is_tenant_extensible\": false,\n        \"sort_order\": 1,\n        \"status\": \"ACTIVE\",\n        \"version\": 1,\n        \"created_at\": \"2026-02-08T10:00:00Z\",\n        \"updated_at\": \"2026-02-08T10:00:00Z\"\n    },\n    \"request_id\": \"req_abc123xyz\"\n}"
+								}
+							]
+						},
+						{
+							"name": "Create Category",
+							"event": [
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											"pm.test('Status code is 201', function() {",
+											"    pm.response.to.have.status(201);",
+											"});",
+											"",
+											"pm.test('Response has created category', function() {",
+											"    var jsonData = pm.response.json();",
+											"    pm.expect(jsonData.success).to.be.true;",
+											"    pm.expect(jsonData.data.id).to.exist;",
+											"    if (jsonData.data.id) {",
+											"        pm.collectionVariables.set('category_id', jsonData.data.id);",
+											"    }",
+											"});"
+										],
+										"type": "text/javascript"
+									}
+								}
+							],
+							"request": {
+								"method": "POST",
+								"header": [
+									{"key": "Content-Type", "value": "application/json"},
+									{"key": "X-Tenant-ID", "value": "{{tenant_id}}"},
+									{"key": "Authorization", "value": "Bearer {{access_token}}"}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n    \"code\": \"DEPARTMENT\",\n    \"name\": \"Department\",\n    \"description\": \"Company departments\",\n    \"is_system\": false,\n    \"is_tenant_extensible\": true,\n    \"sort_order\": 10,\n    \"metadata\": {\n        \"icon\": \"building\"\n    }\n}"
+								},
+								"url": {
+									"raw": "{{base_url}}/api/v1/masterdata/categories",
+									"host": ["{{base_url}}"],
+									"path": ["api", "v1", "masterdata", "categories"]
+								},
+								"description": "Create a new masterdata category.\n\n**Required Fields:**\n- `code`: Unique code (uppercase, max 50 chars)\n- `name`: Display name (max 100 chars)\n\n**Optional Fields:**\n- `description`: Category description\n- `parent_category_id`: UUID of parent category for hierarchy\n- `is_system`: Whether this is a system category (default: false)\n- `is_tenant_extensible`: Whether tenants can add items (default: false)\n- `sort_order`: Display order (default: 0)\n- `metadata`: Additional JSON data"
+							},
+							"response": [
+								{
+									"name": "201 - Category Created",
+									"originalRequest": {
+										"method": "POST",
+										"header": [
+											{"key": "Content-Type", "value": "application/json"},
+											{"key": "X-Tenant-ID", "value": "{{tenant_id}}"},
+											{"key": "Authorization", "value": "Bearer {{access_token}}"}
+										],
+										"body": {"mode": "raw", "raw": "{\n    \"code\": \"DEPARTMENT\",\n    \"name\": \"Department\",\n    \"description\": \"Company departments\",\n    \"is_system\": false,\n    \"is_tenant_extensible\": true,\n    \"sort_order\": 10\n}"},
+										"url": {"raw": "{{base_url}}/api/v1/masterdata/categories", "host": ["{{base_url}}"], "path": ["api", "v1", "masterdata", "categories"]}
+									},
+									"status": "Created",
+									"code": 201,
+									"_postman_previewlanguage": "json",
+									"header": [{"key": "Content-Type", "value": "application/json"}],
+									"body": "{\n    \"success\": true,\n    \"message\": \"Category created successfully\",\n    \"data\": {\n        \"id\": \"019462a1-7b3c-7def-8123-000000000010\",\n        \"code\": \"DEPARTMENT\",\n        \"name\": \"Department\",\n        \"description\": \"Company departments\",\n        \"parent_category_id\": null,\n        \"is_system\": false,\n        \"is_tenant_extensible\": true,\n        \"sort_order\": 10,\n        \"status\": \"ACTIVE\",\n        \"version\": 1,\n        \"created_at\": \"2026-02-08T10:00:00Z\",\n        \"updated_at\": \"2026-02-08T10:00:00Z\"\n    },\n    \"request_id\": \"req_abc123xyz\"\n}"
+								},
+								{
+									"name": "400 - Validation Error",
+									"originalRequest": {
+										"method": "POST",
+										"header": [
+											{"key": "Content-Type", "value": "application/json"},
+											{"key": "X-Tenant-ID", "value": "{{tenant_id}}"},
+											{"key": "Authorization", "value": "Bearer {{access_token}}"}
+										],
+										"body": {"mode": "raw", "raw": "{\n    \"code\": \"\",\n    \"name\": \"\"\n}"},
+										"url": {"raw": "{{base_url}}/api/v1/masterdata/categories", "host": ["{{base_url}}"], "path": ["api", "v1", "masterdata", "categories"]}
+									},
+									"status": "Bad Request",
+									"code": 400,
+									"_postman_previewlanguage": "json",
+									"header": [{"key": "Content-Type", "value": "application/json"}],
+									"body": "{\n    \"success\": false,\n    \"error\": \"ERR_VALIDATION\",\n    \"message\": \"Validation failed\",\n    \"details\": [\n        {\"field\": \"code\", \"message\": \"code is required\"},\n        {\"field\": \"name\", \"message\": \"name is required\"}\n    ],\n    \"request_id\": \"req_abc123xyz\"\n}"
+								},
+								{
+									"name": "409 - Code Already Exists",
+									"originalRequest": {
+										"method": "POST",
+										"header": [
+											{"key": "Content-Type", "value": "application/json"},
+											{"key": "X-Tenant-ID", "value": "{{tenant_id}}"},
+											{"key": "Authorization", "value": "Bearer {{access_token}}"}
+										],
+										"body": {"mode": "raw", "raw": "{\n    \"code\": \"GENDER\",\n    \"name\": \"Duplicate Gender\"\n}"},
+										"url": {"raw": "{{base_url}}/api/v1/masterdata/categories", "host": ["{{base_url}}"], "path": ["api", "v1", "masterdata", "categories"]}
+									},
+									"status": "Conflict",
+									"code": 409,
+									"_postman_previewlanguage": "json",
+									"header": [{"key": "Content-Type", "value": "application/json"}],
+									"body": "{\n    \"success\": false,\n    \"error\": \"ERR_CONFLICT\",\n    \"message\": \"Category with code 'GENDER' already exists\",\n    \"request_id\": \"req_abc123xyz\"\n}"
+								}
+							]
+						},
+						{
+							"name": "Update Category",
+							"request": {
+								"method": "PUT",
+								"header": [
+									{"key": "Content-Type", "value": "application/json"},
+									{"key": "X-Tenant-ID", "value": "{{tenant_id}}"},
+									{"key": "Authorization", "value": "Bearer {{access_token}}"}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n    \"name\": \"Updated Department Name\",\n    \"description\": \"Updated description\",\n    \"sort_order\": 15,\n    \"version\": 1\n}"
+								},
+								"url": {
+									"raw": "{{base_url}}/api/v1/masterdata/categories/{{category_id}}",
+									"host": ["{{base_url}}"],
+									"path": ["api", "v1", "masterdata", "categories", "{{category_id}}"]
+								},
+								"description": "Update an existing masterdata category.\n\n**Note:** The `version` field is required for optimistic locking. Include the current version from the GET response.\n\n**Updatable Fields:**\n- `name`: Display name\n- `description`: Category description\n- `sort_order`: Display order\n- `metadata`: Additional JSON data\n- `status`: ACTIVE or INACTIVE"
+							},
+							"response": [
+								{
+									"name": "200 - Category Updated",
+									"originalRequest": {
+										"method": "PUT",
+										"header": [
+											{"key": "Content-Type", "value": "application/json"},
+											{"key": "X-Tenant-ID", "value": "{{tenant_id}}"},
+											{"key": "Authorization", "value": "Bearer {{access_token}}"}
+										],
+										"body": {"mode": "raw", "raw": "{\n    \"name\": \"Updated Department Name\",\n    \"description\": \"Updated description\",\n    \"sort_order\": 15,\n    \"version\": 1\n}"},
+										"url": {"raw": "{{base_url}}/api/v1/masterdata/categories/{{category_id}}", "host": ["{{base_url}}"], "path": ["api", "v1", "masterdata", "categories", "{{category_id}}"]}
+									},
+									"status": "OK",
+									"code": 200,
+									"_postman_previewlanguage": "json",
+									"header": [{"key": "Content-Type", "value": "application/json"}],
+									"body": "{\n    \"success\": true,\n    \"message\": \"Category updated successfully\",\n    \"data\": {\n        \"id\": \"019462a1-7b3c-7def-8123-000000000010\",\n        \"code\": \"DEPARTMENT\",\n        \"name\": \"Updated Department Name\",\n        \"description\": \"Updated description\",\n        \"sort_order\": 15,\n        \"status\": \"ACTIVE\",\n        \"version\": 2,\n        \"updated_at\": \"2026-02-08T11:00:00Z\"\n    },\n    \"request_id\": \"req_abc123xyz\"\n}"
+								},
+								{
+									"name": "409 - Version Conflict",
+									"originalRequest": {
+										"method": "PUT",
+										"header": [
+											{"key": "Content-Type", "value": "application/json"},
+											{"key": "X-Tenant-ID", "value": "{{tenant_id}}"},
+											{"key": "Authorization", "value": "Bearer {{access_token}}"}
+										],
+										"body": {"mode": "raw", "raw": "{\n    \"name\": \"Updated Name\",\n    \"version\": 1\n}"},
+										"url": {"raw": "{{base_url}}/api/v1/masterdata/categories/{{category_id}}", "host": ["{{base_url}}"], "path": ["api", "v1", "masterdata", "categories", "{{category_id}}"]}
+									},
+									"status": "Conflict",
+									"code": 409,
+									"_postman_previewlanguage": "json",
+									"header": [{"key": "Content-Type", "value": "application/json"}],
+									"body": "{\n    \"success\": false,\n    \"error\": \"ERR_CONFLICT\",\n    \"message\": \"Category has been modified by another user. Please refresh and try again.\",\n    \"data\": {\n        \"current_version\": 3\n    },\n    \"request_id\": \"req_abc123xyz\"\n}"
+								}
+							]
+						},
+						{
+							"name": "Delete Category",
+							"request": {
+								"method": "DELETE",
+								"header": [
+									{"key": "X-Tenant-ID", "value": "{{tenant_id}}"},
+									{"key": "Authorization", "value": "Bearer {{access_token}}"}
+								],
+								"url": {
+									"raw": "{{base_url}}/api/v1/masterdata/categories/{{category_id}}",
+									"host": ["{{base_url}}"],
+									"path": ["api", "v1", "masterdata", "categories", "{{category_id}}"]
+								},
+								"description": "Soft-delete a masterdata category by setting its status to INACTIVE.\n\n**Note:** System categories cannot be deleted."
+							},
+							"response": [
+								{
+									"name": "200 - Category Deleted",
+									"originalRequest": {
+										"method": "DELETE",
+										"header": [
+											{"key": "X-Tenant-ID", "value": "{{tenant_id}}"},
+											{"key": "Authorization", "value": "Bearer {{access_token}}"}
+										],
+										"url": {"raw": "{{base_url}}/api/v1/masterdata/categories/{{category_id}}", "host": ["{{base_url}}"], "path": ["api", "v1", "masterdata", "categories", "{{category_id}}"]}
+									},
+									"status": "OK",
+									"code": 200,
+									"_postman_previewlanguage": "json",
+									"header": [{"key": "Content-Type", "value": "application/json"}],
+									"body": "{\n    \"success\": true,\n    \"message\": \"Category deleted successfully\",\n    \"request_id\": \"req_abc123xyz\"\n}"
+								},
+								{
+									"name": "400 - Cannot Delete System Category",
+									"originalRequest": {
+										"method": "DELETE",
+										"header": [
+											{"key": "X-Tenant-ID", "value": "{{tenant_id}}"},
+											{"key": "Authorization", "value": "Bearer {{access_token}}"}
+										],
+										"url": {"raw": "{{base_url}}/api/v1/masterdata/categories/{{category_id}}", "host": ["{{base_url}}"], "path": ["api", "v1", "masterdata", "categories", "{{category_id}}"]}
+									},
+									"status": "Bad Request",
+									"code": 400,
+									"_postman_previewlanguage": "json",
+									"header": [{"key": "Content-Type", "value": "application/json"}],
+									"body": "{\n    \"success\": false,\n    \"error\": \"ERR_VALIDATION\",\n    \"message\": \"System categories cannot be deleted\",\n    \"request_id\": \"req_abc123xyz\"\n}"
+								}
+							]
+						},
+						{
+							"name": "Get Category Children",
+							"request": {
+								"method": "GET",
+								"header": [
+									{"key": "X-Tenant-ID", "value": "{{tenant_id}}"}
+								],
+								"url": {
+									"raw": "{{base_url}}/api/v1/masterdata/categories/{{category_id}}/children",
+									"host": ["{{base_url}}"],
+									"path": ["api", "v1", "masterdata", "categories", "{{category_id}}", "children"]
+								},
+								"description": "Get all child categories of a parent category."
+							},
+							"response": [
+								{
+									"name": "200 - Children List",
+									"originalRequest": {
+										"method": "GET",
+										"header": [{"key": "X-Tenant-ID", "value": "{{tenant_id}}"}],
+										"url": {"raw": "{{base_url}}/api/v1/masterdata/categories/{{category_id}}/children", "host": ["{{base_url}}"], "path": ["api", "v1", "masterdata", "categories", "{{category_id}}", "children"]}
+									},
+									"status": "OK",
+									"code": 200,
+									"_postman_previewlanguage": "json",
+									"header": [{"key": "Content-Type", "value": "application/json"}],
+									"body": "{\n    \"success\": true,\n    \"data\": [\n        {\n            \"id\": \"019462a1-7b3c-7def-8123-000000000011\",\n            \"code\": \"PROVINCE\",\n            \"name\": \"Province\",\n            \"parent_category_id\": \"019462a1-7b3c-7def-8123-000000000003\",\n            \"sort_order\": 1,\n            \"status\": \"ACTIVE\"\n        },\n        {\n            \"id\": \"019462a1-7b3c-7def-8123-000000000012\",\n            \"code\": \"CITY\",\n            \"name\": \"City\",\n            \"parent_category_id\": \"019462a1-7b3c-7def-8123-000000000003\",\n            \"sort_order\": 2,\n            \"status\": \"ACTIVE\"\n        }\n    ],\n    \"request_id\": \"req_abc123xyz\"\n}"
+								}
+							]
+						}
+					],
+					"description": "Masterdata category management endpoints."
+				},
+				{
+					"name": "Items",
+					"item": [
+						{
+							"name": "List Items",
+							"event": [
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											"pm.test('Status code is 200', function() {",
+											"    pm.response.to.have.status(200);",
+											"});",
+											"",
+											"pm.test('Response has required fields', function() {",
+											"    var jsonData = pm.response.json();",
+											"    pm.expect(jsonData.success).to.be.true;",
+											"    pm.expect(jsonData.data).to.be.an('array');",
+											"});"
+										],
+										"type": "text/javascript"
+									}
+								}
+							],
+							"request": {
+								"method": "GET",
+								"header": [
+									{"key": "X-Tenant-ID", "value": "{{tenant_id}}"}
+								],
+								"url": {
+									"raw": "{{base_url}}/api/v1/masterdata/items?category_code=GENDER&status=ACTIVE",
+									"host": ["{{base_url}}"],
+									"path": ["api", "v1", "masterdata", "items"],
+									"query": [
+										{"key": "category_id", "value": "", "disabled": true, "description": "Filter by category UUID"},
+										{"key": "category_code", "value": "GENDER", "description": "Filter by category code"},
+										{"key": "status", "value": "ACTIVE", "description": "Filter by status"},
+										{"key": "search", "value": "", "disabled": true, "description": "Search in name, alt_name, code"},
+										{"key": "parent_id", "value": "", "disabled": true, "description": "Filter by parent item ID"},
+										{"key": "parent_code", "value": "", "disabled": true, "description": "Filter by parent item code"},
+										{"key": "is_default", "value": "", "disabled": true, "description": "Filter by default flag"},
+										{"key": "page", "value": "1", "disabled": true},
+										{"key": "per_page", "value": "20", "disabled": true}
+									]
+								},
+								"description": "List masterdata items with filtering options.\n\n**Query Parameters:**\n- `category_id` or `category_code`: Required - Filter by category\n- `status`: ACTIVE or INACTIVE\n- `search`: Search in name, alt_name, code\n- `parent_id` or `parent_code`: Filter by parent item\n- `is_default`: Filter by default flag\n- `is_system`: Filter by system flag"
+							},
+							"response": [
+								{
+									"name": "200 - Items List",
+									"originalRequest": {
+										"method": "GET",
+										"header": [{"key": "X-Tenant-ID", "value": "{{tenant_id}}"}],
+										"url": {"raw": "{{base_url}}/api/v1/masterdata/items?category_code=GENDER&status=ACTIVE", "host": ["{{base_url}}"], "path": ["api", "v1", "masterdata", "items"], "query": [{"key": "category_code", "value": "GENDER"}, {"key": "status", "value": "ACTIVE"}]}
+									},
+									"status": "OK",
+									"code": 200,
+									"_postman_previewlanguage": "json",
+									"header": [{"key": "Content-Type", "value": "application/json"}],
+									"body": "{\n    \"success\": true,\n    \"data\": [\n        {\n            \"id\": \"019462a1-7b3c-7def-8123-100000000001\",\n            \"category_id\": \"019462a1-7b3c-7def-8123-000000000001\",\n            \"code\": \"MALE\",\n            \"name\": \"Male\",\n            \"alt_name\": \"Laki-laki\",\n            \"sort_order\": 1,\n            \"is_system\": true,\n            \"is_default\": false,\n            \"status\": \"ACTIVE\",\n            \"version\": 1\n        },\n        {\n            \"id\": \"019462a1-7b3c-7def-8123-100000000002\",\n            \"category_id\": \"019462a1-7b3c-7def-8123-000000000001\",\n            \"code\": \"FEMALE\",\n            \"name\": \"Female\",\n            \"alt_name\": \"Perempuan\",\n            \"sort_order\": 2,\n            \"is_system\": true,\n            \"is_default\": false,\n            \"status\": \"ACTIVE\",\n            \"version\": 1\n        }\n    ],\n    \"meta\": {\n        \"page\": 1,\n        \"per_page\": 20,\n        \"total\": 2,\n        \"total_pages\": 1\n    },\n    \"request_id\": \"req_abc123xyz\"\n}"
+								}
+							]
+						},
+						{
+							"name": "Get Items by Category Code",
+							"request": {
+								"method": "GET",
+								"header": [
+									{"key": "X-Tenant-ID", "value": "{{tenant_id}}"}
+								],
+								"url": {
+									"raw": "{{base_url}}/api/v1/masterdata/categories/{{category_code}}/items?status=ACTIVE",
+									"host": ["{{base_url}}"],
+									"path": ["api", "v1", "masterdata", "categories", "{{category_code}}", "items"],
+									"query": [
+										{"key": "status", "value": "ACTIVE"}
+									]
+								},
+								"description": "Get all items in a category by category code.\n\nThis is the primary endpoint for populating dropdowns in the UI."
+							},
+							"response": [
+								{
+									"name": "200 - Items by Category",
+									"originalRequest": {
+										"method": "GET",
+										"header": [{"key": "X-Tenant-ID", "value": "{{tenant_id}}"}],
+										"url": {"raw": "{{base_url}}/api/v1/masterdata/categories/MARITAL_STATUS/items?status=ACTIVE", "host": ["{{base_url}}"], "path": ["api", "v1", "masterdata", "categories", "MARITAL_STATUS", "items"], "query": [{"key": "status", "value": "ACTIVE"}]}
+									},
+									"status": "OK",
+									"code": 200,
+									"_postman_previewlanguage": "json",
+									"header": [{"key": "Content-Type", "value": "application/json"}],
+									"body": "{\n    \"success\": true,\n    \"data\": [\n        {\n            \"id\": \"019462a1-7b3c-7def-8123-100000000010\",\n            \"code\": \"SINGLE\",\n            \"name\": \"Single\",\n            \"alt_name\": \"Belum Menikah\",\n            \"sort_order\": 1,\n            \"is_default\": true\n        },\n        {\n            \"id\": \"019462a1-7b3c-7def-8123-100000000011\",\n            \"code\": \"MARRIED\",\n            \"name\": \"Married\",\n            \"alt_name\": \"Menikah\",\n            \"sort_order\": 2,\n            \"is_default\": false\n        },\n        {\n            \"id\": \"019462a1-7b3c-7def-8123-100000000012\",\n            \"code\": \"DIVORCED\",\n            \"name\": \"Divorced\",\n            \"alt_name\": \"Cerai\",\n            \"sort_order\": 3,\n            \"is_default\": false\n        },\n        {\n            \"id\": \"019462a1-7b3c-7def-8123-100000000013\",\n            \"code\": \"WIDOWED\",\n            \"name\": \"Widowed\",\n            \"alt_name\": \"Janda/Duda\",\n            \"sort_order\": 4,\n            \"is_default\": false\n        }\n    ],\n    \"request_id\": \"req_abc123xyz\"\n}"
+								}
+							]
+						},
+						{
+							"name": "Get Item by ID",
+							"request": {
+								"method": "GET",
+								"header": [
+									{"key": "X-Tenant-ID", "value": "{{tenant_id}}"}
+								],
+								"url": {
+									"raw": "{{base_url}}/api/v1/masterdata/items/{{item_id}}",
+									"host": ["{{base_url}}"],
+									"path": ["api", "v1", "masterdata", "items", "{{item_id}}"]
+								},
+								"description": "Get a single masterdata item by its UUID."
+							},
+							"response": [
+								{
+									"name": "200 - Item Found",
+									"originalRequest": {
+										"method": "GET",
+										"header": [{"key": "X-Tenant-ID", "value": "{{tenant_id}}"}],
+										"url": {"raw": "{{base_url}}/api/v1/masterdata/items/019462a1-7b3c-7def-8123-100000000001", "host": ["{{base_url}}"], "path": ["api", "v1", "masterdata", "items", "019462a1-7b3c-7def-8123-100000000001"]}
+									},
+									"status": "OK",
+									"code": 200,
+									"_postman_previewlanguage": "json",
+									"header": [{"key": "Content-Type", "value": "application/json"}],
+									"body": "{\n    \"success\": true,\n    \"data\": {\n        \"id\": \"019462a1-7b3c-7def-8123-100000000001\",\n        \"category_id\": \"019462a1-7b3c-7def-8123-000000000001\",\n        \"tenant_id\": null,\n        \"parent_item_id\": null,\n        \"code\": \"MALE\",\n        \"name\": \"Male\",\n        \"alt_name\": \"Laki-laki\",\n        \"description\": null,\n        \"sort_order\": 1,\n        \"is_system\": true,\n        \"is_default\": false,\n        \"status\": \"ACTIVE\",\n        \"effective_from\": null,\n        \"effective_until\": null,\n        \"metadata\": {},\n        \"version\": 1,\n        \"created_at\": \"2026-02-08T10:00:00Z\",\n        \"updated_at\": \"2026-02-08T10:00:00Z\"\n    },\n    \"request_id\": \"req_abc123xyz\"\n}"
+								}
+							]
+						},
+						{
+							"name": "Create Item",
+							"event": [
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											"pm.test('Status code is 201', function() {",
+											"    pm.response.to.have.status(201);",
+											"});",
+											"",
+											"pm.test('Response has created item', function() {",
+											"    var jsonData = pm.response.json();",
+											"    pm.expect(jsonData.success).to.be.true;",
+											"    pm.expect(jsonData.data.id).to.exist;",
+											"    if (jsonData.data.id) {",
+											"        pm.collectionVariables.set('item_id', jsonData.data.id);",
+											"    }",
+											"});"
+										],
+										"type": "text/javascript"
+									}
+								}
+							],
+							"request": {
+								"method": "POST",
+								"header": [
+									{"key": "Content-Type", "value": "application/json"},
+									{"key": "X-Tenant-ID", "value": "{{tenant_id}}"},
+									{"key": "Authorization", "value": "Bearer {{access_token}}"}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n    \"category_id\": \"{{category_id}}\",\n    \"code\": \"IT_DEPT\",\n    \"name\": \"Information Technology\",\n    \"alt_name\": \"IT\",\n    \"description\": \"IT Department\",\n    \"sort_order\": 1,\n    \"is_default\": false,\n    \"metadata\": {\n        \"budget_code\": \"IT001\"\n    }\n}"
+								},
+								"url": {
+									"raw": "{{base_url}}/api/v1/masterdata/items",
+									"host": ["{{base_url}}"],
+									"path": ["api", "v1", "masterdata", "items"]
+								},
+								"description": "Create a new masterdata item.\n\n**Required Fields:**\n- `category_id`: UUID of the category\n- `code`: Unique code within category (max 50 chars)\n- `name`: Display name (max 200 chars)\n\n**Optional Fields:**\n- `alt_name`: Alternative name (max 200 chars)\n- `description`: Item description\n- `parent_item_id`: UUID of parent item for hierarchy\n- `sort_order`: Display order (default: 0)\n- `is_default`: Whether this is the default item (default: false)\n- `effective_from`: Start date for time-bound items\n- `effective_until`: End date for time-bound items\n- `metadata`: Additional JSON data"
+							},
+							"response": [
+								{
+									"name": "201 - Item Created",
+									"originalRequest": {
+										"method": "POST",
+										"header": [
+											{"key": "Content-Type", "value": "application/json"},
+											{"key": "X-Tenant-ID", "value": "{{tenant_id}}"},
+											{"key": "Authorization", "value": "Bearer {{access_token}}"}
+										],
+										"body": {"mode": "raw", "raw": "{\n    \"category_id\": \"019462a1-7b3c-7def-8123-000000000010\",\n    \"code\": \"IT_DEPT\",\n    \"name\": \"Information Technology\",\n    \"alt_name\": \"IT\",\n    \"sort_order\": 1\n}"},
+										"url": {"raw": "{{base_url}}/api/v1/masterdata/items", "host": ["{{base_url}}"], "path": ["api", "v1", "masterdata", "items"]}
+									},
+									"status": "Created",
+									"code": 201,
+									"_postman_previewlanguage": "json",
+									"header": [{"key": "Content-Type", "value": "application/json"}],
+									"body": "{\n    \"success\": true,\n    \"message\": \"Item created successfully\",\n    \"data\": {\n        \"id\": \"019462a1-7b3c-7def-8123-100000000100\",\n        \"category_id\": \"019462a1-7b3c-7def-8123-000000000010\",\n        \"tenant_id\": \"550e8400-e29b-41d4-a716-446655440000\",\n        \"code\": \"IT_DEPT\",\n        \"name\": \"Information Technology\",\n        \"alt_name\": \"IT\",\n        \"sort_order\": 1,\n        \"is_system\": false,\n        \"is_default\": false,\n        \"status\": \"ACTIVE\",\n        \"version\": 1,\n        \"created_at\": \"2026-02-08T10:00:00Z\"\n    },\n    \"request_id\": \"req_abc123xyz\"\n}"
+								}
+							]
+						},
+						{
+							"name": "Update Item",
+							"request": {
+								"method": "PUT",
+								"header": [
+									{"key": "Content-Type", "value": "application/json"},
+									{"key": "X-Tenant-ID", "value": "{{tenant_id}}"},
+									{"key": "Authorization", "value": "Bearer {{access_token}}"}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n    \"name\": \"Information Technology Department\",\n    \"alt_name\": \"IT Dept\",\n    \"sort_order\": 1,\n    \"version\": 1\n}"
+								},
+								"url": {
+									"raw": "{{base_url}}/api/v1/masterdata/items/{{item_id}}",
+									"host": ["{{base_url}}"],
+									"path": ["api", "v1", "masterdata", "items", "{{item_id}}"]
+								},
+								"description": "Update an existing masterdata item.\n\n**Note:** The `version` field is required for optimistic locking."
+							},
+							"response": [
+								{
+									"name": "200 - Item Updated",
+									"originalRequest": {
+										"method": "PUT",
+										"header": [
+											{"key": "Content-Type", "value": "application/json"},
+											{"key": "X-Tenant-ID", "value": "{{tenant_id}}"},
+											{"key": "Authorization", "value": "Bearer {{access_token}}"}
+										],
+										"body": {"mode": "raw", "raw": "{\n    \"name\": \"Information Technology Department\",\n    \"version\": 1\n}"},
+										"url": {"raw": "{{base_url}}/api/v1/masterdata/items/{{item_id}}", "host": ["{{base_url}}"], "path": ["api", "v1", "masterdata", "items", "{{item_id}}"]}
+									},
+									"status": "OK",
+									"code": 200,
+									"_postman_previewlanguage": "json",
+									"header": [{"key": "Content-Type", "value": "application/json"}],
+									"body": "{\n    \"success\": true,\n    \"message\": \"Item updated successfully\",\n    \"data\": {\n        \"id\": \"019462a1-7b3c-7def-8123-100000000100\",\n        \"code\": \"IT_DEPT\",\n        \"name\": \"Information Technology Department\",\n        \"version\": 2,\n        \"updated_at\": \"2026-02-08T11:00:00Z\"\n    },\n    \"request_id\": \"req_abc123xyz\"\n}"
+								}
+							]
+						},
+						{
+							"name": "Delete Item",
+							"request": {
+								"method": "DELETE",
+								"header": [
+									{"key": "X-Tenant-ID", "value": "{{tenant_id}}"},
+									{"key": "Authorization", "value": "Bearer {{access_token}}"}
+								],
+								"url": {
+									"raw": "{{base_url}}/api/v1/masterdata/items/{{item_id}}",
+									"host": ["{{base_url}}"],
+									"path": ["api", "v1", "masterdata", "items", "{{item_id}}"]
+								},
+								"description": "Soft-delete a masterdata item by setting its status to INACTIVE.\n\n**Note:** System items cannot be deleted."
+							},
+							"response": [
+								{
+									"name": "200 - Item Deleted",
+									"originalRequest": {
+										"method": "DELETE",
+										"header": [
+											{"key": "X-Tenant-ID", "value": "{{tenant_id}}"},
+											{"key": "Authorization", "value": "Bearer {{access_token}}"}
+										],
+										"url": {"raw": "{{base_url}}/api/v1/masterdata/items/{{item_id}}", "host": ["{{base_url}}"], "path": ["api", "v1", "masterdata", "items", "{{item_id}}"]}
+									},
+									"status": "OK",
+									"code": 200,
+									"_postman_previewlanguage": "json",
+									"header": [{"key": "Content-Type", "value": "application/json"}],
+									"body": "{\n    \"success\": true,\n    \"message\": \"Item deleted successfully\",\n    \"request_id\": \"req_abc123xyz\"\n}"
+								}
+							]
+						},
+						{
+							"name": "Get Item Children",
+							"request": {
+								"method": "GET",
+								"header": [
+									{"key": "X-Tenant-ID", "value": "{{tenant_id}}"}
+								],
+								"url": {
+									"raw": "{{base_url}}/api/v1/masterdata/items/{{parent_item_code}}/children?category_code=LOCATION",
+									"host": ["{{base_url}}"],
+									"path": ["api", "v1", "masterdata", "items", "{{parent_item_code}}", "children"],
+									"query": [
+										{"key": "category_code", "value": "LOCATION", "description": "Category code for filtering"}
+									]
+								},
+								"description": "Get child items of a parent item (for cascading dropdowns).\n\n**Example:** Get cities for a selected province."
+							},
+							"response": [
+								{
+									"name": "200 - Children List (Provinces for Indonesia)",
+									"originalRequest": {
+										"method": "GET",
+										"header": [{"key": "X-Tenant-ID", "value": "{{tenant_id}}"}],
+										"url": {"raw": "{{base_url}}/api/v1/masterdata/items/ID/children?category_code=LOCATION", "host": ["{{base_url}}"], "path": ["api", "v1", "masterdata", "items", "ID", "children"], "query": [{"key": "category_code", "value": "LOCATION"}]}
+									},
+									"status": "OK",
+									"code": 200,
+									"_postman_previewlanguage": "json",
+									"header": [{"key": "Content-Type", "value": "application/json"}],
+									"body": "{\n    \"success\": true,\n    \"data\": [\n        {\n            \"id\": \"019462a1-7b3c-7def-8123-200000000001\",\n            \"code\": \"ID-JK\",\n            \"name\": \"DKI Jakarta\",\n            \"parent_item_id\": \"019462a1-7b3c-7def-8123-200000000000\",\n            \"sort_order\": 1\n        },\n        {\n            \"id\": \"019462a1-7b3c-7def-8123-200000000002\",\n            \"code\": \"ID-JB\",\n            \"name\": \"Jawa Barat\",\n            \"parent_item_id\": \"019462a1-7b3c-7def-8123-200000000000\",\n            \"sort_order\": 2\n        },\n        {\n            \"id\": \"019462a1-7b3c-7def-8123-200000000003\",\n            \"code\": \"ID-JT\",\n            \"name\": \"Jawa Tengah\",\n            \"parent_item_id\": \"019462a1-7b3c-7def-8123-200000000000\",\n            \"sort_order\": 3\n        }\n    ],\n    \"request_id\": \"req_abc123xyz\"\n}"
+								}
+							]
+						},
+						{
+							"name": "Get Item Tree",
+							"request": {
+								"method": "GET",
+								"header": [
+									{"key": "X-Tenant-ID", "value": "{{tenant_id}}"}
+								],
+								"url": {
+									"raw": "{{base_url}}/api/v1/masterdata/categories/{{category_code}}/tree",
+									"host": ["{{base_url}}"],
+									"path": ["api", "v1", "masterdata", "categories", "{{category_code}}", "tree"]
+								},
+								"description": "Get all items in a category as a flat list for client-side tree building.\n\n**Use Case:** Loading entire location hierarchy for offline use."
+							},
+							"response": [
+								{
+									"name": "200 - Full Tree",
+									"originalRequest": {
+										"method": "GET",
+										"header": [{"key": "X-Tenant-ID", "value": "{{tenant_id}}"}],
+										"url": {"raw": "{{base_url}}/api/v1/masterdata/categories/LOCATION/tree", "host": ["{{base_url}}"], "path": ["api", "v1", "masterdata", "categories", "LOCATION", "tree"]}
+									},
+									"status": "OK",
+									"code": 200,
+									"_postman_previewlanguage": "json",
+									"header": [{"key": "Content-Type", "value": "application/json"}],
+									"body": "{\n    \"success\": true,\n    \"data\": [\n        {\n            \"id\": \"019462a1-7b3c-7def-8123-200000000000\",\n            \"code\": \"ID\",\n            \"name\": \"Indonesia\",\n            \"parent_item_id\": null,\n            \"sort_order\": 1\n        },\n        {\n            \"id\": \"019462a1-7b3c-7def-8123-200000000001\",\n            \"code\": \"ID-JK\",\n            \"name\": \"DKI Jakarta\",\n            \"parent_item_id\": \"019462a1-7b3c-7def-8123-200000000000\",\n            \"sort_order\": 1\n        },\n        {\n            \"id\": \"019462a1-7b3c-7def-8123-200000000010\",\n            \"code\": \"ID-JK-JKT\",\n            \"name\": \"Jakarta Pusat\",\n            \"parent_item_id\": \"019462a1-7b3c-7def-8123-200000000001\",\n            \"sort_order\": 1\n        }\n    ],\n    \"request_id\": \"req_abc123xyz\"\n}"
+								}
+							]
+						},
+						{
+							"name": "Get Default Item",
+							"request": {
+								"method": "GET",
+								"header": [
+									{"key": "X-Tenant-ID", "value": "{{tenant_id}}"}
+								],
+								"url": {
+									"raw": "{{base_url}}/api/v1/masterdata/categories/{{category_code}}/default",
+									"host": ["{{base_url}}"],
+									"path": ["api", "v1", "masterdata", "categories", "{{category_code}}", "default"]
+								},
+								"description": "Get the default item for a category.\n\n**Use Case:** Pre-selecting default value in forms."
+							},
+							"response": [
+								{
+									"name": "200 - Default Item",
+									"originalRequest": {
+										"method": "GET",
+										"header": [{"key": "X-Tenant-ID", "value": "{{tenant_id}}"}],
+										"url": {"raw": "{{base_url}}/api/v1/masterdata/categories/MARITAL_STATUS/default", "host": ["{{base_url}}"], "path": ["api", "v1", "masterdata", "categories", "MARITAL_STATUS", "default"]}
+									},
+									"status": "OK",
+									"code": 200,
+									"_postman_previewlanguage": "json",
+									"header": [{"key": "Content-Type", "value": "application/json"}],
+									"body": "{\n    \"success\": true,\n    \"data\": {\n        \"id\": \"019462a1-7b3c-7def-8123-100000000010\",\n        \"code\": \"SINGLE\",\n        \"name\": \"Single\",\n        \"alt_name\": \"Belum Menikah\",\n        \"is_default\": true\n    },\n    \"request_id\": \"req_abc123xyz\"\n}"
+								},
+								{
+									"name": "404 - No Default Item",
+									"originalRequest": {
+										"method": "GET",
+										"header": [{"key": "X-Tenant-ID", "value": "{{tenant_id}}"}],
+										"url": {"raw": "{{base_url}}/api/v1/masterdata/categories/GENDER/default", "host": ["{{base_url}}"], "path": ["api", "v1", "masterdata", "categories", "GENDER", "default"]}
+									},
+									"status": "Not Found",
+									"code": 404,
+									"_postman_previewlanguage": "json",
+									"header": [{"key": "Content-Type", "value": "application/json"}],
+									"body": "{\n    \"success\": false,\n    \"error\": \"ERR_NOT_FOUND\",\n    \"message\": \"No default item found for category GENDER\",\n    \"request_id\": \"req_abc123xyz\"\n}"
+								}
+							]
+						}
+					],
+					"description": "Masterdata item management endpoints."
+				},
+				{
+					"name": "Validation",
+					"item": [
+						{
+							"name": "Validate Item Code",
+							"request": {
+								"method": "POST",
+								"header": [
+									{"key": "Content-Type", "value": "application/json"},
+									{"key": "X-Tenant-ID", "value": "{{tenant_id}}"}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n    \"category_code\": \"GENDER\",\n    \"item_code\": \"MALE\"\n}"
+								},
+								"url": {
+									"raw": "{{base_url}}/api/v1/masterdata/validate",
+									"host": ["{{base_url}}"],
+									"path": ["api", "v1", "masterdata", "validate"]
+								},
+								"description": "Validate that an item code exists and is active for a given category.\n\n**Use Case:** Form validation before submission."
+							},
+							"response": [
+								{
+									"name": "200 - Valid Code",
+									"originalRequest": {
+										"method": "POST",
+										"header": [
+											{"key": "Content-Type", "value": "application/json"},
+											{"key": "X-Tenant-ID", "value": "{{tenant_id}}"}
+										],
+										"body": {"mode": "raw", "raw": "{\n    \"category_code\": \"GENDER\",\n    \"item_code\": \"MALE\"\n}"},
+										"url": {"raw": "{{base_url}}/api/v1/masterdata/validate", "host": ["{{base_url}}"], "path": ["api", "v1", "masterdata", "validate"]}
+									},
+									"status": "OK",
+									"code": 200,
+									"_postman_previewlanguage": "json",
+									"header": [{"key": "Content-Type", "value": "application/json"}],
+									"body": "{\n    \"success\": true,\n    \"data\": {\n        \"valid\": true,\n        \"category_code\": \"GENDER\",\n        \"item_code\": \"MALE\"\n    },\n    \"request_id\": \"req_abc123xyz\"\n}"
+								},
+								{
+									"name": "200 - Invalid Code",
+									"originalRequest": {
+										"method": "POST",
+										"header": [
+											{"key": "Content-Type", "value": "application/json"},
+											{"key": "X-Tenant-ID", "value": "{{tenant_id}}"}
+										],
+										"body": {"mode": "raw", "raw": "{\n    \"category_code\": \"GENDER\",\n    \"item_code\": \"INVALID\"\n}"},
+										"url": {"raw": "{{base_url}}/api/v1/masterdata/validate", "host": ["{{base_url}}"], "path": ["api", "v1", "masterdata", "validate"]}
+									},
+									"status": "OK",
+									"code": 200,
+									"_postman_previewlanguage": "json",
+									"header": [{"key": "Content-Type", "value": "application/json"}],
+									"body": "{\n    \"success\": true,\n    \"data\": {\n        \"valid\": false,\n        \"category_code\": \"GENDER\",\n        \"item_code\": \"INVALID\",\n        \"message\": \"Item code 'INVALID' not found in category 'GENDER'\"\n    },\n    \"request_id\": \"req_abc123xyz\"\n}"
+								}
+							]
+						},
+						{
+							"name": "Validate Multiple Codes",
+							"request": {
+								"method": "POST",
+								"header": [
+									{"key": "Content-Type", "value": "application/json"},
+									{"key": "X-Tenant-ID", "value": "{{tenant_id}}"}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n    \"validations\": [\n        {\"category_code\": \"GENDER\", \"item_code\": \"MALE\"},\n        {\"category_code\": \"MARITAL_STATUS\", \"item_code\": \"SINGLE\"},\n        {\"category_code\": \"GENDER\", \"item_code\": \"INVALID\"}\n    ]\n}"
+								},
+								"url": {
+									"raw": "{{base_url}}/api/v1/masterdata/validate/batch",
+									"host": ["{{base_url}}"],
+									"path": ["api", "v1", "masterdata", "validate", "batch"]
+								},
+								"description": "Validate multiple item codes in a single request.\n\n**Use Case:** Validating entire form before submission."
+							},
+							"response": [
+								{
+									"name": "200 - Batch Validation Results",
+									"originalRequest": {
+										"method": "POST",
+										"header": [
+											{"key": "Content-Type", "value": "application/json"},
+											{"key": "X-Tenant-ID", "value": "{{tenant_id}}"}
+										],
+										"body": {"mode": "raw", "raw": "{\n    \"validations\": [\n        {\"category_code\": \"GENDER\", \"item_code\": \"MALE\"},\n        {\"category_code\": \"MARITAL_STATUS\", \"item_code\": \"SINGLE\"},\n        {\"category_code\": \"GENDER\", \"item_code\": \"INVALID\"}\n    ]\n}"},
+										"url": {"raw": "{{base_url}}/api/v1/masterdata/validate/batch", "host": ["{{base_url}}"], "path": ["api", "v1", "masterdata", "validate", "batch"]}
+									},
+									"status": "OK",
+									"code": 200,
+									"_postman_previewlanguage": "json",
+									"header": [{"key": "Content-Type", "value": "application/json"}],
+									"body": "{\n    \"success\": true,\n    \"data\": {\n        \"all_valid\": false,\n        \"results\": [\n            {\"category_code\": \"GENDER\", \"item_code\": \"MALE\", \"valid\": true},\n            {\"category_code\": \"MARITAL_STATUS\", \"item_code\": \"SINGLE\", \"valid\": true},\n            {\"category_code\": \"GENDER\", \"item_code\": \"INVALID\", \"valid\": false, \"message\": \"Item code not found\"}\n        ]\n    },\n    \"request_id\": \"req_abc123xyz\"\n}"
+								}
+							]
+						}
+					],
+					"description": "Masterdata validation endpoints for verifying item codes."
+				}
+			],
+			"description": "Masterdata service for managing reference data (categories and items) used across the application.\n\n## Overview\nMasterdata provides standardized dropdown values, hierarchical data (locations), and tenant-extensible reference data.\n\n## Categories\nCategories define types of masterdata (e.g., GENDER, MARITAL_STATUS, LOCATION).\n\n## Items\nItems are the actual values within categories (e.g., MALE/FEMALE for GENDER).\n\n## Tenant Scoping\n- Global items: Available to all tenants (tenant_id = null)\n- Tenant items: Specific to a tenant (tenant_id = UUID)\n- When querying, both global and tenant-specific items are returned.\n\n## Hierarchical Data\nFor categories like LOCATION, items can have parent-child relationships:\n- Country → Province → City → District\n\n## Caching\nAll masterdata endpoints are cached with configurable TTL:\n- Categories: 24 hours\n- Items: 1 hour\n- Tree: 1 hour\n\nCache is invalidated on create/update/delete operations."
+		}
+	],
+	"event": [
+		{
+			"listen": "prerequest",
+			"script": {
+				"type": "text/javascript",
+				"exec": [
+					"if (!pm.collectionVariables.get('test_email') || pm.collectionVariables.get('test_email').includes('{{')) {",
+					"    var timestamp = Date.now();",
+					"    var uniqueEmail = 'test.user.' + timestamp + '@example.com';",
+					"    pm.collectionVariables.set('test_email', uniqueEmail);",
+					"}"
+				]
+			}
+		},
+		{
+			"listen": "test",
+			"script": {
+				"type": "text/javascript",
+				"exec": [
+					"console.log('Response time: ' + pm.response.responseTime + 'ms');"
+				]
+			}
+		}
+	],
+	"variable": [
+		{"key": "base_url", "value": "http://localhost:8080", "type": "string"},
+		{"key": "tenant_id", "value": "550e8400-e29b-41d4-a716-446655440000", "type": "string"},
+		{"key": "tenant_with_approval_id", "value": "550e8400-e29b-41d4-a716-446655440001", "type": "string"},
+		{"key": "test_email", "value": "", "type": "string"},
+		{"key": "existing_user_email", "value": "existing@example.com", "type": "string"},
+		{"key": "registration_id", "value": "", "type": "string"},
+		{"key": "registration_email", "value": "", "type": "string"},
+		{"key": "registration_token", "value": "", "type": "string"},
+		{"key": "otp_code", "value": "123456", "type": "string"},
+		{"key": "expired_registration_id", "value": "", "type": "string"},
+		{"key": "unverified_registration_id", "value": "", "type": "string"},
+		{"key": "user_id", "value": "", "type": "string"},
+		{"key": "access_token", "value": "", "type": "string"},
+		{"key": "refresh_token", "value": "", "type": "string"},
+		{"key": "login_session_id", "value": "", "type": "string"},
+		{"key": "login_email", "value": "", "type": "string"},
+		{"key": "user_password", "value": "SecureP@ssw0rd!", "type": "string"},
+		{"key": "category_id", "value": "", "type": "string"},
+		{"key": "category_code", "value": "GENDER", "type": "string"},
+		{"key": "item_id", "value": "", "type": "string"},
+		{"key": "item_code", "value": "MALE", "type": "string"},
+		{"key": "parent_item_code", "value": "ID", "type": "string"}
+	]
+}

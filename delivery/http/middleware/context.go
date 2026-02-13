@@ -83,6 +83,9 @@ func GetUserAgent(c *fiber.Ctx) string {
 }
 
 func GetRequestID(c *fiber.Ctx) string {
+	if id := c.GetRespHeader("X-Request-ID"); id != "" {
+		return id
+	}
 	return c.Get("X-Request-ID")
 }
 
@@ -92,4 +95,18 @@ func IsPlatformAdmin(c *fiber.Ctx) (bool, error) {
 		return false, err
 	}
 	return claims.IsPlatformAdmin(), nil
+}
+
+func GetTenantIDFromHeader(c *fiber.Ctx) (uuid.UUID, error) {
+	tenantIDStr := c.Get("X-Tenant-ID")
+	if tenantIDStr == "" {
+		return uuid.Nil, errors.ErrBadRequest("X-Tenant-ID header is required")
+	}
+
+	tenantID, err := uuid.Parse(tenantIDStr)
+	if err != nil {
+		return uuid.Nil, errors.ErrBadRequest("Invalid X-Tenant-ID format")
+	}
+
+	return tenantID, nil
 }
