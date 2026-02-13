@@ -58,14 +58,6 @@ func (User) TableName() string {
 	return "users"
 }
 
-func (u *User) IsPlatformAdmin() bool {
-	return u.TenantID == nil
-}
-
-func (u *User) IsTenantUser() bool {
-	return u.TenantID != nil
-}
-
 type UserCredentials struct {
 	ID                uuid.UUID       `json:"id" gorm:"column:id;primaryKey;type:uuid;default:uuidv7()" db:"id"`
 	UserID            uuid.UUID       `json:"user_id" gorm:"column:user_id;uniqueIndex;not null" db:"user_id"`

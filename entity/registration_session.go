@@ -11,15 +11,15 @@ type RegistrationSessionStatus string
 const (
 	RegistrationSessionStatusPendingVerification RegistrationSessionStatus = "PENDING_VERIFICATION"
 	RegistrationSessionStatusVerified            RegistrationSessionStatus = "VERIFIED"
+	RegistrationSessionStatusPasswordSet         RegistrationSessionStatus = "PASSWORD_SET"
 	RegistrationSessionStatusCompleted           RegistrationSessionStatus = "COMPLETED"
 	RegistrationSessionStatusFailed              RegistrationSessionStatus = "FAILED"
 	RegistrationSessionStatusExpired             RegistrationSessionStatus = "EXPIRED"
 )
 
 type RegistrationSession struct {
-	ID       uuid.UUID `json:"id"`
-	TenantID uuid.UUID `json:"tenant_id"`
-	Email    string    `json:"email"`
+	ID    uuid.UUID `json:"id"`
+	Email string    `json:"email"`
 
 	Status RegistrationSessionStatus `json:"status"`
 
@@ -37,6 +37,8 @@ type RegistrationSession struct {
 
 	VerifiedAt            *time.Time `json:"verified_at,omitempty"`
 	RegistrationTokenHash *string    `json:"registration_token_hash,omitempty"`
+
+	PasswordSetAt *time.Time `json:"password_set_at,omitempty"`
 
 	IPAddress string `json:"ip_address"`
 	UserAgent string `json:"user_agent"`
@@ -113,5 +115,17 @@ func (s *RegistrationSession) RemainingResends() int {
 }
 
 func (s *RegistrationSession) CanComplete() bool {
-	return s.IsVerified() && !s.IsExpired()
+	return (s.IsVerified() || s.IsPasswordSet()) && !s.IsExpired()
+}
+
+func (s *RegistrationSession) CanSetPassword() bool {
+	return (s.Status == RegistrationSessionStatusVerified || s.Status == RegistrationSessionStatusPasswordSet) && !s.IsExpired()
+}
+
+func (s *RegistrationSession) IsPasswordSet() bool {
+	return s.Status == RegistrationSessionStatusPasswordSet
+}
+
+func (s *RegistrationSession) CanCompleteProfile() bool {
+	return s.IsPasswordSet() && !s.IsExpired()
 }
