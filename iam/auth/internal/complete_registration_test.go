@@ -22,8 +22,6 @@ import (
 func TestCompleteRegistration(t *testing.T) {
 	registrationID := uuid.New()
 	email := "test@example.com"
-	ipAddress := "192.168.1.1"
-	userAgent := "Mozilla/5.0"
 	jwtSecret := "test-secret-key-for-testing-purposes"
 
 	generateValidToken := func() (string, string) {
@@ -43,6 +41,7 @@ func TestCompleteRegistration(t *testing.T) {
 	}
 
 	validReq := &authdto.CompleteRegistrationRequest{
+		RegistrationID: registrationID,
 		Password:             "SecureP@ssw0rd!",
 		PasswordConfirmation: "SecureP@ssw0rd!",
 		FirstName:            "John",
@@ -304,6 +303,9 @@ func TestCompleteRegistration(t *testing.T) {
 
 			refreshTokenRepo.On("Create", mock.Anything, mock.AnythingOfType("*entity.RefreshToken")).Return(nil)
 
+			tt.req.RegistrationID = registrationID
+			tt.req.RegistrationToken = token
+
 			uc := &usecase{
 				TxManager: txManager,
 				Config: &config.Config{
@@ -328,7 +330,7 @@ func TestCompleteRegistration(t *testing.T) {
 			}
 
 			ctx := context.Background()
-			resp, err := uc.CompleteRegistration(ctx, registrationID, token, tt.req, ipAddress, userAgent)
+			resp, err := uc.CompleteRegistration(ctx, tt.req)
 
 			if tt.expectedError != "" {
 				require.Error(t, err)

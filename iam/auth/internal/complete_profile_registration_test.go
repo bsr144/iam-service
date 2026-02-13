@@ -383,10 +383,11 @@ func TestCompleteProfileRegistration(t *testing.T) {
 				RefreshTokenRepo:           refreshTokenRepo,
 			}
 
+			tt.req.RegistrationID = registrationID
+			tt.req.RegistrationToken = tokenString
+
 			response, err := uc.CompleteProfileRegistration(
 				context.Background(),
-				registrationID,
-				tokenString,
 				tt.req,
 			)
 

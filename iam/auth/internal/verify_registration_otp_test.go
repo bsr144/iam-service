@@ -185,7 +185,9 @@ func TestVerifyRegistrationOTP(t *testing.T) {
 			}
 
 			ctx := context.Background()
-			resp, err := uc.VerifyRegistrationOTP(ctx, registrationID, tt.req)
+			tt.req.RegistrationID = registrationID
+
+			resp, err := uc.VerifyRegistrationOTP(ctx, tt.req)
 
 			if tt.expectedError != "" {
 				require.Error(t, err)

@@ -231,10 +231,11 @@ func TestSetPassword(t *testing.T) {
 				Redis:  redis,
 			}
 
+			tt.req.RegistrationID = registrationID
+			tt.req.RegistrationToken = tokenString
+
 			response, err := uc.SetPassword(
 				context.Background(),
-				registrationID,
-				tokenString,
 				tt.req,
 			)
 

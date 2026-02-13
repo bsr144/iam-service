@@ -27,48 +27,48 @@ func (m *MockAuthUsecase) Logout(ctx context.Context, token string) error {
 	return args.Error(0)
 }
 
-func (m *MockAuthUsecase) InitiateRegistration(ctx context.Context, req *authdto.InitiateRegistrationRequest, ipAddress, userAgent string) (*authdto.InitiateRegistrationResponse, error) {
-	args := m.Called(ctx, req, ipAddress, userAgent)
+func (m *MockAuthUsecase) InitiateRegistration(ctx context.Context, req *authdto.InitiateRegistrationRequest) (*authdto.InitiateRegistrationResponse, error) {
+	args := m.Called(ctx, req)
 	if args.Get(0) == nil {
 		return nil, args.Error(1)
 	}
 	return args.Get(0).(*authdto.InitiateRegistrationResponse), args.Error(1)
 }
 
-func (m *MockAuthUsecase) VerifyRegistrationOTP(ctx context.Context, registrationID uuid.UUID, req *authdto.VerifyRegistrationOTPRequest) (*authdto.VerifyRegistrationOTPResponse, error) {
-	args := m.Called(ctx, registrationID, req)
+func (m *MockAuthUsecase) VerifyRegistrationOTP(ctx context.Context, req *authdto.VerifyRegistrationOTPRequest) (*authdto.VerifyRegistrationOTPResponse, error) {
+	args := m.Called(ctx, req)
 	if args.Get(0) == nil {
 		return nil, args.Error(1)
 	}
 	return args.Get(0).(*authdto.VerifyRegistrationOTPResponse), args.Error(1)
 }
 
-func (m *MockAuthUsecase) ResendRegistrationOTP(ctx context.Context, registrationID uuid.UUID, req *authdto.ResendRegistrationOTPRequest) (*authdto.ResendRegistrationOTPResponse, error) {
-	args := m.Called(ctx, registrationID, req)
+func (m *MockAuthUsecase) ResendRegistrationOTP(ctx context.Context, req *authdto.ResendRegistrationOTPRequest) (*authdto.ResendRegistrationOTPResponse, error) {
+	args := m.Called(ctx, req)
 	if args.Get(0) == nil {
 		return nil, args.Error(1)
 	}
 	return args.Get(0).(*authdto.ResendRegistrationOTPResponse), args.Error(1)
 }
 
-func (m *MockAuthUsecase) CompleteRegistration(ctx context.Context, registrationID uuid.UUID, registrationToken string, req *authdto.CompleteRegistrationRequest, ipAddress, userAgent string) (*authdto.CompleteRegistrationResponse, error) {
-	args := m.Called(ctx, registrationID, registrationToken, req, ipAddress, userAgent)
+func (m *MockAuthUsecase) CompleteRegistration(ctx context.Context, req *authdto.CompleteRegistrationRequest) (*authdto.CompleteRegistrationResponse, error) {
+	args := m.Called(ctx, req)
 	if args.Get(0) == nil {
 		return nil, args.Error(1)
 	}
 	return args.Get(0).(*authdto.CompleteRegistrationResponse), args.Error(1)
 }
 
-func (m *MockAuthUsecase) SetPassword(ctx context.Context, registrationID uuid.UUID, registrationToken string, req *authdto.SetPasswordRequest) (*authdto.SetPasswordResponse, error) {
-	args := m.Called(ctx, registrationID, registrationToken, req)
+func (m *MockAuthUsecase) SetPassword(ctx context.Context, req *authdto.SetPasswordRequest) (*authdto.SetPasswordResponse, error) {
+	args := m.Called(ctx, req)
 	if args.Get(0) == nil {
 		return nil, args.Error(1)
 	}
 	return args.Get(0).(*authdto.SetPasswordResponse), args.Error(1)
 }
 
-func (m *MockAuthUsecase) CompleteProfileRegistration(ctx context.Context, registrationID uuid.UUID, registrationToken string, req *authdto.CompleteProfileRegistrationRequest) (*authdto.CompleteProfileRegistrationResponse, error) {
-	args := m.Called(ctx, registrationID, registrationToken, req)
+func (m *MockAuthUsecase) CompleteProfileRegistration(ctx context.Context, req *authdto.CompleteProfileRegistrationRequest) (*authdto.CompleteProfileRegistrationResponse, error) {
+	args := m.Called(ctx, req)
 	if args.Get(0) == nil {
 		return nil, args.Error(1)
 	}
@@ -125,7 +125,7 @@ func TestSetPasswordController(t *testing.T) {
 				"confirmation_password": "SecureP@ssw0rd!",
 			},
 			setupMock: func(m *MockAuthUsecase) {
-				m.On("SetPassword", mock.Anything, registrationID, registrationToken, mock.AnythingOfType("*authdto.SetPasswordRequest")).
+				m.On("SetPassword", mock.Anything, mock.AnythingOfType("*authdto.SetPasswordRequest")).
 					Return(&authdto.SetPasswordResponse{
 						RegistrationID:    registrationID.String(),
 						Status:            "PASSWORD_SET",
@@ -185,7 +185,7 @@ func TestSetPasswordController(t *testing.T) {
 				"confirmation_password": "SecureP@ssw0rd!",
 			},
 			setupMock: func(m *MockAuthUsecase) {
-				m.On("SetPassword", mock.Anything, registrationID, registrationToken, mock.AnythingOfType("*authdto.SetPasswordRequest")).
+				m.On("SetPassword", mock.Anything, mock.AnythingOfType("*authdto.SetPasswordRequest")).
 					Return(nil, errors.ErrForbidden("Email has not been verified"))
 			},
 			expectedStatus: fiber.StatusForbidden,
@@ -252,7 +252,7 @@ func TestCompleteProfileRegistrationController(t *testing.T) {
 				"place_of_birth": "Jakarta",
 			},
 			setupMock: func(m *MockAuthUsecase) {
-				m.On("CompleteProfileRegistration", mock.Anything, registrationID, registrationToken, mock.AnythingOfType("*authdto.CompleteProfileRegistrationRequest")).
+				m.On("CompleteProfileRegistration", mock.Anything, mock.AnythingOfType("*authdto.CompleteProfileRegistrationRequest")).
 					Return(&authdto.CompleteProfileRegistrationResponse{
 						UserID:  userID,
 						Email:   "john@example.com",
@@ -309,7 +309,7 @@ func TestCompleteProfileRegistrationController(t *testing.T) {
 				"place_of_birth": "Jakarta",
 			},
 			setupMock: func(m *MockAuthUsecase) {
-				m.On("CompleteProfileRegistration", mock.Anything, registrationID, registrationToken, mock.AnythingOfType("*authdto.CompleteProfileRegistrationRequest")).
+				m.On("CompleteProfileRegistration", mock.Anything, mock.AnythingOfType("*authdto.CompleteProfileRegistrationRequest")).
 					Return(nil, errors.ErrValidation("You must be at least 18 years old to register"))
 			},
 			expectedStatus: fiber.StatusBadRequest,
@@ -332,7 +332,7 @@ func TestCompleteProfileRegistrationController(t *testing.T) {
 				"place_of_birth": "Jakarta",
 			},
 			setupMock: func(m *MockAuthUsecase) {
-				m.On("CompleteProfileRegistration", mock.Anything, registrationID, registrationToken, mock.AnythingOfType("*authdto.CompleteProfileRegistrationRequest")).
+				m.On("CompleteProfileRegistration", mock.Anything, mock.AnythingOfType("*authdto.CompleteProfileRegistrationRequest")).
 					Return(nil, errors.ErrConflict("This email has already been registered"))
 			},
 			expectedStatus: fiber.StatusConflict,

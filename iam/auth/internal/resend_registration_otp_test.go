@@ -154,7 +154,9 @@ func TestResendRegistrationOTP(t *testing.T) {
 			}
 
 			ctx := context.Background()
-			resp, err := uc.ResendRegistrationOTP(ctx, registrationID, tt.req)
+			tt.req.RegistrationID = registrationID
+
+			resp, err := uc.ResendRegistrationOTP(ctx, tt.req)
 
 			if tt.expectedError != "" {
 				require.Error(t, err)
