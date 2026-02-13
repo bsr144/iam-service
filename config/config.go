@@ -106,6 +106,12 @@ func bindEnvVariables() {
 
 	_ = viper.BindEnv("log.level", "LOG_LEVEL")
 	_ = viper.BindEnv("log.format", "LOG_FORMAT")
+	_ = viper.BindEnv("log.file_path", "LOG_FILE_PATH")
+	_ = viper.BindEnv("log.max_size_mb", "LOG_MAX_SIZE_MB")
+	_ = viper.BindEnv("log.max_backups", "LOG_MAX_BACKUPS")
+	_ = viper.BindEnv("log.max_age_days", "LOG_MAX_AGE_DAYS")
+	_ = viper.BindEnv("log.compress", "LOG_COMPRESS")
+	_ = viper.BindEnv("log.retain_all", "LOG_RETAIN_ALL")
 
 	_ = viper.BindEnv("email.provider", "EMAIL_PROVIDER")
 	_ = viper.BindEnv("email.smtp_host", "EMAIL_SMTP_HOST")
@@ -176,6 +182,12 @@ func setDefaults() {
 
 	viper.SetDefault("log.level", "info")
 	viper.SetDefault("log.format", "json")
+	viper.SetDefault("log.file_path", "logs/app.log")
+	viper.SetDefault("log.max_size_mb", 100)
+	viper.SetDefault("log.max_backups", 30)
+	viper.SetDefault("log.max_age_days", 30)
+	viper.SetDefault("log.compress", true)
+	viper.SetDefault("log.retain_all", false)
 
 	viper.SetDefault("email.provider", "console")
 	viper.SetDefault("email.smtp_port", 587)

@@ -1,7 +1,14 @@
 package logger
 
 import (
+	"fmt"
+	"iam-service/config"
+	"os"
+	"path/filepath"
+	"strings"
+
 	"go.uber.org/zap"
+	"go.uber.org/zap/zapcore"
 )
 
 type Logger interface {
@@ -52,6 +59,34 @@ func NewZapLogger(environment string) (*zap.Logger, error) {
 		return zap.NewProduction()
 	}
 	return zap.NewDevelopment()
+}
+
+func NewZapLoggerWithConfig(logCfg config.LogConfig, environment string) (*zap.Logger, error) {
+	if environment == "development" {
+		return zap.NewDevelopment()
+	}
+
+	dir := filepath.Dir(logCfg.FilePath)
+	prefix := strings.TrimSuffix(filepath.Base(logCfg.FilePath), filepath.Ext(logCfg.FilePath))
+
+	dfw, err := newDailyFileWriter(dir, prefix, logCfg.Compress, logCfg.MaxAgeDays, logCfg.RetainAll)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create daily file writer: %w", err)
+	}
+
+	fileWriter := zapcore.AddSync(dfw)
+	stdoutWriter := zapcore.AddSync(os.Stdout)
+
+	encoderCfg := zap.NewProductionEncoderConfig()
+	encoderCfg.TimeKey = "timestamp"
+	encoderCfg.EncodeTime = zapcore.ISO8601TimeEncoder
+
+	core := zapcore.NewTee(
+		zapcore.NewCore(zapcore.NewJSONEncoder(encoderCfg), fileWriter, zap.InfoLevel),
+		zapcore.NewCore(zapcore.NewJSONEncoder(encoderCfg), stdoutWriter, zap.InfoLevel),
+	)
+
+	return zap.New(core, zap.AddCaller(), zap.AddStacktrace(zap.ErrorLevel)), nil
 }
 
 func (l logger) With(args ...interface{}) Logger {

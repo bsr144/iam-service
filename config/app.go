@@ -39,6 +39,13 @@ type LogConfig struct {
 	Format string `mapstructure:"format"`
 
 	AuditEnabled bool `mapstructure:"audit_enabled"`
+
+	FilePath   string `mapstructure:"file_path"`
+	MaxSizeMB  int    `mapstructure:"max_size_mb"`
+	MaxBackups int    `mapstructure:"max_backups"`
+	MaxAgeDays int    `mapstructure:"max_age_days"`
+	Compress   bool   `mapstructure:"compress"`
+	RetainAll  bool   `mapstructure:"retain_all"`
 }
 
 type EmailConfig struct {
