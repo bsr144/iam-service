@@ -11,6 +11,7 @@ import (
 	"github.com/gofiber/fiber/v2/middleware/limiter"
 	"github.com/gofiber/fiber/v2/middleware/recover"
 	"github.com/gofiber/fiber/v2/middleware/requestid"
+	"github.com/google/uuid"
 	"go.uber.org/zap"
 )
 
@@ -52,7 +53,11 @@ func (m *Middleware) Setup(app *fiber.App) {
 		return c.Next()
 	})
 
-	app.Use(requestid.New())
+	app.Use(requestid.New(requestid.Config{
+		Generator: func() string {
+			return uuid.New().String()
+		},
+	}))
 
 	app.Use(RequestContext())
 
