@@ -34,7 +34,7 @@ type Server struct {
 }
 
 func NewServer(cfg *config.Config) *Server {
-	zapLogger, _ := logger.NewZapLogger(cfg.App.Environment)
+	zapLogger, _ := logger.NewZapLoggerWithConfig(cfg.Log, cfg.App.Environment)
 	auditLogger := logger.NewAuditLogger(zapLogger, logger.AuditConfig{
 		Enabled: cfg.Log.AuditEnabled,
 	})
@@ -175,14 +175,13 @@ func createErrorHandler(cfg *config.Config, zapLogger *zap.Logger) fiber.ErrorHa
 		requestID := middleware.GetRequestID(c)
 		includeDebug := cfg.IsDevelopment()
 
-		log.Fatalln(includeDebug)
-
 		var appErr *apperrors.AppError
 		if apperrors.As(err, &appErr) {
 
 			logFields := []zap.Field{
 				zap.String("request_id", requestID),
 				zap.String("code", appErr.Code),
+				zap.String("message", appErr.Message),
 				zap.String("kind", appErr.Kind.String()),
 				zap.String("file", appErr.File),
 				zap.Int("line", appErr.Line),
