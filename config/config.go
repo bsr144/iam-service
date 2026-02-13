@@ -102,6 +102,7 @@ func bindEnvVariables() {
 	_ = viper.BindEnv("jwt.audience", "JWT_AUDIENCE")
 	_ = viper.BindEnv("jwt.pin_token_expiry", "JWT_PIN_TOKEN_EXPIRY")
 	_ = viper.BindEnv("jwt.registration_expiry", "JWT_REGISTRATION_EXPIRY")
+	_ = viper.BindEnv("jwt.registration_secret", "JWT_REGISTRATION_SECRET")
 
 	_ = viper.BindEnv("log.level", "LOG_LEVEL")
 	_ = viper.BindEnv("log.format", "LOG_FORMAT")

@@ -18,8 +18,9 @@ type ServerConfig struct {
 }
 
 type JWTConfig struct {
-	AccessSecret  string `mapstructure:"access_secret"`
-	RefreshSecret string `mapstructure:"refresh_secret"`
+	AccessSecret       string `mapstructure:"access_secret"`
+	RefreshSecret      string `mapstructure:"refresh_secret"`
+	RegistrationSecret string `mapstructure:"registration_secret"`
 
 	PrivateKeyPath string `mapstructure:"private_key_path"`
 	PublicKeyPath  string `mapstructure:"public_key_path"`
