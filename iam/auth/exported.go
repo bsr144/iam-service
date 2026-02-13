@@ -14,12 +14,12 @@ import (
 type Usecase interface {
 	Logout(ctx context.Context, token string) error
 
-	InitiateRegistration(ctx context.Context, req *authdto.InitiateRegistrationRequest, ipAddress, userAgent string) (*authdto.InitiateRegistrationResponse, error)
-	VerifyRegistrationOTP(ctx context.Context, registrationID uuid.UUID, req *authdto.VerifyRegistrationOTPRequest) (*authdto.VerifyRegistrationOTPResponse, error)
-	ResendRegistrationOTP(ctx context.Context, registrationID uuid.UUID, req *authdto.ResendRegistrationOTPRequest) (*authdto.ResendRegistrationOTPResponse, error)
-	CompleteRegistration(ctx context.Context, registrationID uuid.UUID, registrationToken string, req *authdto.CompleteRegistrationRequest, ipAddress, userAgent string) (*authdto.CompleteRegistrationResponse, error)
-	SetPassword(ctx context.Context, registrationID uuid.UUID, registrationToken string, req *authdto.SetPasswordRequest) (*authdto.SetPasswordResponse, error)
-	CompleteProfileRegistration(ctx context.Context, registrationID uuid.UUID, registrationToken string, req *authdto.CompleteProfileRegistrationRequest) (*authdto.CompleteProfileRegistrationResponse, error)
+	InitiateRegistration(ctx context.Context, req *authdto.InitiateRegistrationRequest) (*authdto.InitiateRegistrationResponse, error)
+	VerifyRegistrationOTP(ctx context.Context, req *authdto.VerifyRegistrationOTPRequest) (*authdto.VerifyRegistrationOTPResponse, error)
+	ResendRegistrationOTP(ctx context.Context, req *authdto.ResendRegistrationOTPRequest) (*authdto.ResendRegistrationOTPResponse, error)
+	CompleteRegistration(ctx context.Context, req *authdto.CompleteRegistrationRequest) (*authdto.CompleteRegistrationResponse, error)
+	SetPassword(ctx context.Context, req *authdto.SetPasswordRequest) (*authdto.SetPasswordResponse, error)
+	CompleteProfileRegistration(ctx context.Context, req *authdto.CompleteProfileRegistrationRequest) (*authdto.CompleteProfileRegistrationResponse, error)
 	GetRegistrationStatus(ctx context.Context, registrationID uuid.UUID, email string) (*authdto.RegistrationStatusResponse, error)
 }
 
