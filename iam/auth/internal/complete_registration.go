@@ -10,6 +10,7 @@ import (
 
 	"iam-service/entity"
 	"iam-service/iam/auth/authdto"
+	jwtpkg "iam-service/pkg/jwt"
 	"iam-service/pkg/errors"
 
 	"github.com/google/uuid"
@@ -18,17 +19,17 @@ import (
 
 func (uc *usecase) CompleteRegistration(
 	ctx context.Context,
-	tenantID, registrationID uuid.UUID,
+	registrationID uuid.UUID,
 	registrationToken string,
 	req *authdto.CompleteRegistrationRequest,
 	ipAddress, userAgent string,
 ) (*authdto.CompleteRegistrationResponse, error) {
-	_, err := uc.validateRegistrationCompleteToken(registrationToken, registrationID, tenantID)
+	_, err := uc.validateRegistrationCompleteToken(registrationToken, registrationID)
 	if err != nil {
 		return nil, err
 	}
 
-	session, err := uc.Redis.GetRegistrationSession(ctx, tenantID, registrationID)
+	session, err := uc.Redis.GetRegistrationSession(ctx, registrationID)
 	if err != nil {
 		return nil, err
 	}
@@ -57,7 +58,7 @@ func (uc *usecase) CompleteRegistration(
 	}
 	passwordHashStr := string(passwordHash)
 
-	emailExists, err := uc.UserRepo.EmailExistsInTenant(ctx, tenantID, session.Email)
+	emailExists, err := uc.UserRepo.EmailExists(ctx, session.Email)
 	if err != nil {
 		return nil, errors.ErrInternal("failed to check email").WithError(err)
 	}
@@ -73,7 +74,6 @@ func (uc *usecase) CompleteRegistration(
 
 	err = uc.TxManager.WithTransaction(ctx, func(txCtx context.Context) error {
 		user = &entity.User{
-			TenantID:      &tenantID,
 			Email:         session.Email,
 			EmailVerified: true,
 			IsActive:      userStatus == entity.UserStatusActive,
@@ -118,7 +118,7 @@ func (uc *usecase) CompleteRegistration(
 			return err
 		}
 
-		tracking := entity.NewUserActivationTracking(user.ID, &tenantID)
+		tracking := entity.NewUserActivationTracking(user.ID, nil)
 		if err := tracking.AddStatusTransition(string(userStatus), "registration"); err != nil {
 			return err
 		}
@@ -133,8 +133,8 @@ func (uc *usecase) CompleteRegistration(
 		return nil, errors.ErrInternal("failed to create user").WithError(err)
 	}
 
-	_ = uc.Redis.DeleteRegistrationSession(ctx, tenantID, registrationID)
-	_ = uc.Redis.UnlockRegistrationEmail(ctx, tenantID, session.Email)
+	_ = uc.Redis.DeleteRegistrationSession(ctx, registrationID)
+	_ = uc.Redis.UnlockRegistrationEmail(ctx, session.Email)
 
 	response := &authdto.CompleteRegistrationResponse{
 		UserID: user.ID,
@@ -149,7 +149,7 @@ func (uc *usecase) CompleteRegistration(
 	if !requiresApproval {
 		response.Message = "Registration completed successfully. You are now logged in."
 
-		accessToken, refreshToken, expiresIn, err := uc.generateAuthTokensForRegistration(ctx, user.ID, tenantID, session.Email)
+		accessToken, refreshToken, expiresIn, err := uc.generateAuthTokensForRegistration(ctx, user.ID, session.Email)
 		if err != nil {
 			response.Message = "Registration completed successfully. Please login to continue."
 		} else {
@@ -168,7 +168,67 @@ func (uc *usecase) CompleteRegistration(
 	return response, nil
 }
 
-func (uc *usecase) generateAuthTokensForRegistration(_ context.Context, _, _ uuid.UUID, _ string) (string, string, int, error) {
+func (uc *usecase) generateAuthTokensForRegistration(ctx context.Context, userID uuid.UUID, email string) (string, string, int, error) {
+	sessionID := uuid.New()
+	tokenFamily := uuid.New()
 
-	return "", "", 0, errors.ErrInternal("token generation pending implementation")
+	tokenConfig := &jwtpkg.TokenConfig{
+		SigningMethod: uc.Config.JWT.SigningMethod,
+		AccessSecret:  uc.Config.JWT.AccessSecret,
+		RefreshSecret: uc.Config.JWT.RefreshSecret,
+		AccessExpiry:  uc.Config.JWT.AccessExpiry,
+		RefreshExpiry: uc.Config.JWT.RefreshExpiry,
+		Issuer:        uc.Config.JWT.Issuer,
+		Audience:      uc.Config.JWT.Audience,
+	}
+
+	if uc.Config.JWT.SigningMethod == "RS256" {
+		privateKey, err := jwtpkg.LoadPrivateKeyFromFile(uc.Config.JWT.PrivateKeyPath)
+		if err != nil {
+			return "", "", 0, errors.ErrInternal("failed to load private key").WithError(err)
+		}
+		publicKey, err := jwtpkg.LoadPublicKeyFromFile(uc.Config.JWT.PublicKeyPath)
+		if err != nil {
+			return "", "", 0, errors.ErrInternal("failed to load public key").WithError(err)
+		}
+		tokenConfig.PrivateKey = privateKey
+		tokenConfig.PublicKey = publicKey
+	}
+
+	accessToken, err := jwtpkg.GenerateAccessToken(
+		userID,
+		email,
+		nil,
+		nil,
+		[]string{},
+		[]string{},
+		nil,
+		sessionID,
+		tokenConfig,
+	)
+	if err != nil {
+		return "", "", 0, errors.ErrInternal("failed to generate access token").WithError(err)
+	}
+
+	refreshToken, err := jwtpkg.GenerateRefreshToken(userID, sessionID, tokenConfig)
+	if err != nil {
+		return "", "", 0, errors.ErrInternal("failed to generate refresh token").WithError(err)
+	}
+
+	refreshTokenHash := hashToken(refreshToken)
+	refreshTokenEntity := &entity.RefreshToken{
+		UserID:      userID,
+		TokenHash:   refreshTokenHash,
+		TokenFamily: tokenFamily,
+		ExpiresAt:   time.Now().Add(uc.Config.JWT.RefreshExpiry),
+		CreatedAt:   time.Now(),
+	}
+
+	if err := uc.RefreshTokenRepo.Create(ctx, refreshTokenEntity); err != nil {
+		return "", "", 0, errors.ErrInternal("failed to create refresh token").WithError(err)
+	}
+
+	expiresIn := int(uc.Config.JWT.AccessExpiry.Seconds())
+
+	return accessToken, refreshToken, expiresIn, nil
 }

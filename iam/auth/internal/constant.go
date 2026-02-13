@@ -5,18 +5,7 @@ const (
 )
 
 const (
-	OTPLength        = 6
-	OTPExpiryMinutes = 1
-
-	MaxActiveOTPPerEmail = 5
-)
-
-const (
-	JWTExpirationHours = 72
-)
-
-const (
-	RegistrationTokenExpiryMinutes = 10
+	OTPLength = 6
 )
 
 const (
@@ -33,16 +22,4 @@ const (
 
 	RegistrationRateLimitPerHour = 3
 	RegistrationRateLimitWindow  = 60
-)
-
-const (
-	LoginSessionExpiryMinutes = 10
-
-	LoginOTPLength         = 6
-	LoginOTPExpiryMinutes  = 10
-	LoginOTPMaxAttempts    = 5
-	LoginOTPMaxResends     = 3
-	LoginOTPResendCooldown = 60
-
-	LoginRateLimitPerHour = 10
 )

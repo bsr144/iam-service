@@ -12,10 +12,10 @@ import (
 
 func (uc *usecase) GetRegistrationStatus(
 	ctx context.Context,
-	tenantID, registrationID uuid.UUID,
+	registrationID uuid.UUID,
 	email string,
 ) (*authdto.RegistrationStatusResponse, error) {
-	session, err := uc.Redis.GetRegistrationSession(ctx, tenantID, registrationID)
+	session, err := uc.Redis.GetRegistrationSession(ctx, registrationID)
 	if err != nil {
 		return nil, err
 	}

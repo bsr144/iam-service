@@ -6,6 +6,7 @@ import (
 	"encoding/hex"
 	"fmt"
 	"net/http"
+	"strings"
 	"time"
 
 	"iam-service/entity"
@@ -19,15 +20,15 @@ import (
 
 func (uc *usecase) VerifyRegistrationOTP(
 	ctx context.Context,
-	tenantID, registrationID uuid.UUID,
+	registrationID uuid.UUID,
 	req *authdto.VerifyRegistrationOTPRequest,
 ) (*authdto.VerifyRegistrationOTPResponse, error) {
-	session, err := uc.Redis.GetRegistrationSession(ctx, tenantID, registrationID)
+	session, err := uc.Redis.GetRegistrationSession(ctx, registrationID)
 	if err != nil {
 		return nil, err
 	}
 
-	if session.Email != req.Email {
+	if !strings.EqualFold(session.Email, req.Email) {
 		return nil, errors.ErrValidation("Email does not match registration")
 	}
 
@@ -58,7 +59,7 @@ func (uc *usecase) VerifyRegistrationOTP(
 	err = bcrypt.CompareHashAndPassword([]byte(session.OTPHash), []byte(req.OTPCode))
 	if err != nil {
 
-		attempts, incErr := uc.Redis.IncrementRegistrationAttempts(ctx, tenantID, registrationID)
+		attempts, incErr := uc.Redis.IncrementRegistrationAttempts(ctx, registrationID)
 		if incErr != nil {
 			return nil, incErr
 		}
@@ -74,12 +75,12 @@ func (uc *usecase) VerifyRegistrationOTP(
 			})
 	}
 
-	token, tokenHash, err := uc.generateRegistrationCompleteToken(registrationID, tenantID, req.Email)
+	token, tokenHash, err := uc.generateRegistrationCompleteToken(registrationID, req.Email)
 	if err != nil {
 		return nil, errors.ErrInternal("failed to generate registration token").WithError(err)
 	}
 
-	if err := uc.Redis.MarkRegistrationVerified(ctx, tenantID, registrationID, tokenHash); err != nil {
+	if err := uc.Redis.MarkRegistrationVerified(ctx, registrationID, tokenHash); err != nil {
 		return nil, err
 	}
 
@@ -92,18 +93,17 @@ func (uc *usecase) VerifyRegistrationOTP(
 		RegistrationToken: token,
 		TokenExpiresAt:    tokenExpiry,
 		NextStep: authdto.NextStep{
-			Action:         "complete_registration",
-			Endpoint:       fmt.Sprintf("/api/iam/v1/registrations/%s/complete", registrationID.String()),
-			RequiredFields: []string{"password", "password_confirmation", "first_name", "last_name"},
+			Action:         "set_password",
+			Endpoint:       fmt.Sprintf("/api/iam/v1/registrations/%s/set-password", registrationID.String()),
+			RequiredFields: []string{"password", "confirmation_password"},
 		},
 	}, nil
 }
 
-func (uc *usecase) generateRegistrationCompleteToken(registrationID, tenantID uuid.UUID, email string) (string, string, error) {
+func (uc *usecase) generateRegistrationCompleteToken(registrationID uuid.UUID, email string) (string, string, error) {
 	now := time.Now()
 	claims := jwt.MapClaims{
 		"registration_id": registrationID.String(),
-		"tenant_id":       tenantID.String(),
 		"email":           email,
 		"purpose":         RegistrationCompleteTokenPurpose,
 		"exp":             now.Add(time.Duration(RegistrationCompleteTokenExpiryMinutes) * time.Minute).Unix(),
@@ -112,7 +112,7 @@ func (uc *usecase) generateRegistrationCompleteToken(registrationID, tenantID uu
 	}
 
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
-	tokenString, err := token.SignedString([]byte(uc.Config.JWT.AccessSecret))
+	tokenString, err := token.SignedString([]byte(uc.registrationSigningSecret()))
 	if err != nil {
 		return "", "", err
 	}
@@ -123,12 +123,12 @@ func (uc *usecase) generateRegistrationCompleteToken(registrationID, tenantID uu
 	return tokenString, tokenHash, nil
 }
 
-func (uc *usecase) validateRegistrationCompleteToken(tokenString string, expectedRegistrationID, expectedTenantID uuid.UUID) (jwt.MapClaims, error) {
+func (uc *usecase) validateRegistrationCompleteToken(tokenString string, expectedRegistrationID uuid.UUID) (jwt.MapClaims, error) {
 	token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
 		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
 			return nil, errors.ErrTokenInvalid()
 		}
-		return []byte(uc.Config.JWT.AccessSecret), nil
+		return []byte(uc.registrationSigningSecret()), nil
 	})
 
 	if err != nil {
@@ -146,10 +146,6 @@ func (uc *usecase) validateRegistrationCompleteToken(tokenString string, expecte
 
 	if regID, ok := claims["registration_id"].(string); !ok || regID != expectedRegistrationID.String() {
 		return nil, errors.ErrUnauthorized("Token does not match this registration")
-	}
-
-	if tid, ok := claims["tenant_id"].(string); !ok || tid != expectedTenantID.String() {
-		return nil, errors.ErrUnauthorized("Token does not match this tenant")
 	}
 
 	return claims, nil

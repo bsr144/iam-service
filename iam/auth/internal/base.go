@@ -13,7 +13,6 @@ type usecase struct {
 	UserProfileRepo            contract.UserProfileRepository
 	UserCredentialsRepo        contract.UserCredentialsRepository
 	UserSecurityRepo           contract.UserSecurityRepository
-	EmailVerificationRepo      contract.EmailVerificationRepository
 	TenantRepo                 contract.TenantRepository
 	UserActivationTrackingRepo contract.UserActivationTrackingRepository
 	RoleRepo                   contract.RoleRepository
@@ -33,7 +32,6 @@ func NewUsecase(
 	userProfileRepo contract.UserProfileRepository,
 	userCredentialsRepo contract.UserCredentialsRepository,
 	userSecurityRepo contract.UserSecurityRepository,
-	emailVerificationRepo contract.EmailVerificationRepository,
 	tenantRepo contract.TenantRepository,
 	userActivationTrackingRepo contract.UserActivationTrackingRepository,
 	roleRepository contract.RoleRepository,
@@ -52,7 +50,6 @@ func NewUsecase(
 		UserProfileRepo:            userProfileRepo,
 		UserCredentialsRepo:        userCredentialsRepo,
 		UserSecurityRepo:           userSecurityRepo,
-		EmailVerificationRepo:      emailVerificationRepo,
 		TenantRepo:                 tenantRepo,
 		UserActivationTrackingRepo: userActivationTrackingRepo,
 		RoleRepo:                   roleRepository,

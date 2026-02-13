@@ -7,28 +7,17 @@ import (
 	"iam-service/entity"
 	"iam-service/iam/auth/authdto"
 	"iam-service/pkg/errors"
+	"iam-service/pkg/logger"
 
 	"github.com/google/uuid"
 )
 
 func (uc *usecase) InitiateRegistration(
 	ctx context.Context,
-	tenantID uuid.UUID,
 	req *authdto.InitiateRegistrationRequest,
 	ipAddress, userAgent string,
 ) (*authdto.InitiateRegistrationResponse, error) {
-	tenant, err := uc.TenantRepo.GetByID(ctx, tenantID)
-	if err != nil {
-		if errors.IsNotFound(err) {
-			return nil, errors.ErrTenantNotFound()
-		}
-		return nil, errors.ErrInternal("failed to verify tenant").WithError(err)
-	}
-	if !tenant.IsActive() {
-		return nil, errors.ErrTenantInactive()
-	}
-
-	emailExists, err := uc.UserRepo.EmailExistsInTenant(ctx, tenantID, req.Email)
+	emailExists, err := uc.UserRepo.EmailExists(ctx, req.Email)
 	if err != nil {
 		return nil, errors.ErrInternal("failed to check email").WithError(err)
 	}
@@ -50,7 +39,7 @@ func (uc *usecase) InitiateRegistration(
 	}
 
 	rateLimitTTL := time.Duration(RegistrationRateLimitWindow) * time.Minute
-	count, err := uc.Redis.IncrementRegistrationRateLimit(ctx, tenantID, req.Email, rateLimitTTL)
+	count, err := uc.Redis.IncrementRegistrationRateLimit(ctx, req.Email, rateLimitTTL)
 	if err != nil {
 		return nil, err
 	}
@@ -58,7 +47,7 @@ func (uc *usecase) InitiateRegistration(
 		return nil, errors.ErrTooManyRequests("Too many registration attempts. Please try again later.")
 	}
 
-	emailLocked, err := uc.Redis.IsRegistrationEmailLocked(ctx, tenantID, req.Email)
+	emailLocked, err := uc.Redis.IsRegistrationEmailLocked(ctx, req.Email)
 	if err != nil {
 		return nil, err
 	}
@@ -78,7 +67,6 @@ func (uc *usecase) InitiateRegistration(
 
 	session := &entity.RegistrationSession{
 		ID:                    sessionID,
-		TenantID:              tenantID,
 		Email:                 req.Email,
 		Status:                entity.RegistrationSessionStatusPendingVerification,
 		OTPHash:               otpHash,
@@ -95,7 +83,7 @@ func (uc *usecase) InitiateRegistration(
 		ExpiresAt:             now.Add(sessionTTL),
 	}
 
-	locked, err := uc.Redis.LockRegistrationEmail(ctx, tenantID, req.Email, sessionTTL)
+	locked, err := uc.Redis.LockRegistrationEmail(ctx, req.Email, sessionTTL)
 	if err != nil {
 		return nil, errors.ErrInternal("failed to lock email").WithError(err)
 	}
@@ -105,11 +93,21 @@ func (uc *usecase) InitiateRegistration(
 
 	if err := uc.Redis.CreateRegistrationSession(ctx, session, sessionTTL); err != nil {
 
-		_ = uc.Redis.UnlockRegistrationEmail(ctx, tenantID, req.Email)
+		_ = uc.Redis.UnlockRegistrationEmail(ctx, req.Email)
 		return nil, err
 	}
 
-	_ = uc.EmailService.SendOTP(ctx, req.Email, otp, RegistrationOTPExpiryMinutes)
+	if err := uc.EmailService.SendOTP(ctx, req.Email, otp, RegistrationOTPExpiryMinutes); err != nil {
+		uc.AuditLogger.Log(ctx, logger.AuditEvent{
+			Domain:  "auth",
+			Action:  "registration_otp_send_failed",
+			Success: false,
+			Reason:  err.Error(),
+			Metadata: map[string]any{
+				"email": req.Email,
+			},
+		})
+	}
 
 	return &authdto.InitiateRegistrationResponse{
 		RegistrationID: sessionID.String(),

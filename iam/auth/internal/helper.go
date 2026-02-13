@@ -2,13 +2,12 @@ package internal
 
 import (
 	"crypto/rand"
+	"crypto/sha256"
+	"encoding/hex"
 	"iam-service/pkg/errors"
 	"math/big"
 	"strings"
-	"time"
 
-	"github.com/golang-jwt/jwt/v5"
-	"github.com/google/uuid"
 	"golang.org/x/crypto/bcrypt"
 )
 
@@ -70,41 +69,16 @@ func (uc *usecase) generateOTP() (otp string, otpHash string, err error) {
 	return otp, string(hash), nil
 }
 
-func (uc *usecase) generateRegistrationToken(userID, tenantID uuid.UUID) (string, error) {
-	claims := jwt.MapClaims{
-		"user_id":   userID.String(),
-		"tenant_id": tenantID.String(),
-		"purpose":   "registration",
-		"exp":       time.Now().Add(10 * time.Minute).Unix(),
-		"iat":       time.Now().Unix(),
+func (uc *usecase) registrationSigningSecret() string {
+	if uc.Config.JWT.RegistrationSecret != "" {
+		return uc.Config.JWT.RegistrationSecret
 	}
-
-	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
-	return token.SignedString([]byte(uc.Config.JWT.AccessSecret))
+	return uc.Config.JWT.AccessSecret
 }
 
-func (uc *usecase) parseRegistrationToken(tokenString string) (jwt.MapClaims, error) {
-	token, err := jwt.Parse(tokenString, func(token *jwt.Token) (any, error) {
-		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
-			return nil, errors.ErrTokenInvalid()
-		}
-		return []byte(uc.Config.JWT.AccessSecret), nil
-	})
-
-	if err != nil {
-		return nil, err
-	}
-
-	claims, ok := token.Claims.(jwt.MapClaims)
-	if !ok || !token.Valid {
-		return nil, errors.ErrTokenInvalid()
-	}
-
-	if purpose, ok := claims["purpose"].(string); !ok || purpose != "registration" {
-		return nil, errors.ErrTokenInvalid()
-	}
-
-	return claims, nil
+func hashToken(token string) string {
+	hash := sha256.Sum256([]byte(token))
+	return hex.EncodeToString(hash[:])
 }
 
 func maskEmailForRegistration(email string) string {

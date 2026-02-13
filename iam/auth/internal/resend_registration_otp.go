@@ -3,6 +3,7 @@ package internal
 import (
 	"context"
 	"net/http"
+	"strings"
 	"time"
 
 	"iam-service/entity"
@@ -14,15 +15,15 @@ import (
 
 func (uc *usecase) ResendRegistrationOTP(
 	ctx context.Context,
-	tenantID, registrationID uuid.UUID,
+	registrationID uuid.UUID,
 	req *authdto.ResendRegistrationOTPRequest,
 ) (*authdto.ResendRegistrationOTPResponse, error) {
-	session, err := uc.Redis.GetRegistrationSession(ctx, tenantID, registrationID)
+	session, err := uc.Redis.GetRegistrationSession(ctx, registrationID)
 	if err != nil {
 		return nil, err
 	}
 
-	if session.Email != req.Email {
+	if !strings.EqualFold(session.Email, req.Email) {
 		return nil, errors.ErrValidation("Email does not match registration")
 	}
 
@@ -62,7 +63,7 @@ func (uc *usecase) ResendRegistrationOTP(
 	}
 
 	otpExpiry := time.Now().Add(time.Duration(RegistrationOTPExpiryMinutes) * time.Minute)
-	if err := uc.Redis.UpdateRegistrationOTP(ctx, tenantID, registrationID, otpHash, otpExpiry); err != nil {
+	if err := uc.Redis.UpdateRegistrationOTP(ctx, registrationID, otpHash, otpExpiry); err != nil {
 		return nil, err
 	}
 
