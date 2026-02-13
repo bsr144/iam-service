@@ -75,6 +75,17 @@ func (r *userRepository) EmailExistsInTenant(ctx context.Context, tenantID uuid.
 	return count > 0, nil
 }
 
+func (r *userRepository) EmailExists(ctx context.Context, email string) (bool, error) {
+	var count int64
+	err := r.getDB(ctx).Model(&entity.User{}).
+		Where("email = ?", email).
+		Count(&count).Error
+	if err != nil {
+		return false, translateError(err, "user")
+	}
+	return count > 0, nil
+}
+
 func (r *userRepository) Delete(ctx context.Context, id uuid.UUID) error {
 	now := time.Now()
 	result := r.getDB(ctx).Model(&entity.User{}).
