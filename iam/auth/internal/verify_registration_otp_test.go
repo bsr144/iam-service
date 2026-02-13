@@ -18,7 +18,6 @@ import (
 )
 
 func TestVerifyRegistrationOTP(t *testing.T) {
-	tenantID := uuid.New()
 	registrationID := uuid.New()
 	email := "test@example.com"
 	validOTP := "123456"
@@ -38,7 +37,6 @@ func TestVerifyRegistrationOTP(t *testing.T) {
 			setupMocks: func(redis *MockRegistrationSessionStore) {
 				session := &entity.RegistrationSession{
 					ID:           registrationID,
-					TenantID:     tenantID,
 					Email:        email,
 					Status:       entity.RegistrationSessionStatusPendingVerification,
 					OTPHash:      string(otpHash),
@@ -47,15 +45,15 @@ func TestVerifyRegistrationOTP(t *testing.T) {
 					MaxAttempts:  5,
 					ExpiresAt:    time.Now().Add(10 * time.Minute),
 				}
-				redis.On("GetRegistrationSession", mock.Anything, tenantID, registrationID).Return(session, nil)
-				redis.On("MarkRegistrationVerified", mock.Anything, tenantID, registrationID, mock.AnythingOfType("string")).Return(nil)
+				redis.On("GetRegistrationSession", mock.Anything, registrationID).Return(session, nil)
+				redis.On("MarkRegistrationVerified", mock.Anything, registrationID, mock.AnythingOfType("string")).Return(nil)
 			},
 		},
 		{
 			name: "error - registration not found",
 			req:  &authdto.VerifyRegistrationOTPRequest{Email: email, OTPCode: validOTP},
 			setupMocks: func(redis *MockRegistrationSessionStore) {
-				redis.On("GetRegistrationSession", mock.Anything, tenantID, registrationID).Return(nil, errors.ErrNotFound("registration not found"))
+				redis.On("GetRegistrationSession", mock.Anything, registrationID).Return(nil, errors.ErrNotFound("registration not found"))
 			},
 			expectedError: "not found",
 			expectedCode:  errors.CodeNotFound,
@@ -66,14 +64,13 @@ func TestVerifyRegistrationOTP(t *testing.T) {
 			setupMocks: func(redis *MockRegistrationSessionStore) {
 				session := &entity.RegistrationSession{
 					ID:           registrationID,
-					TenantID:     tenantID,
 					Email:        email,
 					Status:       entity.RegistrationSessionStatusPendingVerification,
 					OTPHash:      string(otpHash),
 					OTPExpiresAt: time.Now().Add(10 * time.Minute),
 					ExpiresAt:    time.Now().Add(10 * time.Minute),
 				}
-				redis.On("GetRegistrationSession", mock.Anything, tenantID, registrationID).Return(session, nil)
+				redis.On("GetRegistrationSession", mock.Anything, registrationID).Return(session, nil)
 			},
 			expectedError: "Email does not match",
 			expectedCode:  errors.CodeValidation,
@@ -84,14 +81,13 @@ func TestVerifyRegistrationOTP(t *testing.T) {
 			setupMocks: func(redis *MockRegistrationSessionStore) {
 				session := &entity.RegistrationSession{
 					ID:           registrationID,
-					TenantID:     tenantID,
 					Email:        email,
 					Status:       entity.RegistrationSessionStatusPendingVerification,
 					OTPHash:      string(otpHash),
 					OTPExpiresAt: time.Now().Add(10 * time.Minute),
 					ExpiresAt:    time.Now().Add(-1 * time.Minute),
 				}
-				redis.On("GetRegistrationSession", mock.Anything, tenantID, registrationID).Return(session, nil)
+				redis.On("GetRegistrationSession", mock.Anything, registrationID).Return(session, nil)
 			},
 			expectedError: "expired",
 			expectedCode:  "REGISTRATION_EXPIRED",
@@ -103,7 +99,6 @@ func TestVerifyRegistrationOTP(t *testing.T) {
 				verifiedAt := time.Now()
 				session := &entity.RegistrationSession{
 					ID:           registrationID,
-					TenantID:     tenantID,
 					Email:        email,
 					Status:       entity.RegistrationSessionStatusVerified,
 					OTPHash:      string(otpHash),
@@ -111,7 +106,7 @@ func TestVerifyRegistrationOTP(t *testing.T) {
 					VerifiedAt:   &verifiedAt,
 					ExpiresAt:    time.Now().Add(10 * time.Minute),
 				}
-				redis.On("GetRegistrationSession", mock.Anything, tenantID, registrationID).Return(session, nil)
+				redis.On("GetRegistrationSession", mock.Anything, registrationID).Return(session, nil)
 			},
 			expectedError: "already verified",
 			expectedCode:  errors.CodeConflict,
@@ -122,14 +117,13 @@ func TestVerifyRegistrationOTP(t *testing.T) {
 			setupMocks: func(redis *MockRegistrationSessionStore) {
 				session := &entity.RegistrationSession{
 					ID:           registrationID,
-					TenantID:     tenantID,
 					Email:        email,
 					Status:       entity.RegistrationSessionStatusPendingVerification,
 					OTPHash:      string(otpHash),
 					OTPExpiresAt: time.Now().Add(-1 * time.Minute),
 					ExpiresAt:    time.Now().Add(10 * time.Minute),
 				}
-				redis.On("GetRegistrationSession", mock.Anything, tenantID, registrationID).Return(session, nil)
+				redis.On("GetRegistrationSession", mock.Anything, registrationID).Return(session, nil)
 			},
 			expectedError: "expired",
 			expectedCode:  "OTP_EXPIRED",
@@ -140,7 +134,6 @@ func TestVerifyRegistrationOTP(t *testing.T) {
 			setupMocks: func(redis *MockRegistrationSessionStore) {
 				session := &entity.RegistrationSession{
 					ID:           registrationID,
-					TenantID:     tenantID,
 					Email:        email,
 					Status:       entity.RegistrationSessionStatusFailed,
 					OTPHash:      string(otpHash),
@@ -149,7 +142,7 @@ func TestVerifyRegistrationOTP(t *testing.T) {
 					MaxAttempts:  5,
 					ExpiresAt:    time.Now().Add(10 * time.Minute),
 				}
-				redis.On("GetRegistrationSession", mock.Anything, tenantID, registrationID).Return(session, nil)
+				redis.On("GetRegistrationSession", mock.Anything, registrationID).Return(session, nil)
 			},
 			expectedError: "Too many failed attempts",
 			expectedCode:  errors.CodeTooManyRequests,
@@ -160,7 +153,6 @@ func TestVerifyRegistrationOTP(t *testing.T) {
 			setupMocks: func(redis *MockRegistrationSessionStore) {
 				session := &entity.RegistrationSession{
 					ID:           registrationID,
-					TenantID:     tenantID,
 					Email:        email,
 					Status:       entity.RegistrationSessionStatusPendingVerification,
 					OTPHash:      string(otpHash),
@@ -169,8 +161,8 @@ func TestVerifyRegistrationOTP(t *testing.T) {
 					MaxAttempts:  5,
 					ExpiresAt:    time.Now().Add(10 * time.Minute),
 				}
-				redis.On("GetRegistrationSession", mock.Anything, tenantID, registrationID).Return(session, nil)
-				redis.On("IncrementRegistrationAttempts", mock.Anything, tenantID, registrationID).Return(1, nil)
+				redis.On("GetRegistrationSession", mock.Anything, registrationID).Return(session, nil)
+				redis.On("IncrementRegistrationAttempts", mock.Anything, registrationID).Return(1, nil)
 			},
 			expectedError: "incorrect",
 			expectedCode:  errors.CodeUnauthorized,
@@ -193,7 +185,7 @@ func TestVerifyRegistrationOTP(t *testing.T) {
 			}
 
 			ctx := context.Background()
-			resp, err := uc.VerifyRegistrationOTP(ctx, tenantID, registrationID, tt.req)
+			resp, err := uc.VerifyRegistrationOTP(ctx, registrationID, tt.req)
 
 			if tt.expectedError != "" {
 				require.Error(t, err)

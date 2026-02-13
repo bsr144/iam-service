@@ -106,6 +106,11 @@ func (m *MockUserRepository) EmailExistsInTenant(ctx context.Context, tenantID u
 	return args.Bool(0), args.Error(1)
 }
 
+func (m *MockUserRepository) EmailExists(ctx context.Context, email string) (bool, error) {
+	args := m.Called(ctx, email)
+	return args.Bool(0), args.Error(1)
+}
+
 func (m *MockUserRepository) List(ctx context.Context, filter *usercontract.UserListFilter) ([]*entity.User, int64, error) {
 	args := m.Called(ctx, filter)
 	return args.Get(0).([]*entity.User), args.Get(1).(int64), args.Error(2)
@@ -128,8 +133,8 @@ func (m *MockRegistrationSessionStore) CreateRegistrationSession(ctx context.Con
 	return args.Error(0)
 }
 
-func (m *MockRegistrationSessionStore) GetRegistrationSession(ctx context.Context, tenantID, sessionID uuid.UUID) (*entity.RegistrationSession, error) {
-	args := m.Called(ctx, tenantID, sessionID)
+func (m *MockRegistrationSessionStore) GetRegistrationSession(ctx context.Context, sessionID uuid.UUID) (*entity.RegistrationSession, error) {
+	args := m.Called(ctx, sessionID)
 	if args.Get(0) == nil {
 		return nil, args.Error(1)
 	}
@@ -141,48 +146,58 @@ func (m *MockRegistrationSessionStore) UpdateRegistrationSession(ctx context.Con
 	return args.Error(0)
 }
 
-func (m *MockRegistrationSessionStore) DeleteRegistrationSession(ctx context.Context, tenantID, sessionID uuid.UUID) error {
-	args := m.Called(ctx, tenantID, sessionID)
+func (m *MockRegistrationSessionStore) DeleteRegistrationSession(ctx context.Context, sessionID uuid.UUID) error {
+	args := m.Called(ctx, sessionID)
 	return args.Error(0)
 }
 
-func (m *MockRegistrationSessionStore) IncrementRegistrationAttempts(ctx context.Context, tenantID, sessionID uuid.UUID) (int, error) {
-	args := m.Called(ctx, tenantID, sessionID)
+func (m *MockRegistrationSessionStore) IncrementRegistrationAttempts(ctx context.Context, sessionID uuid.UUID) (int, error) {
+	args := m.Called(ctx, sessionID)
 	return args.Int(0), args.Error(1)
 }
 
-func (m *MockRegistrationSessionStore) UpdateRegistrationOTP(ctx context.Context, tenantID, sessionID uuid.UUID, otpHash string, expiresAt time.Time) error {
-	args := m.Called(ctx, tenantID, sessionID, otpHash, expiresAt)
+func (m *MockRegistrationSessionStore) UpdateRegistrationOTP(ctx context.Context, sessionID uuid.UUID, otpHash string, expiresAt time.Time) error {
+	args := m.Called(ctx, sessionID, otpHash, expiresAt)
 	return args.Error(0)
 }
 
-func (m *MockRegistrationSessionStore) MarkRegistrationVerified(ctx context.Context, tenantID, sessionID uuid.UUID, tokenHash string) error {
-	args := m.Called(ctx, tenantID, sessionID, tokenHash)
+func (m *MockRegistrationSessionStore) MarkRegistrationVerified(ctx context.Context, sessionID uuid.UUID, tokenHash string) error {
+	args := m.Called(ctx, sessionID, tokenHash)
 	return args.Error(0)
 }
 
-func (m *MockRegistrationSessionStore) LockRegistrationEmail(ctx context.Context, tenantID uuid.UUID, email string, ttl time.Duration) (bool, error) {
-	args := m.Called(ctx, tenantID, email, ttl)
+func (m *MockRegistrationSessionStore) MarkRegistrationPasswordSet(ctx context.Context, sessionID uuid.UUID, passwordHash string, tokenHash string) error {
+	args := m.Called(ctx, sessionID, passwordHash, tokenHash)
+	return args.Error(0)
+}
+
+func (m *MockRegistrationSessionStore) GetRegistrationPasswordHash(ctx context.Context, sessionID uuid.UUID) (string, error) {
+	args := m.Called(ctx, sessionID)
+	return args.String(0), args.Error(1)
+}
+
+func (m *MockRegistrationSessionStore) LockRegistrationEmail(ctx context.Context, email string, ttl time.Duration) (bool, error) {
+	args := m.Called(ctx, email, ttl)
 	return args.Bool(0), args.Error(1)
 }
 
-func (m *MockRegistrationSessionStore) UnlockRegistrationEmail(ctx context.Context, tenantID uuid.UUID, email string) error {
-	args := m.Called(ctx, tenantID, email)
+func (m *MockRegistrationSessionStore) UnlockRegistrationEmail(ctx context.Context, email string) error {
+	args := m.Called(ctx, email)
 	return args.Error(0)
 }
 
-func (m *MockRegistrationSessionStore) IsRegistrationEmailLocked(ctx context.Context, tenantID uuid.UUID, email string) (bool, error) {
-	args := m.Called(ctx, tenantID, email)
+func (m *MockRegistrationSessionStore) IsRegistrationEmailLocked(ctx context.Context, email string) (bool, error) {
+	args := m.Called(ctx, email)
 	return args.Bool(0), args.Error(1)
 }
 
-func (m *MockRegistrationSessionStore) IncrementRegistrationRateLimit(ctx context.Context, tenantID uuid.UUID, email string, ttl time.Duration) (int64, error) {
-	args := m.Called(ctx, tenantID, email, ttl)
+func (m *MockRegistrationSessionStore) IncrementRegistrationRateLimit(ctx context.Context, email string, ttl time.Duration) (int64, error) {
+	args := m.Called(ctx, email, ttl)
 	return args.Get(0).(int64), args.Error(1)
 }
 
-func (m *MockRegistrationSessionStore) GetRegistrationRateLimitCount(ctx context.Context, tenantID uuid.UUID, email string) (int64, error) {
-	args := m.Called(ctx, tenantID, email)
+func (m *MockRegistrationSessionStore) GetRegistrationRateLimitCount(ctx context.Context, email string) (int64, error) {
+	args := m.Called(ctx, email)
 	return args.Get(0).(int64), args.Error(1)
 }
 

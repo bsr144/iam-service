@@ -16,7 +16,6 @@ import (
 )
 
 func TestGetRegistrationStatus(t *testing.T) {
-	tenantID := uuid.New()
 	registrationID := uuid.New()
 	email := "test@example.com"
 
@@ -34,7 +33,6 @@ func TestGetRegistrationStatus(t *testing.T) {
 			setupMocks: func(redis *MockRegistrationSessionStore) {
 				session := &entity.RegistrationSession{
 					ID:          registrationID,
-					TenantID:    tenantID,
 					Email:       email,
 					Status:      entity.RegistrationSessionStatusPendingVerification,
 					Attempts:    2,
@@ -43,7 +41,7 @@ func TestGetRegistrationStatus(t *testing.T) {
 					MaxResends:  3,
 					ExpiresAt:   time.Now().Add(10 * time.Minute),
 				}
-				redis.On("GetRegistrationSession", mock.Anything, tenantID, registrationID).Return(session, nil)
+				redis.On("GetRegistrationSession", mock.Anything, registrationID).Return(session, nil)
 			},
 			checkResponse: func(t *testing.T, session *entity.RegistrationSession) {},
 		},
@@ -53,7 +51,6 @@ func TestGetRegistrationStatus(t *testing.T) {
 			setupMocks: func(redis *MockRegistrationSessionStore) {
 				session := &entity.RegistrationSession{
 					ID:          registrationID,
-					TenantID:    tenantID,
 					Email:       email,
 					Status:      entity.RegistrationSessionStatusVerified,
 					Attempts:    0,
@@ -62,14 +59,14 @@ func TestGetRegistrationStatus(t *testing.T) {
 					MaxResends:  3,
 					ExpiresAt:   time.Now().Add(10 * time.Minute),
 				}
-				redis.On("GetRegistrationSession", mock.Anything, tenantID, registrationID).Return(session, nil)
+				redis.On("GetRegistrationSession", mock.Anything, registrationID).Return(session, nil)
 			},
 		},
 		{
 			name:  "error - registration not found",
 			email: email,
 			setupMocks: func(redis *MockRegistrationSessionStore) {
-				redis.On("GetRegistrationSession", mock.Anything, tenantID, registrationID).Return(nil, errors.ErrNotFound("registration not found"))
+				redis.On("GetRegistrationSession", mock.Anything, registrationID).Return(nil, errors.ErrNotFound("registration not found"))
 			},
 			expectedError: "not found",
 			expectedCode:  errors.CodeNotFound,
@@ -80,12 +77,11 @@ func TestGetRegistrationStatus(t *testing.T) {
 			setupMocks: func(redis *MockRegistrationSessionStore) {
 				session := &entity.RegistrationSession{
 					ID:        registrationID,
-					TenantID:  tenantID,
 					Email:     email,
 					Status:    entity.RegistrationSessionStatusPendingVerification,
 					ExpiresAt: time.Now().Add(10 * time.Minute),
 				}
-				redis.On("GetRegistrationSession", mock.Anything, tenantID, registrationID).Return(session, nil)
+				redis.On("GetRegistrationSession", mock.Anything, registrationID).Return(session, nil)
 			},
 			expectedError: "not found",
 			expectedCode:  errors.CodeNotFound,
@@ -104,7 +100,7 @@ func TestGetRegistrationStatus(t *testing.T) {
 			}
 
 			ctx := context.Background()
-			resp, err := uc.GetRegistrationStatus(ctx, tenantID, registrationID, tt.email)
+			resp, err := uc.GetRegistrationStatus(ctx, registrationID, tt.email)
 
 			if tt.expectedError != "" {
 				require.Error(t, err)
