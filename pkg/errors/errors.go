@@ -160,9 +160,12 @@ func (e *AppError) WithDetails(details map[string]interface{}) *AppError {
 func newWithCaller(code, message string, httpStatus int, kind Kind, skip int) *AppError {
 	file, line := "unknown", 0
 	if _, f, l, ok := runtime.Caller(skip); ok {
-
 		if idx := strings.LastIndex(f, "/"); idx >= 0 {
-			f = f[idx+1:]
+			if idx2 := strings.LastIndex(f[:idx], "/"); idx2 >= 0 {
+				f = f[idx2+1:]
+			} else {
+				f = f[idx+1:]
+			}
 		}
 		file, line = f, l
 	}
