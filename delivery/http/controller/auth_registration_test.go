@@ -83,6 +83,38 @@ func (m *MockAuthUsecase) GetRegistrationStatus(ctx context.Context, registratio
 	return args.Get(0).(*authdto.RegistrationStatusResponse), args.Error(1)
 }
 
+func (m *MockAuthUsecase) InitiateLogin(ctx context.Context, req *authdto.InitiateLoginRequest) (*authdto.UnifiedLoginResponse, error) {
+	args := m.Called(ctx, req)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).(*authdto.UnifiedLoginResponse), args.Error(1)
+}
+
+func (m *MockAuthUsecase) VerifyLoginOTP(ctx context.Context, req *authdto.VerifyLoginOTPRequest) (*authdto.VerifyLoginOTPResponse, error) {
+	args := m.Called(ctx, req)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).(*authdto.VerifyLoginOTPResponse), args.Error(1)
+}
+
+func (m *MockAuthUsecase) ResendLoginOTP(ctx context.Context, req *authdto.ResendLoginOTPRequest) (*authdto.ResendLoginOTPResponse, error) {
+	args := m.Called(ctx, req)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).(*authdto.ResendLoginOTPResponse), args.Error(1)
+}
+
+func (m *MockAuthUsecase) GetLoginStatus(ctx context.Context, req *authdto.GetLoginStatusRequest) (*authdto.LoginStatusResponse, error) {
+	args := m.Called(ctx, req)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).(*authdto.LoginStatusResponse), args.Error(1)
+}
+
 func setupTestApp() *fiber.App {
 	return fiber.New(fiber.Config{
 		ErrorHandler: func(c *fiber.Ctx, err error) error {

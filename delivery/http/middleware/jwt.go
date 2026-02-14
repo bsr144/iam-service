@@ -18,6 +18,16 @@ func JWTAuth(cfg *config.Config) fiber.Handler {
 		Issuer:        cfg.JWT.Issuer,
 	}
 
+	if cfg.JWT.SigningMethod == "RS256" {
+		if privateKey, err := jwtpkg.LoadPrivateKeyFromFile(cfg.JWT.PrivateKeyPath); err == nil {
+			tokenConfig.PrivateKey = privateKey
+		}
+		if publicKey, err := jwtpkg.LoadPublicKeyFromFile(cfg.JWT.PublicKeyPath); err == nil {
+			tokenConfig.PublicKey = publicKey
+		}
+		tokenConfig.SigningMethod = "RS256"
+	}
+
 	return func(c *fiber.Ctx) error {
 
 		authHeader := c.Get("Authorization")
@@ -42,6 +52,22 @@ func JWTAuth(cfg *config.Config) fiber.Handler {
 
 		tokenString := parts[1]
 
+		// Try multi-tenant claims first (login flow tokens)
+		multiClaims, multiErr := jwtpkg.ParseMultiTenantAccessToken(tokenString, tokenConfig)
+		if multiErr == nil && len(multiClaims.Tenants) > 0 {
+			// Build a legacy JWTClaims for backward compatibility
+			legacyClaims := &jwtpkg.JWTClaims{
+				UserID:           multiClaims.UserID,
+				Email:            multiClaims.Email,
+				SessionID:        multiClaims.SessionID,
+				RegisteredClaims: multiClaims.RegisteredClaims,
+			}
+			c.Locals(UserClaimsKey, legacyClaims)
+			c.Locals(MultiTenantClaimsKey, multiClaims)
+			return c.Next()
+		}
+
+		// Fall back to legacy single-tenant claims (registration flow tokens)
 		claims, err := jwtpkg.ParseAccessToken(tokenString, tokenConfig)
 		if err != nil {
 			var appErr *errors.AppError

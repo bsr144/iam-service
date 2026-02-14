@@ -10,7 +10,8 @@ import (
 )
 
 const (
-	UserClaimsKey = "user_claims"
+	UserClaimsKey         = "user_claims"
+	MultiTenantClaimsKey  = "multi_tenant_claims"
 )
 
 func GetUserClaims(c *fiber.Ctx) (*jwtpkg.JWTClaims, error) {
@@ -25,6 +26,20 @@ func GetUserClaims(c *fiber.Ctx) (*jwtpkg.JWTClaims, error) {
 	}
 
 	return jwtClaims, nil
+}
+
+func GetMultiTenantClaims(c *fiber.Ctx) (*jwtpkg.MultiTenantClaims, error) {
+	claims := c.Locals(MultiTenantClaimsKey)
+	if claims == nil {
+		return nil, errors.ErrUnauthorized("multi-tenant claims not found in context")
+	}
+
+	multiClaims, ok := claims.(*jwtpkg.MultiTenantClaims)
+	if !ok {
+		return nil, errors.ErrInternal("invalid multi-tenant claims type in context")
+	}
+
+	return multiClaims, nil
 }
 
 func GetUserID(c *fiber.Ctx) (uuid.UUID, error) {

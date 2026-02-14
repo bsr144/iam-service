@@ -75,6 +75,9 @@ func NewServer(cfg *config.Config) *Server {
 	productRepo := postgres.NewProductRepository(postgresDB)
 	permissionRepo := postgres.NewPermissionRepository(postgresDB)
 	rolePermissionRepo := postgres.NewRolePermissionRepository(postgresDB)
+	userSessionRepo := postgres.NewUserSessionRepository(postgresDB)
+	userTenantRegRepo := postgres.NewUserTenantRegistrationRepository(postgresDB)
+	productsByTenantRepo := postgres.NewProductsByTenantRepository(postgresDB)
 
 	masterdataCategoryRepo := postgres.NewMasterdataCategoryRepository(postgresDB)
 	masterdataItemRepo := postgres.NewMasterdataItemRepository(postgresDB)
@@ -98,6 +101,10 @@ func NewServer(cfg *config.Config) *Server {
 		permissionRepo,
 		emailService,
 		redisWrapper,
+		redisWrapper,
+		userSessionRepo,
+		userTenantRegRepo,
+		productsByTenantRepo,
 		auditLogger,
 	)
 	roleUsecase := role.NewUsecase(
