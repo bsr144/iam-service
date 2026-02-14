@@ -16,14 +16,13 @@ const (
 )
 
 type LoginSession struct {
-	ID       uuid.UUID `json:"id"`
-	TenantID uuid.UUID `json:"tenant_id"`
-	UserID   uuid.UUID `json:"user_id"`
-	Email    string    `json:"email"`
+	ID     uuid.UUID `json:"id"`
+	UserID uuid.UUID `json:"user_id"`
+	Email  string    `json:"email"`
 
 	Status LoginSessionStatus `json:"status"`
 
-	OTPHash      string    `json:"-"`
+	OTPHash      string    `json:"otp_hash"`
 	OTPCreatedAt time.Time `json:"otp_created_at"`
 	OTPExpiresAt time.Time `json:"otp_expires_at"`
 
@@ -37,8 +36,6 @@ type LoginSession struct {
 
 	IPAddress string `json:"ip_address"`
 	UserAgent string `json:"user_agent"`
-
-	ProductID *uuid.UUID `json:"product_id,omitempty"`
 
 	CreatedAt  time.Time  `json:"created_at"`
 	ExpiresAt  time.Time  `json:"expires_at"`

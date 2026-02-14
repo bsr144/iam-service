@@ -77,6 +77,50 @@ func GenerateAccessToken(
 	return tokenString, nil
 }
 
+func GenerateMultiTenantAccessToken(
+	userID uuid.UUID,
+	email string,
+	tenants []TenantClaim,
+	sessionID uuid.UUID,
+	config *TokenConfig,
+) (string, error) {
+	now := time.Now()
+	expiresAt := now.Add(config.AccessExpiry)
+
+	claims := &MultiTenantClaims{
+		UserID:    userID,
+		Email:     email,
+		Tenants:   tenants,
+		SessionID: sessionID,
+		RegisteredClaims: jwt.RegisteredClaims{
+			Subject:   userID.String(),
+			Issuer:    config.Issuer,
+			Audience:  config.Audience,
+			IssuedAt:  jwt.NewNumericDate(now),
+			ExpiresAt: jwt.NewNumericDate(expiresAt),
+			NotBefore: jwt.NewNumericDate(now),
+		},
+	}
+
+	var token *jwt.Token
+	var signingKey interface{}
+
+	if config.SigningMethod == "RS256" {
+		token = jwt.NewWithClaims(jwt.SigningMethodRS256, claims)
+		signingKey = config.PrivateKey
+	} else {
+		token = jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
+		signingKey = []byte(config.AccessSecret)
+	}
+
+	tokenString, err := token.SignedString(signingKey)
+	if err != nil {
+		return "", fmt.Errorf("failed to sign multi-tenant token: %w", err)
+	}
+
+	return tokenString, nil
+}
+
 func GenerateRefreshToken(
 	userID uuid.UUID,
 	sessionID uuid.UUID,
