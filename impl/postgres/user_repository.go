@@ -32,7 +32,7 @@ func (r *userRepository) Create(ctx context.Context, user *entity.User) error {
 
 func (r *userRepository) GetByID(ctx context.Context, id uuid.UUID) (*entity.User, error) {
 	var user entity.User
-	err := r.getDB(ctx).Where("id = ?", id).First(&user).Error
+	err := r.getDB(ctx).Where("id = ? AND deleted_at IS NULL", id).First(&user).Error
 	if err != nil {
 		return nil, translateError(err, "user")
 	}
@@ -41,7 +41,7 @@ func (r *userRepository) GetByID(ctx context.Context, id uuid.UUID) (*entity.Use
 
 func (r *userRepository) GetByEmail(ctx context.Context, tenantID uuid.UUID, email string) (*entity.User, error) {
 	var user entity.User
-	err := r.getDB(ctx).Where("tenant_id = ? AND email = ?", tenantID, email).First(&user).Error
+	err := r.getDB(ctx).Where("tenant_id = ? AND email = ? AND deleted_at IS NULL", tenantID, email).First(&user).Error
 	if err != nil {
 		return nil, translateError(err, "user")
 	}
@@ -50,7 +50,7 @@ func (r *userRepository) GetByEmail(ctx context.Context, tenantID uuid.UUID, ema
 
 func (r *userRepository) GetByEmailAnyTenant(ctx context.Context, email string) (*entity.User, error) {
 	var user entity.User
-	err := r.getDB(ctx).Where("email = ?", email).First(&user).Error
+	err := r.getDB(ctx).Where("email = ? AND deleted_at IS NULL", email).First(&user).Error
 	if err != nil {
 		return nil, translateError(err, "user")
 	}
