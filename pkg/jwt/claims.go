@@ -7,8 +7,6 @@ import (
 	"github.com/google/uuid"
 )
 
-// JWTClaims is the legacy single-tenant claims structure.
-// Kept for backward compatibility with registration flow.
 type JWTClaims struct {
 	UserID      uuid.UUID  `json:"user_id"`
 	Email       string     `json:"email"`
@@ -96,7 +94,6 @@ func (c *JWTClaims) HasAudience(audience string) bool {
 	return false
 }
 
-// ProductClaim represents a product (application) with its roles and permissions.
 type ProductClaim struct {
 	ProductID   uuid.UUID `json:"product_id"`
 	ProductCode string    `json:"product_code"`
@@ -104,14 +101,11 @@ type ProductClaim struct {
 	Permissions []string  `json:"permissions,omitempty"`
 }
 
-// TenantClaim represents a tenant with its associated products.
 type TenantClaim struct {
 	TenantID uuid.UUID      `json:"tenant_id"`
 	Products []ProductClaim `json:"products,omitempty"`
 }
 
-// MultiTenantClaims is the multi-tenant JWT claims structure for login flow.
-// Carries all tenant+product associations for the user.
 type MultiTenantClaims struct {
 	UserID    uuid.UUID     `json:"user_id"`
 	Email     string        `json:"email"`
