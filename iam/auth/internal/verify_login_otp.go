@@ -1,0 +1,255 @@
+package internal
+
+import (
+	"context"
+	"net"
+	"net/http"
+	"strings"
+	"time"
+
+	"iam-service/entity"
+	"iam-service/iam/auth/authdto"
+	"iam-service/pkg/errors"
+	jwtpkg "iam-service/pkg/jwt"
+
+	"github.com/google/uuid"
+	"golang.org/x/crypto/bcrypt"
+)
+
+func (uc *usecase) VerifyLoginOTP(
+	ctx context.Context,
+	req *authdto.VerifyLoginOTPRequest,
+) (*authdto.VerifyLoginOTPResponse, error) {
+	session, err := uc.LoginRedis.GetLoginSession(ctx, req.LoginSessionID)
+	if err != nil {
+		return nil, errors.New("SESSION_NOT_FOUND", "Login session not found or expired", http.StatusNotFound)
+	}
+
+	if !strings.EqualFold(session.Email, req.Email) {
+		return nil, errors.New("SESSION_MISMATCH", "Email does not match login session", http.StatusBadRequest)
+	}
+
+	if !session.CanAttemptOTP() {
+		if session.IsExpired() {
+			return nil, errors.New("SESSION_EXPIRED", "Login session has expired. Please start a new login.", http.StatusGone)
+		}
+		if session.IsOTPExpired() {
+			return nil, errors.New("OTP_EXPIRED", "OTP has expired. Please request a new one.", http.StatusGone)
+		}
+		if session.IsLocked() {
+			return nil, errors.New("SESSION_LOCKED", "Too many failed attempts. Please start a new login.", http.StatusForbidden)
+		}
+		return nil, errors.New("OTP_INVALID", "Unable to verify OTP", http.StatusBadRequest)
+	}
+
+	if err := bcrypt.CompareHashAndPassword([]byte(session.OTPHash), []byte(req.OTPCode)); err != nil {
+		_, _ = uc.LoginRedis.IncrementLoginAttempts(ctx, req.LoginSessionID)
+		remaining := session.RemainingAttempts() - 1
+		if remaining <= 0 {
+			return nil, errors.New("SESSION_LOCKED", "Too many failed attempts. Please start a new login.", http.StatusForbidden)
+		}
+		return nil, errors.New("OTP_INVALID", "Invalid OTP code", http.StatusBadRequest)
+	}
+
+	if err := uc.LoginRedis.MarkLoginVerified(ctx, req.LoginSessionID); err != nil {
+		return nil, errors.ErrInternal("failed to mark session verified").WithError(err)
+	}
+
+	tenantClaims, userTenants, err := uc.buildMultiTenantClaims(ctx, session.UserID)
+	if err != nil {
+		return nil, errors.ErrInternal("failed to build tenant claims").WithError(err)
+	}
+
+	sessionID := uuid.New()
+	tokenFamily := uuid.New()
+
+	tokenConfig, err := uc.buildTokenConfig()
+	if err != nil {
+		return nil, err
+	}
+
+	accessToken, err := jwtpkg.GenerateMultiTenantAccessToken(
+		session.UserID,
+		session.Email,
+		tenantClaims,
+		sessionID,
+		tokenConfig,
+	)
+	if err != nil {
+		return nil, errors.ErrInternal("failed to generate access token").WithError(err)
+	}
+
+	refreshToken, err := jwtpkg.GenerateRefreshToken(session.UserID, sessionID, tokenConfig)
+	if err != nil {
+		return nil, errors.ErrInternal("failed to generate refresh token").WithError(err)
+	}
+
+	refreshTokenHash := hashToken(refreshToken)
+	refreshTokenEntity := &entity.RefreshToken{
+		UserID:      session.UserID,
+		TokenHash:   refreshTokenHash,
+		TokenFamily: tokenFamily,
+		ExpiresAt:   time.Now().Add(uc.Config.JWT.RefreshExpiry),
+		IPAddress:   net.ParseIP(req.IPAddress),
+		UserAgent:   req.UserAgent,
+		CreatedAt:   time.Now(),
+	}
+	now := time.Now()
+	userSession := &entity.UserSession{
+		UserID:       session.UserID,
+		IPAddress:    req.IPAddress,
+		LoginMethod:  entity.UserSessionLoginMethodEmailOTP,
+		Status:       entity.UserSessionStatusActive,
+		LastActiveAt: now,
+		ExpiresAt:    now.Add(uc.Config.JWT.RefreshExpiry),
+		CreatedAt:    now,
+		UpdatedAt:    now,
+	}
+	if req.UserAgent != "" {
+		userSession.UserAgent = &req.UserAgent
+	}
+
+	if err := uc.TxManager.WithTransaction(ctx, func(txCtx context.Context) error {
+		if err := uc.RefreshTokenRepo.Create(txCtx, refreshTokenEntity); err != nil {
+			return err
+		}
+		userSession.RefreshTokenID = &refreshTokenEntity.ID
+		if err := uc.UserSessionRepo.Create(txCtx, userSession); err != nil {
+			return err
+		}
+		return nil
+	}); err != nil {
+		return nil, errors.ErrInternal("failed to complete login").WithError(err)
+	}
+
+	// Best-effort cleanup: session is already verified and will auto-expire via Redis TTL
+	_ = uc.LoginRedis.DeleteLoginSession(ctx, req.LoginSessionID)
+
+	// Profile fetch is non-critical — empty name in response is acceptable
+	profile, _ := uc.UserProfileRepo.GetByUserID(ctx, session.UserID)
+	fullName := ""
+	if profile != nil {
+		fullName = profile.FirstName
+		if profile.LastName != "" {
+			fullName += " " + profile.LastName
+		}
+	}
+
+	return &authdto.VerifyLoginOTPResponse{
+		AccessToken:  accessToken,
+		RefreshToken: refreshToken,
+		ExpiresIn:    int(uc.Config.JWT.AccessExpiry.Seconds()),
+		TokenType:    "Bearer",
+		User: authdto.LoginUserResponse{
+			ID:       session.UserID,
+			Email:    session.Email,
+			FullName: fullName,
+			Tenants:  userTenants,
+		},
+	}, nil
+}
+
+func (uc *usecase) buildMultiTenantClaims(ctx context.Context, userID uuid.UUID) ([]jwtpkg.TenantClaim, []authdto.TenantResponse, error) {
+	registrations, err := uc.UserTenantRegRepo.ListActiveByUserID(ctx, userID)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	var jwtClaims []jwtpkg.TenantClaim
+	var dtoTenants []authdto.TenantResponse
+
+	for _, reg := range registrations {
+		products, err := uc.ProductsByTenantRepo.ListActiveByTenantID(ctx, reg.TenantID)
+		if err != nil {
+			return nil, nil, err
+		}
+
+		var jwtProducts []jwtpkg.ProductClaim
+		var dtoProducts []authdto.ProductResponse
+
+		for _, product := range products {
+			userRoles, err := uc.UserRoleRepo.ListActiveByUserID(ctx, userID, &product.ID)
+			if err != nil {
+				return nil, nil, err
+			}
+
+			var roleIDs []uuid.UUID
+			var roleNames []string
+			for _, ur := range userRoles {
+				roleIDs = append(roleIDs, ur.RoleID)
+			}
+
+			if len(roleIDs) > 0 {
+				roles, err := uc.RoleRepo.GetByIDs(ctx, roleIDs)
+				if err != nil {
+					return nil, nil, err
+				}
+				for _, r := range roles {
+					roleNames = append(roleNames, r.Code)
+				}
+			}
+
+			var permissions []string
+			if len(roleIDs) > 0 {
+				permissions, err = uc.PermissionRepo.GetCodesByRoleIDs(ctx, roleIDs)
+				if err != nil {
+					return nil, nil, err
+				}
+			}
+
+			jwtProducts = append(jwtProducts, jwtpkg.ProductClaim{
+				ProductID:   product.ID,
+				ProductCode: product.Code,
+				Roles:       roleNames,
+				Permissions: permissions,
+			})
+
+			dtoProducts = append(dtoProducts, authdto.ProductResponse{
+				ProductID:   product.ID,
+				ProductCode: product.Code,
+				Roles:       roleNames,
+				Permissions: permissions,
+			})
+		}
+
+		jwtClaims = append(jwtClaims, jwtpkg.TenantClaim{
+			TenantID: reg.TenantID,
+			Products: jwtProducts,
+		})
+
+		dtoTenants = append(dtoTenants, authdto.TenantResponse{
+			TenantID: reg.TenantID,
+			Products: dtoProducts,
+		})
+	}
+
+	return jwtClaims, dtoTenants, nil
+}
+
+func (uc *usecase) buildTokenConfig() (*jwtpkg.TokenConfig, error) {
+	tokenConfig := &jwtpkg.TokenConfig{
+		SigningMethod: uc.Config.JWT.SigningMethod,
+		AccessSecret:  uc.Config.JWT.AccessSecret,
+		RefreshSecret: uc.Config.JWT.RefreshSecret,
+		AccessExpiry:  uc.Config.JWT.AccessExpiry,
+		RefreshExpiry: uc.Config.JWT.RefreshExpiry,
+		Issuer:        uc.Config.JWT.Issuer,
+		Audience:      uc.Config.JWT.Audience,
+	}
+
+	if uc.Config.JWT.SigningMethod == "RS256" {
+		privateKey, err := jwtpkg.LoadPrivateKeyFromFile(uc.Config.JWT.PrivateKeyPath)
+		if err != nil {
+			return nil, errors.ErrInternal("failed to load JWT private key").WithError(err)
+		}
+		tokenConfig.PrivateKey = privateKey
+
+		publicKey, err := jwtpkg.LoadPublicKeyFromFile(uc.Config.JWT.PublicKeyPath)
+		if err != nil {
+			return nil, errors.ErrInternal("failed to load JWT public key").WithError(err)
+		}
+		tokenConfig.PublicKey = publicKey
+	}
+
+	return tokenConfig, nil
+}

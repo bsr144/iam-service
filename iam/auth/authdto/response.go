@@ -17,6 +17,25 @@ type UserResponse struct {
 	MFAEnabled bool       `json:"mfa_enabled"`
 }
 
+type ProductResponse struct {
+	ProductID   uuid.UUID `json:"product_id"`
+	ProductCode string    `json:"product_code"`
+	Roles       []string  `json:"roles,omitempty"`
+	Permissions []string  `json:"permissions,omitempty"`
+}
+
+type TenantResponse struct {
+	TenantID uuid.UUID         `json:"tenant_id"`
+	Products []ProductResponse `json:"products,omitempty"`
+}
+
+type LoginUserResponse struct {
+	ID       uuid.UUID        `json:"id"`
+	Email    string           `json:"email"`
+	FullName string           `json:"full_name"`
+	Tenants  []TenantResponse `json:"tenants,omitempty"`
+}
+
 type OTPConfig struct {
 	Length                int `json:"length"`
 	ExpiresInMinutes      int `json:"expires_in_minutes"`

@@ -6,19 +6,27 @@ import (
 	"github.com/google/uuid"
 )
 
+type InitiateLoginRequest struct {
+	Email     string `json:"email" validate:"required,email"`
+	IPAddress string `json:"-"`
+	UserAgent string `json:"-"`
+}
+
 type VerifyLoginOTPRequest struct {
-	LoginSessionID uuid.UUID `json:"login_session_id" validate:"required"`
+	LoginSessionID uuid.UUID `json:"-"`
 	Email          string    `json:"email" validate:"required,email"`
 	OTPCode        string    `json:"otp_code" validate:"required,len=6,numeric"`
+	IPAddress      string    `json:"-"`
+	UserAgent      string    `json:"-"`
 }
 
 type ResendLoginOTPRequest struct {
-	LoginSessionID uuid.UUID `json:"login_session_id" validate:"required"`
+	LoginSessionID uuid.UUID `json:"-"`
 	Email          string    `json:"email" validate:"required,email"`
 }
 
 type GetLoginStatusRequest struct {
-	LoginSessionID uuid.UUID `json:"login_session_id" validate:"required"`
+	LoginSessionID uuid.UUID `json:"-"`
 	Email          string    `json:"email" validate:"required,email"`
 }
 
@@ -33,11 +41,11 @@ type LoginOTPRequiredResponse struct {
 }
 
 type VerifyLoginOTPResponse struct {
-	AccessToken  string       `json:"access_token"`
-	RefreshToken string       `json:"refresh_token"`
-	ExpiresIn    int          `json:"expires_in"`
-	TokenType    string       `json:"token_type"`
-	User         UserResponse `json:"user"`
+	AccessToken  string            `json:"access_token"`
+	RefreshToken string            `json:"refresh_token"`
+	ExpiresIn    int               `json:"expires_in"`
+	TokenType    string            `json:"token_type"`
+	User         LoginUserResponse `json:"user"`
 }
 
 type ResendLoginOTPResponse struct {
@@ -76,11 +84,11 @@ type UnifiedLoginResponse struct {
 	ResendsAllowed  *int       `json:"resends_allowed,omitempty"`
 	SessionExpires  *time.Time `json:"session_expires_at,omitempty"`
 
-	AccessToken  string        `json:"access_token,omitempty"`
-	RefreshToken string        `json:"refresh_token,omitempty"`
-	ExpiresIn    int           `json:"expires_in,omitempty"`
-	TokenType    string        `json:"token_type,omitempty"`
-	User         *UserResponse `json:"user,omitempty"`
+	AccessToken  string             `json:"access_token,omitempty"`
+	RefreshToken string             `json:"refresh_token,omitempty"`
+	ExpiresIn    int                `json:"expires_in,omitempty"`
+	TokenType    string             `json:"token_type,omitempty"`
+	User         *LoginUserResponse `json:"user,omitempty"`
 }
 
 func NewOTPRequiredResponse(sessionID uuid.UUID, email string, sessionExpires, otpExpires time.Time, maxAttempts, maxResends int) *UnifiedLoginResponse {
@@ -95,7 +103,7 @@ func NewOTPRequiredResponse(sessionID uuid.UUID, email string, sessionExpires, o
 	}
 }
 
-func NewLoginSuccessResponse(accessToken, refreshToken string, expiresIn int, user UserResponse) *UnifiedLoginResponse {
+func NewLoginSuccessResponse(accessToken, refreshToken string, expiresIn int, user LoginUserResponse) *UnifiedLoginResponse {
 	return &UnifiedLoginResponse{
 		Status:       LoginResultSuccess,
 		AccessToken:  accessToken,

@@ -21,6 +21,11 @@ type Usecase interface {
 	SetPassword(ctx context.Context, req *authdto.SetPasswordRequest) (*authdto.SetPasswordResponse, error)
 	CompleteProfileRegistration(ctx context.Context, req *authdto.CompleteProfileRegistrationRequest) (*authdto.CompleteProfileRegistrationResponse, error)
 	GetRegistrationStatus(ctx context.Context, registrationID uuid.UUID, email string) (*authdto.RegistrationStatusResponse, error)
+
+	InitiateLogin(ctx context.Context, req *authdto.InitiateLoginRequest) (*authdto.UnifiedLoginResponse, error)
+	VerifyLoginOTP(ctx context.Context, req *authdto.VerifyLoginOTPRequest) (*authdto.VerifyLoginOTPResponse, error)
+	ResendLoginOTP(ctx context.Context, req *authdto.ResendLoginOTPRequest) (*authdto.ResendLoginOTPResponse, error)
+	GetLoginStatus(ctx context.Context, req *authdto.GetLoginStatusRequest) (*authdto.LoginStatusResponse, error)
 }
 
 func NewUsecase(
@@ -39,6 +44,10 @@ func NewUsecase(
 	permissionRepo contract.PermissionRepository,
 	emailService contract.EmailService,
 	redis contract.RegistrationSessionStore,
+	loginRedis contract.LoginSessionStore,
+	userSessionRepo contract.UserSessionRepository,
+	userTenantRegRepo contract.UserTenantRegistrationRepository,
+	productsByTenantRepo contract.ProductsByTenantRepository,
 	auditLogger logger.AuditLogger,
 ) Usecase {
 	return internal.NewUsecase(
@@ -57,6 +66,10 @@ func NewUsecase(
 		permissionRepo,
 		emailService,
 		redis,
+		loginRedis,
+		userSessionRepo,
+		userTenantRegRepo,
+		productsByTenantRepo,
 		auditLogger,
 	)
 }

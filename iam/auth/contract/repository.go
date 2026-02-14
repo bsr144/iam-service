@@ -80,6 +80,35 @@ type PermissionRepository interface {
 	GetCodesByRoleIDs(ctx context.Context, roleIDs []uuid.UUID) ([]string, error)
 }
 
+type LoginSessionStore interface {
+	CreateLoginSession(ctx context.Context, session *entity.LoginSession, ttl time.Duration) error
+	GetLoginSession(ctx context.Context, sessionID uuid.UUID) (*entity.LoginSession, error)
+	UpdateLoginSession(ctx context.Context, session *entity.LoginSession, ttl time.Duration) error
+	DeleteLoginSession(ctx context.Context, sessionID uuid.UUID) error
+
+	IncrementLoginAttempts(ctx context.Context, sessionID uuid.UUID) (int, error)
+	UpdateLoginOTP(ctx context.Context, sessionID uuid.UUID, otpHash string, expiresAt time.Time) error
+	MarkLoginVerified(ctx context.Context, sessionID uuid.UUID) error
+
+	IncrementLoginRateLimit(ctx context.Context, email string, ttl time.Duration) (int64, error)
+	GetLoginRateLimitCount(ctx context.Context, email string) (int64, error)
+}
+
+type UserSessionRepository interface {
+	Create(ctx context.Context, session *entity.UserSession) error
+	GetByID(ctx context.Context, id uuid.UUID) (*entity.UserSession, error)
+	UpdateLastActive(ctx context.Context, id uuid.UUID) error
+	Revoke(ctx context.Context, id uuid.UUID) error
+}
+
+type UserTenantRegistrationRepository interface {
+	ListActiveByUserID(ctx context.Context, userID uuid.UUID) ([]entity.UserTenantRegistration, error)
+}
+
+type ProductsByTenantRepository interface {
+	ListActiveByTenantID(ctx context.Context, tenantID uuid.UUID) ([]entity.Product, error)
+}
+
 type RegistrationSessionStore interface {
 	CreateRegistrationSession(ctx context.Context, session *entity.RegistrationSession, ttl time.Duration) error
 	GetRegistrationSession(ctx context.Context, sessionID uuid.UUID) (*entity.RegistrationSession, error)
