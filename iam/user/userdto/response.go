@@ -27,25 +27,21 @@ type RoleInfo struct {
 }
 
 type UserDetailResponse struct {
-	ID                uuid.UUID   `json:"id"`
-	Email             string      `json:"email"`
-	FirstName         string      `json:"first_name"`
-	LastName          string      `json:"last_name"`
-	FullName          string      `json:"full_name"`
-	Phone             *string     `json:"phone,omitempty"`
-	Address           *string     `json:"address,omitempty"`
-	AvatarURL         *string     `json:"avatar_url,omitempty"`
-	PreferredLanguage string      `json:"preferred_language"`
-	Timezone          string      `json:"timezone"`
-	EmailVerified     bool        `json:"email_verified"`
-	PINSet            bool        `json:"pin_set"`
-	IsActive          bool        `json:"is_active"`
-	IsServiceAccount  bool        `json:"is_service_account"`
-	TenantID          *uuid.UUID  `json:"tenant_id,omitempty"`
-	BranchID          *uuid.UUID  `json:"branch_id,omitempty"`
-	LastLoginAt       *time.Time  `json:"last_login_at,omitempty"`
-	CreatedAt         time.Time   `json:"created_at"`
-	UpdatedAt         time.Time   `json:"updated_at"`
+	ID                uuid.UUID    `json:"id"`
+	Email             string       `json:"email"`
+	FirstName         string       `json:"first_name"`
+	LastName          string       `json:"last_name"`
+	FullName          string       `json:"full_name"`
+	PhoneNumber       *string      `json:"phone_number,omitempty"`
+	Address           *string      `json:"address,omitempty"`
+	ProfilePictureURL *string      `json:"profile_picture_url,omitempty"`
+	EmailVerified     bool         `json:"email_verified"`
+	PINSet            bool         `json:"pin_set"`
+	Status            string       `json:"status"`
+	IsActive          bool         `json:"is_active"`
+	LastLoginAt       *time.Time   `json:"last_login_at,omitempty"`
+	CreatedAt         time.Time    `json:"created_at"`
+	UpdatedAt         time.Time    `json:"updated_at"`
 	Branches          []BranchInfo `json:"branches,omitempty"`
 	Roles             []RoleInfo   `json:"roles,omitempty"`
 }
@@ -56,11 +52,10 @@ type UserListItem struct {
 	FirstName     string     `json:"first_name"`
 	LastName      string     `json:"last_name"`
 	FullName      string     `json:"full_name"`
-	Phone         *string    `json:"phone,omitempty"`
+	PhoneNumber   *string    `json:"phone_number,omitempty"`
 	EmailVerified bool       `json:"email_verified"`
+	Status        string     `json:"status"`
 	IsActive      bool       `json:"is_active"`
-	TenantID      *uuid.UUID `json:"tenant_id,omitempty"`
-	BranchID      *uuid.UUID `json:"branch_id,omitempty"`
 	LastLoginAt   *time.Time `json:"last_login_at,omitempty"`
 	CreatedAt     time.Time  `json:"created_at"`
 }

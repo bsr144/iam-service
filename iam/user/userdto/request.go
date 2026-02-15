@@ -3,13 +3,12 @@ package userdto
 import "github.com/google/uuid"
 
 type CreateRequest struct {
-	TenantID  uuid.UUID  `json:"tenant_id" validate:"required"`
-	RoleCode  string     `json:"role_code" validate:"required"`
-	Email     string     `json:"email" validate:"required,email,max=255"`
-	Password  string     `json:"password" validate:"required,min=8,max=128"`
-	FirstName string     `json:"first_name" validate:"required,min=2,max=100"`
-	LastName  string     `json:"last_name" validate:"required,min=2,max=100"`
-	BranchID  *uuid.UUID `json:"branch_id,omitempty" validate:"omitempty,uuid"`
+	TenantID uuid.UUID `json:"tenant_id" validate:"required"`
+	RoleCode string    `json:"role_code" validate:"required"`
+	Email    string    `json:"email" validate:"required,email,max=255"`
+	Password string    `json:"password" validate:"required,min=8,max=128"`
+	FirstName string   `json:"first_name" validate:"required,min=2,max=100"`
+	LastName  string   `json:"last_name" validate:"required,min=2,max=100"`
 }
 
 type ListRequest struct {
@@ -19,7 +18,6 @@ type ListRequest struct {
 	SortOrder string     `query:"sort_order" validate:"omitempty,oneof=asc desc"`
 	Status    string     `query:"status" validate:"omitempty"`
 	Search    string     `query:"search" validate:"omitempty,max=100"`
-	BranchID  *uuid.UUID `query:"branch_id" validate:"omitempty"`
 	RoleID    *uuid.UUID `query:"role_id" validate:"omitempty"`
 }
 
@@ -42,12 +40,10 @@ func (r *ListRequest) SetDefaults() {
 }
 
 type UpdateMeRequest struct {
-	FirstName         *string `json:"first_name,omitempty" validate:"omitempty,min=2,max=100"`
-	LastName          *string `json:"last_name,omitempty" validate:"omitempty,min=2,max=100"`
-	Phone             *string `json:"phone,omitempty" validate:"omitempty,max=50"`
-	Address           *string `json:"address,omitempty" validate:"omitempty,max=500"`
-	PreferredLanguage *string `json:"preferred_language,omitempty" validate:"omitempty,oneof=en id"`
-	Timezone          *string `json:"timezone,omitempty" validate:"omitempty,max=50"`
+	FirstName   *string `json:"first_name,omitempty" validate:"omitempty,min=2,max=100"`
+	LastName    *string `json:"last_name,omitempty" validate:"omitempty,min=2,max=100"`
+	PhoneNumber *string `json:"phone_number,omitempty" validate:"omitempty,max=50"`
+	Address     *string `json:"address,omitempty" validate:"omitempty,max=500"`
 }
 
 type UpdateRequest struct {
@@ -55,8 +51,7 @@ type UpdateRequest struct {
 	LastName  *string `json:"last_name,omitempty" validate:"omitempty,min=2,max=100"`
 	Phone     *string `json:"phone,omitempty" validate:"omitempty,max=50"`
 	Address   *string `json:"address,omitempty" validate:"omitempty,max=500"`
-	IsActive  *bool   `json:"is_active,omitempty"`
-	BranchID  *uuid.UUID `json:"branch_id,omitempty"`
+	Status    *string `json:"status,omitempty" validate:"omitempty"`
 }
 
 type RejectRequest struct {
