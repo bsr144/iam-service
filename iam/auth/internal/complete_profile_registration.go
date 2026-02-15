@@ -4,7 +4,6 @@ import (
 	"context"
 	"crypto/sha256"
 	"encoding/hex"
-	"encoding/json"
 	"net/http"
 	"strings"
 	"time"
@@ -58,7 +57,6 @@ func (uc *usecase) CompleteProfileRegistration(
 		return nil, errors.ErrValidation("You must be at least 18 years old to register")
 	}
 
-	dobStr := req.DateOfBirth
 	gender := entity.Gender(req.Gender)
 	maritalStatus := entity.MaritalStatus(req.MaritalStatus)
 
@@ -75,29 +73,22 @@ func (uc *usecase) CompleteProfileRegistration(
 		return nil, errors.ErrForbidden("Password has not been set")
 	}
 
-	userStatus := entity.UserStatusActive
-	var user *entity.User
 	now := time.Now()
+	var user *entity.User
 
 	err = uc.TxManager.WithTransaction(ctx, func(txCtx context.Context) error {
 		user = &entity.User{
-			Email:         session.Email,
-			EmailVerified: true,
-			IsActive:      userStatus == entity.UserStatusActive,
+			Email:              session.Email,
+			Status:             entity.UserStatusActive,
+			StatusChangedAt:    &now,
+			RegistrationSource: "SELF",
 		}
 		if err := uc.UserRepo.Create(txCtx, user); err != nil {
 			return err
 		}
 
-		credentials := &entity.UserCredentials{
-			UserID:          user.ID,
-			PasswordHash:    &passwordHashStr,
-			PasswordHistory: json.RawMessage("[]"),
-			PINHistory:      json.RawMessage("[]"),
-			CreatedAt:       now,
-			UpdatedAt:       now,
-		}
-		if err := uc.UserCredentialsRepo.Create(txCtx, credentials); err != nil {
+		authMethod := entity.NewPasswordAuthMethod(user.ID, passwordHashStr)
+		if err := uc.UserAuthMethodRepo.Create(txCtx, authMethod); err != nil {
 			return err
 		}
 
@@ -105,34 +96,24 @@ func (uc *usecase) CompleteProfileRegistration(
 			UserID:        user.ID,
 			FirstName:     firstName,
 			LastName:      lastName,
-			Phone:         &req.PhoneNumber,
-			DateOfBirth:   &dobStr,
+			PhoneNumber:   &req.PhoneNumber,
+			DateOfBirth:   &dob,
 			Gender:        &gender,
 			MaritalStatus: &maritalStatus,
 			Address:       &req.Address,
-			PlaceOfBirth:  &req.PlaceOfBirth,
-			CreatedAt:     now,
 			UpdatedAt:     now,
 		}
 		if err := uc.UserProfileRepo.Create(txCtx, profile); err != nil {
 			return err
 		}
 
-		security := &entity.UserSecurity{
-			UserID:    user.ID,
-			Metadata:  json.RawMessage("{}"),
-			CreatedAt: now,
-			UpdatedAt: now,
+		securityState := &entity.UserSecurityState{
+			UserID:          user.ID,
+			EmailVerified:   true,
+			EmailVerifiedAt: &now,
+			UpdatedAt:       now,
 		}
-		if err := uc.UserSecurityRepo.Create(txCtx, security); err != nil {
-			return err
-		}
-
-		tracking := entity.NewUserActivationTracking(user.ID, nil)
-		if err := tracking.AddStatusTransition(string(userStatus), "registration"); err != nil {
-			return err
-		}
-		if err := uc.UserActivationTrackingRepo.Create(txCtx, tracking); err != nil {
+		if err := uc.UserSecurityStateRepo.Create(txCtx, securityState); err != nil {
 			return err
 		}
 
@@ -151,12 +132,14 @@ func (uc *usecase) CompleteProfileRegistration(
 		return nil, errors.ErrInternal("failed to generate auth tokens").WithError(err)
 	}
 
-	_ = uc.EmailService.SendWelcome(ctx, session.Email, firstName)
+	uc.sendEmailAsync(ctx, func(ctx context.Context) error {
+		return uc.EmailService.SendWelcome(ctx, session.Email, firstName)
+	})
 
 	response := &authdto.CompleteProfileRegistrationResponse{
 		UserID:  user.ID,
 		Email:   session.Email,
-		Status:  string(userStatus),
+		Status:  string(entity.UserStatusActive),
 		Message: "Registration completed successfully. You are now logged in.",
 		Profile: authdto.RegistrationUserProfile{
 			FirstName: firstName,
@@ -196,10 +179,6 @@ func (uc *usecase) validateProfileFields(req *authdto.CompleteProfileRegistratio
 
 	if len(req.Address) < 10 {
 		return errors.ErrValidation("address must be at least 10 characters")
-	}
-
-	if len(req.PlaceOfBirth) < 2 {
-		return errors.ErrValidation("place_of_birth must be at least 2 characters")
 	}
 
 	return nil

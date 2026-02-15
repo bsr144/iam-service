@@ -7,7 +7,6 @@ import (
 	"iam-service/entity"
 	"iam-service/iam/auth/authdto"
 	"iam-service/pkg/errors"
-	"iam-service/pkg/logger"
 
 	"github.com/google/uuid"
 )
@@ -96,17 +95,9 @@ func (uc *usecase) InitiateRegistration(
 		return nil, err
 	}
 
-	if err := uc.EmailService.SendOTP(ctx, req.Email, otp, RegistrationOTPExpiryMinutes); err != nil {
-		uc.AuditLogger.Log(ctx, logger.AuditEvent{
-			Domain:  "auth",
-			Action:  "registration_otp_send_failed",
-			Success: false,
-			Reason:  err.Error(),
-			Metadata: map[string]any{
-				"email": req.Email,
-			},
-		})
-	}
+	uc.sendEmailAsync(ctx, func(ctx context.Context) error {
+		return uc.EmailService.SendOTP(ctx, req.Email, otp, RegistrationOTPExpiryMinutes)
+	})
 
 	return &authdto.InitiateRegistrationResponse{
 		RegistrationID: sessionID.String(),

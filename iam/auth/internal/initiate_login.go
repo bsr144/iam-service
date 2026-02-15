@@ -35,12 +35,12 @@ func (uc *usecase) InitiateLogin(
 		return nil, errors.New("RATE_LIMITED", "Too many login attempts. Please try again later.", http.StatusTooManyRequests)
 	}
 
-	user, err := uc.UserRepo.GetByEmailAnyTenant(ctx, email)
+	user, err := uc.UserRepo.GetByEmail(ctx, email)
 	if err != nil {
 		return nil, errors.New("INVALID_CREDENTIALS", "If an account exists with this email, an OTP has been sent.", http.StatusOK)
 	}
 
-	if !user.IsActive {
+	if !user.IsActive() {
 		return nil, errors.New("INVALID_CREDENTIALS", "If an account exists with this email, an OTP has been sent.", http.StatusOK)
 	}
 
@@ -76,8 +76,9 @@ func (uc *usecase) InitiateLogin(
 		return nil, errors.ErrInternal("failed to create login session").WithError(err)
 	}
 
-	// Best-effort email delivery: user can resend OTP if email fails
-	_ = uc.EmailService.SendOTP(ctx, email, otp, LoginOTPExpiryMinutes)
+	uc.sendEmailAsync(ctx, func(ctx context.Context) error {
+		return uc.EmailService.SendOTP(ctx, email, otp, LoginOTPExpiryMinutes)
+	})
 
 	return authdto.NewOTPRequiredResponse(
 		session.ID,

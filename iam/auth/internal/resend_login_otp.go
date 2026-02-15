@@ -49,8 +49,9 @@ func (uc *usecase) ResendLoginOTP(
 		return nil, errors.ErrInternal("failed to update OTP").WithError(err)
 	}
 
-	// Best-effort email delivery: user can resend OTP if email fails
-	_ = uc.EmailService.SendOTP(ctx, session.Email, otp, LoginOTPExpiryMinutes)
+	uc.sendEmailAsync(ctx, func(ctx context.Context) error {
+		return uc.EmailService.SendOTP(ctx, session.Email, otp, LoginOTPExpiryMinutes)
+	})
 
 	updatedSession, err := uc.LoginRedis.GetLoginSession(ctx, req.LoginSessionID)
 	if err != nil {

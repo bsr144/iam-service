@@ -1,15 +1,35 @@
 package internal
 
 import (
+	"context"
 	"crypto/rand"
 	"crypto/sha256"
 	"encoding/hex"
-	"iam-service/pkg/errors"
 	"math/big"
 	"strings"
+	"time"
+
+	"iam-service/pkg/errors"
+	"iam-service/pkg/logger"
 
 	"golang.org/x/crypto/bcrypt"
 )
+
+func (uc *usecase) sendEmailAsync(ctx context.Context, fn func(ctx context.Context) error) {
+	bgCtx := context.WithoutCancel(ctx)
+	go func() {
+		sendCtx, cancel := context.WithTimeout(bgCtx, 30*time.Second)
+		defer cancel()
+		if err := fn(sendCtx); err != nil {
+			uc.AuditLogger.Log(sendCtx, logger.AuditEvent{
+				Domain:  "auth",
+				Action:  "email_send_failed",
+				Success: false,
+				Reason:  err.Error(),
+			})
+		}
+	}()
+}
 
 func (uc *usecase) validatePassword(password string) error {
 	if len(password) < PasswordMinLength {

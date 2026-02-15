@@ -64,9 +64,9 @@ func (uc *usecase) ResendRegistrationOTP(
 		return nil, err
 	}
 
-	if err := uc.EmailService.SendOTP(ctx, req.Email, otp, RegistrationOTPExpiryMinutes); err != nil {
-
-	}
+	uc.sendEmailAsync(ctx, func(ctx context.Context) error {
+		return uc.EmailService.SendOTP(ctx, req.Email, otp, RegistrationOTPExpiryMinutes)
+	})
 
 	nextResendAt := time.Now().Add(time.Duration(session.ResendCooldownSeconds) * time.Second)
 

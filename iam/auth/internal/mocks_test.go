@@ -75,15 +75,7 @@ func (m *MockUserRepository) GetByID(ctx context.Context, id uuid.UUID) (*entity
 	return args.Get(0).(*entity.User), args.Error(1)
 }
 
-func (m *MockUserRepository) GetByEmail(ctx context.Context, tenantID uuid.UUID, email string) (*entity.User, error) {
-	args := m.Called(ctx, tenantID, email)
-	if args.Get(0) == nil {
-		return nil, args.Error(1)
-	}
-	return args.Get(0).(*entity.User), args.Error(1)
-}
-
-func (m *MockUserRepository) GetByEmailAnyTenant(ctx context.Context, email string) (*entity.User, error) {
+func (m *MockUserRepository) GetByEmail(ctx context.Context, email string) (*entity.User, error) {
 	args := m.Called(ctx, email)
 	if args.Get(0) == nil {
 		return nil, args.Error(1)
@@ -101,11 +93,6 @@ func (m *MockUserRepository) Delete(ctx context.Context, id uuid.UUID) error {
 	return args.Error(0)
 }
 
-func (m *MockUserRepository) EmailExistsInTenant(ctx context.Context, tenantID uuid.UUID, email string) (bool, error) {
-	args := m.Called(ctx, tenantID, email)
-	return args.Bool(0), args.Error(1)
-}
-
 func (m *MockUserRepository) EmailExists(ctx context.Context, email string) (bool, error) {
 	args := m.Called(ctx, email)
 	return args.Bool(0), args.Error(1)
@@ -114,14 +101,6 @@ func (m *MockUserRepository) EmailExists(ctx context.Context, email string) (boo
 func (m *MockUserRepository) List(ctx context.Context, filter *usercontract.UserListFilter) ([]*entity.User, int64, error) {
 	args := m.Called(ctx, filter)
 	return args.Get(0).([]*entity.User), args.Get(1).(int64), args.Error(2)
-}
-
-func (m *MockUserRepository) GetPendingApprovalUsers(ctx context.Context, tenantID uuid.UUID) ([]*entity.User, error) {
-	args := m.Called(ctx, tenantID)
-	if args.Get(0) == nil {
-		return nil, args.Error(1)
-	}
-	return args.Get(0).([]*entity.User), args.Error(1)
 }
 
 type MockRegistrationSessionStore struct {
@@ -236,10 +215,6 @@ type MockUserProfileRepository struct {
 
 func (m *MockUserProfileRepository) Create(ctx context.Context, profile *entity.UserProfile) error {
 	args := m.Called(ctx, profile)
-
-	if profile.ID == uuid.Nil {
-		profile.ID = uuid.New()
-	}
 	return args.Error(0)
 }
 
@@ -256,81 +231,51 @@ func (m *MockUserProfileRepository) Update(ctx context.Context, profile *entity.
 	return args.Error(0)
 }
 
-type MockUserCredentialsRepository struct {
+type MockUserAuthMethodRepository struct {
 	mock.Mock
 }
 
-func (m *MockUserCredentialsRepository) Create(ctx context.Context, credentials *entity.UserCredentials) error {
-	args := m.Called(ctx, credentials)
+func (m *MockUserAuthMethodRepository) Create(ctx context.Context, authMethod *entity.UserAuthMethod) error {
+	args := m.Called(ctx, authMethod)
 
-	if credentials.ID == uuid.Nil {
-		credentials.ID = uuid.New()
+	if authMethod.ID == uuid.Nil {
+		authMethod.ID = uuid.New()
 	}
 	return args.Error(0)
 }
 
-func (m *MockUserCredentialsRepository) GetByUserID(ctx context.Context, userID uuid.UUID) (*entity.UserCredentials, error) {
+func (m *MockUserAuthMethodRepository) GetByUserID(ctx context.Context, userID uuid.UUID) (*entity.UserAuthMethod, error) {
 	args := m.Called(ctx, userID)
 	if args.Get(0) == nil {
 		return nil, args.Error(1)
 	}
-	return args.Get(0).(*entity.UserCredentials), args.Error(1)
+	return args.Get(0).(*entity.UserAuthMethod), args.Error(1)
 }
 
-func (m *MockUserCredentialsRepository) Update(ctx context.Context, credentials *entity.UserCredentials) error {
-	args := m.Called(ctx, credentials)
+func (m *MockUserAuthMethodRepository) Update(ctx context.Context, authMethod *entity.UserAuthMethod) error {
+	args := m.Called(ctx, authMethod)
 	return args.Error(0)
 }
 
-type MockUserSecurityRepository struct {
+type MockUserSecurityStateRepository struct {
 	mock.Mock
 }
 
-func (m *MockUserSecurityRepository) Create(ctx context.Context, security *entity.UserSecurity) error {
-	args := m.Called(ctx, security)
-
-	if security.ID == uuid.Nil {
-		security.ID = uuid.New()
-	}
+func (m *MockUserSecurityStateRepository) Create(ctx context.Context, securityState *entity.UserSecurityState) error {
+	args := m.Called(ctx, securityState)
 	return args.Error(0)
 }
 
-func (m *MockUserSecurityRepository) GetByUserID(ctx context.Context, userID uuid.UUID) (*entity.UserSecurity, error) {
+func (m *MockUserSecurityStateRepository) GetByUserID(ctx context.Context, userID uuid.UUID) (*entity.UserSecurityState, error) {
 	args := m.Called(ctx, userID)
 	if args.Get(0) == nil {
 		return nil, args.Error(1)
 	}
-	return args.Get(0).(*entity.UserSecurity), args.Error(1)
+	return args.Get(0).(*entity.UserSecurityState), args.Error(1)
 }
 
-func (m *MockUserSecurityRepository) Update(ctx context.Context, security *entity.UserSecurity) error {
-	args := m.Called(ctx, security)
-	return args.Error(0)
-}
-
-type MockUserActivationTrackingRepository struct {
-	mock.Mock
-}
-
-func (m *MockUserActivationTrackingRepository) Create(ctx context.Context, tracking *entity.UserActivationTracking) error {
-	args := m.Called(ctx, tracking)
-
-	if tracking.ID == uuid.Nil {
-		tracking.ID = uuid.New()
-	}
-	return args.Error(0)
-}
-
-func (m *MockUserActivationTrackingRepository) GetByUserID(ctx context.Context, userID uuid.UUID) (*entity.UserActivationTracking, error) {
-	args := m.Called(ctx, userID)
-	if args.Get(0) == nil {
-		return nil, args.Error(1)
-	}
-	return args.Get(0).(*entity.UserActivationTracking), args.Error(1)
-}
-
-func (m *MockUserActivationTrackingRepository) Update(ctx context.Context, tracking *entity.UserActivationTracking) error {
-	args := m.Called(ctx, tracking)
+func (m *MockUserSecurityStateRepository) Update(ctx context.Context, securityState *entity.UserSecurityState) error {
+	args := m.Called(ctx, securityState)
 	return args.Error(0)
 }
 
