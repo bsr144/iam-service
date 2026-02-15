@@ -69,11 +69,9 @@ func JWTAuth(cfg *config.Config, blacklistStore ...contract.TokenBlacklistStore)
 			c.Locals(UserClaimsKey, legacyClaims)
 			c.Locals(MultiTenantClaimsKey, multiClaims)
 
-			// Store userID and jti as convenience locals
 			c.Locals("userID", multiClaims.UserID.String())
 			c.Locals("jti", multiClaims.RegisteredClaims.ID)
 
-			// Check token blacklist (fail-open: Redis errors allow request through)
 			if store != nil {
 				if rejected := checkBlacklist(c, store, multiClaims.RegisteredClaims.ID, multiClaims.UserID, multiClaims.RegisteredClaims); rejected != nil {
 					return rejected
@@ -104,11 +102,9 @@ func JWTAuth(cfg *config.Config, blacklistStore ...contract.TokenBlacklistStore)
 
 		c.Locals(UserClaimsKey, claims)
 
-		// Store userID and jti as convenience locals
 		c.Locals("userID", claims.UserID.String())
 		c.Locals("jti", claims.RegisteredClaims.ID)
 
-		// Check token blacklist (fail-open: Redis errors allow request through)
 		if store != nil {
 			if rejected := checkBlacklist(c, store, claims.RegisteredClaims.ID, claims.UserID, claims.RegisteredClaims); rejected != nil {
 				return rejected

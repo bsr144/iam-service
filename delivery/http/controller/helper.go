@@ -100,10 +100,7 @@ func getUserAgent(c *fiber.Ctx) string {
 	return c.Get("User-Agent")
 }
 
-// extractClaimsForLogout extracts userID, JTI, and token expiry from JWT claims.
-// Tries multi-tenant claims first, falls back to legacy claims.
 func extractClaimsForLogout(c *fiber.Ctx) (userID uuid.UUID, jti string, tokenExp time.Time, err error) {
-	// Try multi-tenant claims first (set by middleware)
 	multiClaims := c.Locals("multi_tenant_claims")
 	if multiClaims != nil {
 		mc, ok := multiClaims.(*jwtpkg.MultiTenantClaims)
@@ -117,7 +114,6 @@ func extractClaimsForLogout(c *fiber.Ctx) (userID uuid.UUID, jti string, tokenEx
 		}
 	}
 
-	// Fallback to legacy claims
 	claims, claimsErr := getUserClaims(c)
 	if claimsErr != nil {
 		return uuid.Nil, "", time.Time{}, claimsErr

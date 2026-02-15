@@ -13,13 +13,11 @@ import (
 )
 
 func SetupAuthRoutes(api fiber.Router, cfg *config.Config, authController *controller.AuthController, blacklistStore contract.TokenBlacklistStore) {
-	// Authenticated logout endpoints (require JWT)
 	auth := api.Group("/auth")
 	auth.Use(middleware.JWTAuth(cfg, blacklistStore))
-	auth.Post("/logout", authController.Logout)        // Logout single session
-	auth.Post("/logout-all", authController.LogoutAll) // Logout all sessions
+	auth.Post("/logout", authController.Logout)
+	auth.Post("/logout-all", authController.LogoutAll)
 
-	// Public registration endpoints
 	registrations := api.Group("/registrations")
 	if !cfg.IsDevelopment() {
 		registrations.Use(limiter.New(limiter.Config{
@@ -45,7 +43,6 @@ func SetupAuthRoutes(api fiber.Router, cfg *config.Config, authController *contr
 	registrations.Post("/:id/complete-profile", authController.CompleteProfileRegistration)
 	registrations.Post("/:id/complete", authController.CompleteRegistration)
 
-	// Public login endpoints
 	login := api.Group("/login")
 	if !cfg.IsDevelopment() {
 		login.Use(limiter.New(limiter.Config{
