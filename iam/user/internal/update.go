@@ -3,6 +3,7 @@ package internal
 import (
 	"context"
 
+	"iam-service/entity"
 	"iam-service/iam/user/userdto"
 	"iam-service/pkg/errors"
 
@@ -18,12 +19,6 @@ func (uc *usecase) Update(ctx context.Context, callerTenantID *uuid.UUID, id uui
 		return nil, err
 	}
 
-	if callerTenantID != nil {
-		if user.TenantID == nil || *callerTenantID != *user.TenantID {
-			return nil, errors.ErrForbidden("access denied")
-		}
-	}
-
 	profile, err := uc.UserProfileRepo.GetByUserID(ctx, id)
 	if err != nil && !errors.IsNotFound(err) {
 		return nil, err
@@ -32,12 +27,8 @@ func (uc *usecase) Update(ctx context.Context, callerTenantID *uuid.UUID, id uui
 	userUpdated := false
 	profileUpdated := false
 
-	if req.IsActive != nil {
-		user.IsActive = *req.IsActive
-		userUpdated = true
-	}
-	if req.BranchID != nil {
-		user.BranchID = req.BranchID
+	if req.Status != nil {
+		user.Status = entity.UserStatus(*req.Status)
 		userUpdated = true
 	}
 
@@ -57,7 +48,7 @@ func (uc *usecase) Update(ctx context.Context, callerTenantID *uuid.UUID, id uui
 			profileUpdated = true
 		}
 		if req.Phone != nil {
-			profile.Phone = req.Phone
+			profile.PhoneNumber = req.Phone
 			profileUpdated = true
 		}
 		if req.Address != nil {
@@ -72,15 +63,15 @@ func (uc *usecase) Update(ctx context.Context, callerTenantID *uuid.UUID, id uui
 		}
 	}
 
-	credentials, err := uc.UserCredentialsRepo.GetByUserID(ctx, id)
+	authMethod, err := uc.UserAuthMethodRepo.GetByUserID(ctx, id)
 	if err != nil && !errors.IsNotFound(err) {
 		return nil, err
 	}
 
-	security, err := uc.UserSecurityRepo.GetByUserID(ctx, id)
+	securityState, err := uc.UserSecurityStateRepo.GetByUserID(ctx, id)
 	if err != nil && !errors.IsNotFound(err) {
 		return nil, err
 	}
 
-	return mapUserToDetailResponse(user, profile, credentials, security), nil
+	return mapUserToDetailResponse(user, profile, authMethod, securityState), nil
 }

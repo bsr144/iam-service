@@ -2,7 +2,6 @@ package internal
 
 import (
 	"context"
-	"encoding/json"
 	"time"
 
 	"iam-service/entity"
@@ -36,7 +35,7 @@ func (uc *usecase) Create(ctx context.Context, req *userdto.CreateRequest) (*use
 		return nil, errors.ErrBadRequest("Only system roles can be assigned through this endpoint")
 	}
 
-	emailExists, err := uc.UserRepo.EmailExistsInTenant(ctx, req.TenantID, req.Email)
+	emailExists, err := uc.UserRepo.EmailExists(ctx, req.Email)
 	if err != nil {
 		return nil, errors.ErrInternal("failed to check email").WithError(err)
 	}
@@ -59,25 +58,17 @@ func (uc *usecase) Create(ctx context.Context, req *userdto.CreateRequest) (*use
 
 	err = uc.TxManager.WithTransaction(ctx, func(txCtx context.Context) error {
 		user := &entity.User{
-			TenantID:      &req.TenantID,
-			BranchID:      req.BranchID,
-			Email:         req.Email,
-			EmailVerified: true,
-			IsActive:      true,
+			Email:              req.Email,
+			Status:             entity.UserStatusActive,
+			StatusChangedAt:    &now,
+			RegistrationSource: "ADMIN",
 		}
 		if err := uc.UserRepo.Create(txCtx, user); err != nil {
 			return err
 		}
 
-		credentials := &entity.UserCredentials{
-			UserID:          user.ID,
-			PasswordHash:    &passwordHashStr,
-			PasswordHistory: json.RawMessage("[]"),
-			PINHistory:      json.RawMessage("[]"),
-			CreatedAt:       now,
-			UpdatedAt:       now,
-		}
-		if err := uc.UserCredentialsRepo.Create(txCtx, credentials); err != nil {
+		authMethod := entity.NewPasswordAuthMethod(user.ID, passwordHashStr)
+		if err := uc.UserAuthMethodRepo.Create(txCtx, authMethod); err != nil {
 			return err
 		}
 
@@ -85,7 +76,6 @@ func (uc *usecase) Create(ctx context.Context, req *userdto.CreateRequest) (*use
 			UserID:    user.ID,
 			FirstName: req.FirstName,
 			LastName:  req.LastName,
-			CreatedAt: now,
 			UpdatedAt: now,
 		}
 		if err := uc.UserProfileRepo.Create(txCtx, profile); err != nil {
@@ -95,7 +85,6 @@ func (uc *usecase) Create(ctx context.Context, req *userdto.CreateRequest) (*use
 		userRole := &entity.UserRole{
 			UserID:        user.ID,
 			RoleID:        role.ID,
-			BranchID:      req.BranchID,
 			EffectiveFrom: now,
 			CreatedAt:     now,
 		}
@@ -103,21 +92,13 @@ func (uc *usecase) Create(ctx context.Context, req *userdto.CreateRequest) (*use
 			return err
 		}
 
-		security := &entity.UserSecurity{
-			UserID:    user.ID,
-			Metadata:  json.RawMessage("{}"),
-			CreatedAt: now,
-			UpdatedAt: now,
+		securityState := &entity.UserSecurityState{
+			UserID:        user.ID,
+			EmailVerified: true,
+			EmailVerifiedAt: &now,
+			UpdatedAt:     now,
 		}
-		if err := uc.UserSecurityRepo.Create(txCtx, security); err != nil {
-			return err
-		}
-
-		tracking := entity.NewUserActivationTracking(user.ID, &req.TenantID)
-		if err := tracking.MarkUserCreatedBySystem(); err != nil {
-			return err
-		}
-		if err := uc.UserActivationTrackingRepo.Create(txCtx, tracking); err != nil {
+		if err := uc.UserSecurityStateRepo.Create(txCtx, securityState); err != nil {
 			return err
 		}
 

@@ -18,26 +18,20 @@ func (uc *usecase) GetByID(ctx context.Context, callerTenantID *uuid.UUID, id uu
 		return nil, err
 	}
 
-	if callerTenantID != nil {
-		if user.TenantID == nil || *callerTenantID != *user.TenantID {
-			return nil, errors.ErrForbidden("access denied")
-		}
-	}
-
 	profile, err := uc.UserProfileRepo.GetByUserID(ctx, id)
 	if err != nil && !errors.IsNotFound(err) {
 		return nil, err
 	}
 
-	credentials, err := uc.UserCredentialsRepo.GetByUserID(ctx, id)
+	authMethod, err := uc.UserAuthMethodRepo.GetByUserID(ctx, id)
 	if err != nil && !errors.IsNotFound(err) {
 		return nil, err
 	}
 
-	security, err := uc.UserSecurityRepo.GetByUserID(ctx, id)
+	securityState, err := uc.UserSecurityStateRepo.GetByUserID(ctx, id)
 	if err != nil && !errors.IsNotFound(err) {
 		return nil, err
 	}
 
-	return mapUserToDetailResponse(user, profile, credentials, security), nil
+	return mapUserToDetailResponse(user, profile, authMethod, securityState), nil
 }

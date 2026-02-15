@@ -18,10 +18,10 @@ func (uc *usecase) Unlock(ctx context.Context, id uuid.UUID) (*userdto.UnlockRes
 		return nil, err
 	}
 
-	security, err := uc.UserSecurityRepo.GetByUserID(ctx, id)
+	security, err := uc.UserSecurityStateRepo.GetByUserID(ctx, id)
 	if err != nil {
 		if errors.IsNotFound(err) {
-			return nil, errors.ErrInternal("user security not found")
+			return nil, errors.ErrInternal("user security state not found")
 		}
 		return nil, err
 	}
@@ -33,7 +33,7 @@ func (uc *usecase) Unlock(ctx context.Context, id uuid.UUID) (*userdto.UnlockRes
 	security.LockedUntil = nil
 	security.FailedLoginAttempts = 0
 
-	if err := uc.UserSecurityRepo.Update(ctx, security); err != nil {
+	if err := uc.UserSecurityStateRepo.Update(ctx, security); err != nil {
 		return nil, errors.ErrInternal("failed to unlock user").WithError(err)
 	}
 

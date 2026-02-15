@@ -18,24 +18,22 @@ func (uc *usecase) ResetPIN(ctx context.Context, id uuid.UUID) (*userdto.ResetPI
 		return nil, err
 	}
 
-	credentials, err := uc.UserCredentialsRepo.GetByUserID(ctx, id)
+	securityState, err := uc.UserSecurityStateRepo.GetByUserID(ctx, id)
 	if err != nil {
 		if errors.IsNotFound(err) {
-			return nil, errors.ErrInternal("user credentials not found")
+			return nil, errors.ErrInternal("user security state not found")
 		}
 		return nil, err
 	}
 
-	if credentials.PINHash == nil {
+	if !securityState.PINVerified {
 		return nil, errors.ErrBadRequest("user does not have a PIN set")
 	}
 
-	credentials.PINHash = nil
-	credentials.PINSetAt = nil
-	credentials.PINChangedAt = nil
-	credentials.PINExpiresAt = nil
+	securityState.PINVerified = false
+	securityState.FailedPINAttempts = 0
 
-	if err := uc.UserCredentialsRepo.Update(ctx, credentials); err != nil {
+	if err := uc.UserSecurityStateRepo.Update(ctx, securityState); err != nil {
 		return nil, errors.ErrInternal("failed to reset PIN").WithError(err)
 	}
 

@@ -2,7 +2,9 @@ package internal
 
 import (
 	"context"
+	"time"
 
+	"iam-service/entity"
 	"iam-service/iam/user/userdto"
 	"iam-service/pkg/errors"
 
@@ -18,35 +20,16 @@ func (uc *usecase) Reject(ctx context.Context, id uuid.UUID, approverID uuid.UUI
 		return nil, err
 	}
 
-	tracking, err := uc.UserActivationTrackingRepo.GetByUserID(ctx, id)
-	if err != nil {
-		if errors.IsNotFound(err) {
-			return nil, errors.ErrBadRequest("user activation tracking not found")
-		}
-		return nil, err
+	if user.IsActive() {
+		return nil, errors.ErrBadRequest("cannot reject an active user")
 	}
 
-	if tracking.IsActivated() {
-		return nil, errors.ErrBadRequest("cannot reject an already activated user")
-	}
+	now := time.Now()
+	user.Status = entity.UserStatusInactive
+	user.StatusChangedAt = &now
+	user.StatusChangedBy = &approverID
 
-	if tracking.IsAdminRegistered() {
-		return nil, errors.ErrBadRequest("user has already been processed by admin")
-	}
-
-	err = uc.TxManager.WithTransaction(ctx, func(txCtx context.Context) error {
-		if err := tracking.AddStatusTransition("admin_rejected: "+req.Reason, "admin"); err != nil {
-			return err
-		}
-		if err := uc.UserActivationTrackingRepo.Update(txCtx, tracking); err != nil {
-			return err
-		}
-
-		user.IsActive = false
-		return uc.UserRepo.Update(txCtx, user)
-	})
-
-	if err != nil {
+	if err := uc.UserRepo.Update(ctx, user); err != nil {
 		return nil, errors.ErrInternal("failed to reject user").WithError(err)
 	}
 
