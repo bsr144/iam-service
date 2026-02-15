@@ -19,16 +19,15 @@ func ToUserResponse(resp *userdto.UserDetailResponse) *response.UserResponse {
 	}
 
 	return &response.UserResponse{
-		ID:        resp.ID,
-		Email:     resp.Email,
-		FirstName: resp.FirstName,
-		LastName:  resp.LastName,
-		FullName:  resp.FullName,
-		Phone:     resp.Phone,
-		IsActive:  resp.IsActive,
-		TenantID:  resp.TenantID,
-		BranchID:  resp.BranchID,
-		Roles:     roles,
+		ID:          resp.ID,
+		Email:       resp.Email,
+		FirstName:   resp.FirstName,
+		LastName:    resp.LastName,
+		FullName:    resp.FullName,
+		PhoneNumber: resp.PhoneNumber,
+		Status:      resp.Status,
+		IsActive:    resp.IsActive,
+		Roles:       roles,
 	}
 }
 
@@ -37,13 +36,13 @@ func ToUserListItemResponse(item *userdto.UserListItem) *response.UserListItemRe
 		return nil
 	}
 	return &response.UserListItemResponse{
-		ID:        item.ID,
-		Email:     item.Email,
-		FullName:  item.FullName,
-		Phone:     item.Phone,
-		IsActive:  item.IsActive,
-		TenantID:  item.TenantID,
-		CreatedAt: item.CreatedAt,
+		ID:          item.ID,
+		Email:       item.Email,
+		FullName:    item.FullName,
+		PhoneNumber: item.PhoneNumber,
+		Status:      item.Status,
+		IsActive:    item.IsActive,
+		CreatedAt:   item.CreatedAt,
 	}
 }
 
@@ -85,16 +84,15 @@ func ToUpdateUserResponse(resp *userdto.UpdateResponse) *response.UpdateUserResp
 
 	return &response.UpdateUserResponse{
 		UserResponse: response.UserResponse{
-			ID:        resp.ID,
-			Email:     resp.Email,
-			FirstName: resp.FirstName,
-			LastName:  resp.LastName,
-			FullName:  resp.FullName,
-			Phone:     resp.Phone,
-			IsActive:  resp.IsActive,
-			TenantID:  resp.TenantID,
-			BranchID:  resp.BranchID,
-			Roles:     roles,
+			ID:          resp.ID,
+			Email:       resp.Email,
+			FirstName:   resp.FirstName,
+			LastName:    resp.LastName,
+			FullName:    resp.FullName,
+			PhoneNumber: resp.PhoneNumber,
+			Status:      resp.Status,
+			IsActive:    resp.IsActive,
+			Roles:       roles,
 		},
 		Message: resp.Message,
 	}

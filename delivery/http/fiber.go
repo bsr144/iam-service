@@ -65,10 +65,9 @@ func NewServer(cfg *config.Config) *Server {
 
 	authUserRepo := postgres.NewUserRepository(postgresDB)
 	userProfileRepo := postgres.NewUserProfileRepository(postgresDB)
-	userCredentialsRepo := postgres.NewUserCredentialsRepository(postgresDB)
-	userSecurityRepo := postgres.NewUserSecurityRepository(postgresDB)
+	userAuthMethodRepo := postgres.NewUserAuthMethodRepository(postgresDB)
+	userSecurityStateRepo := postgres.NewUserSecurityStateRepository(postgresDB)
 	tenantRepo := postgres.NewTenantRepository(postgresDB)
-	userActivationTrackingRepo := postgres.NewUserActivationTrackingRepository(postgresDB)
 	roleRepo := postgres.NewRoleRepository(postgresDB)
 	refreshTokenRepo := postgres.NewRefreshTokenRepository(postgresDB)
 	userRoleRepo := postgres.NewUserRoleRepository(postgresDB)
@@ -90,10 +89,9 @@ func NewServer(cfg *config.Config) *Server {
 		cfg,
 		authUserRepo,
 		userProfileRepo,
-		userCredentialsRepo,
-		userSecurityRepo,
+		userAuthMethodRepo,
+		userSecurityStateRepo,
 		tenantRepo,
-		userActivationTrackingRepo,
 		roleRepo,
 		refreshTokenRepo,
 		userRoleRepo,
@@ -119,11 +117,10 @@ func NewServer(cfg *config.Config) *Server {
 		cfg,
 		authUserRepo,
 		userProfileRepo,
-		userCredentialsRepo,
-		userSecurityRepo,
+		userAuthMethodRepo,
+		userSecurityStateRepo,
 		tenantRepo,
 		roleRepo,
-		userActivationTrackingRepo,
 		userRoleRepo,
 	)
 	masterdataUsecase := masterdata.NewUsecase(
