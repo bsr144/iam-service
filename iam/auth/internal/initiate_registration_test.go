@@ -23,14 +23,14 @@ func TestInitiateRegistration(t *testing.T) {
 	tests := []struct {
 		name          string
 		req           *authdto.InitiateRegistrationRequest
-		setupMocks    func(*MockUserRepository, *MockRegistrationSessionStore, *MockEmailService)
+		setupMocks    func(*MockUserRepository, *MockInMemoryStore, *MockEmailService)
 		expectedError string
 		expectedCode  string
 	}{
 		{
 			name: "success - registration initiated",
 			req:  &authdto.InitiateRegistrationRequest{Email: email, IPAddress: ipAddress, UserAgent: userAgent},
-			setupMocks: func(userRepo *MockUserRepository, redis *MockRegistrationSessionStore, emailSvc *MockEmailService) {
+			setupMocks: func(userRepo *MockUserRepository, redis *MockInMemoryStore, emailSvc *MockEmailService) {
 				userRepo.On("EmailExists", mock.Anything, email).Return(false, nil)
 				redis.On("IncrementRegistrationRateLimit", mock.Anything, email, mock.Anything).Return(int64(1), nil)
 				redis.On("IsRegistrationEmailLocked", mock.Anything, email).Return(false, nil)
@@ -42,14 +42,14 @@ func TestInitiateRegistration(t *testing.T) {
 		{
 			name: "success - email already exists (returns fake success to prevent enumeration)",
 			req:  &authdto.InitiateRegistrationRequest{Email: email, IPAddress: ipAddress, UserAgent: userAgent},
-			setupMocks: func(userRepo *MockUserRepository, redis *MockRegistrationSessionStore, emailSvc *MockEmailService) {
+			setupMocks: func(userRepo *MockUserRepository, redis *MockInMemoryStore, emailSvc *MockEmailService) {
 				userRepo.On("EmailExists", mock.Anything, email).Return(true, nil)
 			},
 		},
 		{
 			name: "error - rate limit exceeded",
 			req:  &authdto.InitiateRegistrationRequest{Email: email, IPAddress: ipAddress, UserAgent: userAgent},
-			setupMocks: func(userRepo *MockUserRepository, redis *MockRegistrationSessionStore, emailSvc *MockEmailService) {
+			setupMocks: func(userRepo *MockUserRepository, redis *MockInMemoryStore, emailSvc *MockEmailService) {
 				userRepo.On("EmailExists", mock.Anything, email).Return(false, nil)
 				redis.On("IncrementRegistrationRateLimit", mock.Anything, email, mock.Anything).Return(int64(RegistrationRateLimitPerHour+1), nil)
 			},
@@ -59,7 +59,7 @@ func TestInitiateRegistration(t *testing.T) {
 		{
 			name: "error - email already locked (registration in progress)",
 			req:  &authdto.InitiateRegistrationRequest{Email: email, IPAddress: ipAddress, UserAgent: userAgent},
-			setupMocks: func(userRepo *MockUserRepository, redis *MockRegistrationSessionStore, emailSvc *MockEmailService) {
+			setupMocks: func(userRepo *MockUserRepository, redis *MockInMemoryStore, emailSvc *MockEmailService) {
 				userRepo.On("EmailExists", mock.Anything, email).Return(false, nil)
 				redis.On("IncrementRegistrationRateLimit", mock.Anything, email, mock.Anything).Return(int64(1), nil)
 				redis.On("IsRegistrationEmailLocked", mock.Anything, email).Return(true, nil)
@@ -72,7 +72,7 @@ func TestInitiateRegistration(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			userRepo := new(MockUserRepository)
-			redis := new(MockRegistrationSessionStore)
+			redis := new(MockInMemoryStore)
 			emailSvc := new(MockEmailService)
 
 			tt.setupMocks(userRepo, redis, emailSvc)
@@ -80,7 +80,7 @@ func TestInitiateRegistration(t *testing.T) {
 			uc := &usecase{
 				Config:       &config.Config{},
 				UserRepo:     userRepo,
-				Redis:        redis,
+				InMemoryStore:        redis,
 				EmailService: emailSvc,
 			}
 

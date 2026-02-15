@@ -25,7 +25,7 @@ func (uc *usecase) CompleteRegistration(
 		return nil, err
 	}
 
-	session, err := uc.Redis.GetRegistrationSession(ctx, req.RegistrationID)
+	session, err := uc.InMemoryStore.GetRegistrationSession(ctx, req.RegistrationID)
 	if err != nil {
 		return nil, err
 	}
@@ -113,8 +113,8 @@ func (uc *usecase) CompleteRegistration(
 		return nil, errors.ErrInternal("failed to create user").WithError(err)
 	}
 
-	_ = uc.Redis.DeleteRegistrationSession(ctx, req.RegistrationID)
-	_ = uc.Redis.UnlockRegistrationEmail(ctx, session.Email)
+	_ = uc.InMemoryStore.DeleteRegistrationSession(ctx, req.RegistrationID)
+	_ = uc.InMemoryStore.UnlockRegistrationEmail(ctx, session.Email)
 
 	response := &authdto.CompleteRegistrationResponse{
 		UserID: user.ID,

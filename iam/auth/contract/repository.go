@@ -122,3 +122,16 @@ type RegistrationSessionStore interface {
 	IncrementRegistrationRateLimit(ctx context.Context, email string, ttl time.Duration) (int64, error)
 	GetRegistrationRateLimitCount(ctx context.Context, email string) (int64, error)
 }
+
+type TokenBlacklistStore interface {
+	BlacklistToken(ctx context.Context, jti string, ttl time.Duration) error
+	IsTokenBlacklisted(ctx context.Context, jti string) (bool, error)
+	BlacklistUser(ctx context.Context, userID uuid.UUID, timestamp time.Time, ttl time.Duration) error
+	GetUserBlacklistTimestamp(ctx context.Context, userID uuid.UUID) (*time.Time, error)
+}
+
+type InMemoryStore interface {
+	RegistrationSessionStore
+	LoginSessionStore
+	TokenBlacklistStore
+}

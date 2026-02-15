@@ -18,28 +18,25 @@ func (uc *usecase) Logout(ctx context.Context, req *authdto.LogoutRequest) error
 	refreshToken, err := uc.RefreshTokenRepo.GetByTokenHash(ctx, tokenHash)
 	if err != nil {
 		if errors.IsNotFound(err) {
-			return nil // idempotent: not-found is OK
+			return nil
 		}
 		return errors.ErrInternal("failed to verify token").WithError(err)
 	}
 
-	// BOLA check: verify ownership
 	if refreshToken.UserID != req.UserID {
-		return nil // idempotent — don't reveal token exists for other user
+		return nil
 	}
 
 	if refreshToken.RevokedAt != nil {
-		return nil // idempotent: already revoked is OK
+		return nil
 	}
 
 	if refreshToken.IsExpired() {
-		return nil // idempotent: expired is OK
+		return nil
 	}
 
-	// Find linked session
 	session, _ := uc.UserSessionRepo.GetByRefreshTokenID(ctx, refreshToken.ID)
 
-	// Atomic revocation
 	err = uc.TxManager.WithTransaction(ctx, func(txCtx context.Context) error {
 		if err := uc.RefreshTokenRepo.Revoke(txCtx, refreshToken.ID, "User logout"); err != nil {
 			return err
@@ -55,12 +52,10 @@ func (uc *usecase) Logout(ctx context.Context, req *authdto.LogoutRequest) error
 		return errors.ErrInternal("failed to revoke session").WithError(err)
 	}
 
-	// Blacklist access token (outside transaction, fire-and-forget for Redis).
-	// Use context.WithoutCancel so blacklist completes even if HTTP client disconnects.
 	if req.AccessTokenJTI != "" {
 		ttl := time.Until(req.AccessTokenExp)
 		if ttl > 0 {
-			_ = uc.TokenBlacklistStore.BlacklistToken(context.WithoutCancel(ctx), req.AccessTokenJTI, ttl)
+			_ = uc.InMemoryStore.BlacklistToken(context.WithoutCancel(ctx), req.AccessTokenJTI, ttl)
 		}
 	}
 

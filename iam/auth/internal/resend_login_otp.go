@@ -14,7 +14,7 @@ func (uc *usecase) ResendLoginOTP(
 	ctx context.Context,
 	req *authdto.ResendLoginOTPRequest,
 ) (*authdto.ResendLoginOTPResponse, error) {
-	session, err := uc.LoginRedis.GetLoginSession(ctx, req.LoginSessionID)
+	session, err := uc.InMemoryStore.GetLoginSession(ctx, req.LoginSessionID)
 	if err != nil {
 		return nil, errors.New("SESSION_NOT_FOUND", "Login session not found or expired", http.StatusNotFound)
 	}
@@ -45,7 +45,7 @@ func (uc *usecase) ResendLoginOTP(
 	otpExpiry := time.Duration(LoginOTPExpiryMinutes) * time.Minute
 	newOTPExpiresAt := time.Now().Add(otpExpiry)
 
-	if err := uc.LoginRedis.UpdateLoginOTP(ctx, req.LoginSessionID, otpHash, newOTPExpiresAt); err != nil {
+	if err := uc.InMemoryStore.UpdateLoginOTP(ctx, req.LoginSessionID, otpHash, newOTPExpiresAt); err != nil {
 		return nil, errors.ErrInternal("failed to update OTP").WithError(err)
 	}
 
@@ -53,7 +53,7 @@ func (uc *usecase) ResendLoginOTP(
 		return uc.EmailService.SendOTP(ctx, session.Email, otp, LoginOTPExpiryMinutes)
 	})
 
-	updatedSession, err := uc.LoginRedis.GetLoginSession(ctx, req.LoginSessionID)
+	updatedSession, err := uc.InMemoryStore.GetLoginSession(ctx, req.LoginSessionID)
 	if err != nil {
 		return nil, errors.ErrInternal("failed to get updated session").WithError(err)
 	}

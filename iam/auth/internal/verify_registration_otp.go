@@ -22,7 +22,7 @@ func (uc *usecase) VerifyRegistrationOTP(
 	ctx context.Context,
 	req *authdto.VerifyRegistrationOTPRequest,
 ) (*authdto.VerifyRegistrationOTPResponse, error) {
-	session, err := uc.Redis.GetRegistrationSession(ctx, req.RegistrationID)
+	session, err := uc.InMemoryStore.GetRegistrationSession(ctx, req.RegistrationID)
 	if err != nil {
 		return nil, err
 	}
@@ -58,7 +58,7 @@ func (uc *usecase) VerifyRegistrationOTP(
 	err = bcrypt.CompareHashAndPassword([]byte(session.OTPHash), []byte(req.OTPCode))
 	if err != nil {
 
-		attempts, incErr := uc.Redis.IncrementRegistrationAttempts(ctx, req.RegistrationID)
+		attempts, incErr := uc.InMemoryStore.IncrementRegistrationAttempts(ctx, req.RegistrationID)
 		if incErr != nil {
 			return nil, incErr
 		}
@@ -79,7 +79,7 @@ func (uc *usecase) VerifyRegistrationOTP(
 		return nil, errors.ErrInternal("failed to generate registration token").WithError(err)
 	}
 
-	if err := uc.Redis.MarkRegistrationVerified(ctx, req.RegistrationID, tokenHash); err != nil {
+	if err := uc.InMemoryStore.MarkRegistrationVerified(ctx, req.RegistrationID, tokenHash); err != nil {
 		return nil, err
 	}
 

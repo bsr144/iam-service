@@ -27,7 +27,7 @@ func (uc *usecase) InitiateLogin(
 
 	email := strings.ToLower(strings.TrimSpace(req.Email))
 
-	count, err := uc.LoginRedis.IncrementLoginRateLimit(ctx, email, time.Duration(LoginRateLimitWindow)*time.Minute)
+	count, err := uc.InMemoryStore.IncrementLoginRateLimit(ctx, email, time.Duration(LoginRateLimitWindow)*time.Minute)
 	if err != nil {
 		return nil, errors.ErrInternal("failed to check rate limit").WithError(err)
 	}
@@ -72,7 +72,7 @@ func (uc *usecase) InitiateLogin(
 		ExpiresAt:             now.Add(sessionExpiry),
 	}
 
-	if err := uc.LoginRedis.CreateLoginSession(ctx, session, sessionExpiry); err != nil {
+	if err := uc.InMemoryStore.CreateLoginSession(ctx, session, sessionExpiry); err != nil {
 		return nil, errors.ErrInternal("failed to create login session").WithError(err)
 	}
 

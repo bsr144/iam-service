@@ -27,14 +27,14 @@ func TestVerifyRegistrationOTP(t *testing.T) {
 	tests := []struct {
 		name          string
 		req           *authdto.VerifyRegistrationOTPRequest
-		setupMocks    func(*MockRegistrationSessionStore)
+		setupMocks    func(*MockInMemoryStore)
 		expectedError string
 		expectedCode  string
 	}{
 		{
 			name: "success - OTP verified",
 			req:  &authdto.VerifyRegistrationOTPRequest{Email: email, OTPCode: validOTP},
-			setupMocks: func(redis *MockRegistrationSessionStore) {
+			setupMocks: func(redis *MockInMemoryStore) {
 				session := &entity.RegistrationSession{
 					ID:           registrationID,
 					Email:        email,
@@ -52,7 +52,7 @@ func TestVerifyRegistrationOTP(t *testing.T) {
 		{
 			name: "error - registration not found",
 			req:  &authdto.VerifyRegistrationOTPRequest{Email: email, OTPCode: validOTP},
-			setupMocks: func(redis *MockRegistrationSessionStore) {
+			setupMocks: func(redis *MockInMemoryStore) {
 				redis.On("GetRegistrationSession", mock.Anything, registrationID).Return(nil, errors.ErrNotFound("registration not found"))
 			},
 			expectedError: "not found",
@@ -61,7 +61,7 @@ func TestVerifyRegistrationOTP(t *testing.T) {
 		{
 			name: "error - email mismatch",
 			req:  &authdto.VerifyRegistrationOTPRequest{Email: "wrong@example.com", OTPCode: validOTP},
-			setupMocks: func(redis *MockRegistrationSessionStore) {
+			setupMocks: func(redis *MockInMemoryStore) {
 				session := &entity.RegistrationSession{
 					ID:           registrationID,
 					Email:        email,
@@ -78,7 +78,7 @@ func TestVerifyRegistrationOTP(t *testing.T) {
 		{
 			name: "error - session expired",
 			req:  &authdto.VerifyRegistrationOTPRequest{Email: email, OTPCode: validOTP},
-			setupMocks: func(redis *MockRegistrationSessionStore) {
+			setupMocks: func(redis *MockInMemoryStore) {
 				session := &entity.RegistrationSession{
 					ID:           registrationID,
 					Email:        email,
@@ -95,7 +95,7 @@ func TestVerifyRegistrationOTP(t *testing.T) {
 		{
 			name: "error - already verified",
 			req:  &authdto.VerifyRegistrationOTPRequest{Email: email, OTPCode: validOTP},
-			setupMocks: func(redis *MockRegistrationSessionStore) {
+			setupMocks: func(redis *MockInMemoryStore) {
 				verifiedAt := time.Now()
 				session := &entity.RegistrationSession{
 					ID:           registrationID,
@@ -114,7 +114,7 @@ func TestVerifyRegistrationOTP(t *testing.T) {
 		{
 			name: "error - OTP expired",
 			req:  &authdto.VerifyRegistrationOTPRequest{Email: email, OTPCode: validOTP},
-			setupMocks: func(redis *MockRegistrationSessionStore) {
+			setupMocks: func(redis *MockInMemoryStore) {
 				session := &entity.RegistrationSession{
 					ID:           registrationID,
 					Email:        email,
@@ -131,7 +131,7 @@ func TestVerifyRegistrationOTP(t *testing.T) {
 		{
 			name: "error - max attempts exceeded (session failed)",
 			req:  &authdto.VerifyRegistrationOTPRequest{Email: email, OTPCode: validOTP},
-			setupMocks: func(redis *MockRegistrationSessionStore) {
+			setupMocks: func(redis *MockInMemoryStore) {
 				session := &entity.RegistrationSession{
 					ID:           registrationID,
 					Email:        email,
@@ -150,7 +150,7 @@ func TestVerifyRegistrationOTP(t *testing.T) {
 		{
 			name: "error - invalid OTP",
 			req:  &authdto.VerifyRegistrationOTPRequest{Email: email, OTPCode: "000000"},
-			setupMocks: func(redis *MockRegistrationSessionStore) {
+			setupMocks: func(redis *MockInMemoryStore) {
 				session := &entity.RegistrationSession{
 					ID:           registrationID,
 					Email:        email,
@@ -172,7 +172,7 @@ func TestVerifyRegistrationOTP(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 
-			redis := new(MockRegistrationSessionStore)
+			redis := new(MockInMemoryStore)
 			tt.setupMocks(redis)
 
 			uc := &usecase{
@@ -181,7 +181,7 @@ func TestVerifyRegistrationOTP(t *testing.T) {
 						AccessSecret: "test-secret-key-for-testing-purposes",
 					},
 				},
-				Redis: redis,
+				InMemoryStore: redis,
 			}
 
 			ctx := context.Background()

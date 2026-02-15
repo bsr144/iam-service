@@ -26,7 +26,7 @@ func TestLogout(t *testing.T) {
 	tests := []struct {
 		name    string
 		req     *authdto.LogoutRequest
-		setup   func(*MockRefreshTokenRepository, *MockUserSessionRepository, *MockTokenBlacklistStore, *MockTransactionManager)
+		setup   func(*MockRefreshTokenRepository, *MockUserSessionRepository, *MockInMemoryStore, *MockTransactionManager)
 		wantErr bool
 		errType string
 	}{
@@ -38,7 +38,7 @@ func TestLogout(t *testing.T) {
 				AccessTokenExp: time.Now().Add(15 * time.Minute),
 				UserID:         userID,
 			},
-			setup: func(mockRefreshTokenRepo *MockRefreshTokenRepository, mockSessionRepo *MockUserSessionRepository, mockBlacklist *MockTokenBlacklistStore, mockTxMgr *MockTransactionManager) {
+			setup: func(mockRefreshTokenRepo *MockRefreshTokenRepository, mockSessionRepo *MockUserSessionRepository, mockBlacklist *MockInMemoryStore, mockTxMgr *MockTransactionManager) {
 				refreshToken := &entity.RefreshToken{
 					ID:        refreshTokenID,
 					UserID:    userID,
@@ -70,7 +70,7 @@ func TestLogout(t *testing.T) {
 				AccessTokenJTI: jti,
 				UserID:         userID,
 			},
-			setup: func(mockRefreshTokenRepo *MockRefreshTokenRepository, mockSessionRepo *MockUserSessionRepository, mockBlacklist *MockTokenBlacklistStore, mockTxMgr *MockTransactionManager) {
+			setup: func(mockRefreshTokenRepo *MockRefreshTokenRepository, mockSessionRepo *MockUserSessionRepository, mockBlacklist *MockInMemoryStore, mockTxMgr *MockTransactionManager) {
 				mockRefreshTokenRepo.On("GetByTokenHash", mock.Anything, mock.Anything).Return(nil, errors.ErrNotFound("token not found"))
 			},
 			wantErr: false,
@@ -81,7 +81,7 @@ func TestLogout(t *testing.T) {
 				RefreshToken: "test-refresh-token",
 				UserID:       userID,
 			},
-			setup: func(mockRefreshTokenRepo *MockRefreshTokenRepository, mockSessionRepo *MockUserSessionRepository, mockBlacklist *MockTokenBlacklistStore, mockTxMgr *MockTransactionManager) {
+			setup: func(mockRefreshTokenRepo *MockRefreshTokenRepository, mockSessionRepo *MockUserSessionRepository, mockBlacklist *MockInMemoryStore, mockTxMgr *MockTransactionManager) {
 				now := time.Now()
 				refreshToken := &entity.RefreshToken{
 					ID:        refreshTokenID,
@@ -99,7 +99,7 @@ func TestLogout(t *testing.T) {
 				RefreshToken: "test-refresh-token",
 				UserID:       userID,
 			},
-			setup: func(mockRefreshTokenRepo *MockRefreshTokenRepository, mockSessionRepo *MockUserSessionRepository, mockBlacklist *MockTokenBlacklistStore, mockTxMgr *MockTransactionManager) {
+			setup: func(mockRefreshTokenRepo *MockRefreshTokenRepository, mockSessionRepo *MockUserSessionRepository, mockBlacklist *MockInMemoryStore, mockTxMgr *MockTransactionManager) {
 				refreshToken := &entity.RefreshToken{
 					ID:        refreshTokenID,
 					UserID:    userID,
@@ -115,19 +115,19 @@ func TestLogout(t *testing.T) {
 			name: "success - BOLA violation (different user, idempotent)",
 			req: &authdto.LogoutRequest{
 				RefreshToken: "test-refresh-token",
-				UserID:       uuid.New(), // different user
+				UserID:       uuid.New(),
 			},
-			setup: func(mockRefreshTokenRepo *MockRefreshTokenRepository, mockSessionRepo *MockUserSessionRepository, mockBlacklist *MockTokenBlacklistStore, mockTxMgr *MockTransactionManager) {
+			setup: func(mockRefreshTokenRepo *MockRefreshTokenRepository, mockSessionRepo *MockUserSessionRepository, mockBlacklist *MockInMemoryStore, mockTxMgr *MockTransactionManager) {
 				refreshToken := &entity.RefreshToken{
 					ID:        refreshTokenID,
-					UserID:    userID, // original owner
+					UserID:    userID,
 					TokenHash: tokenHash,
 					ExpiresAt: time.Now().Add(30 * time.Minute),
 					RevokedAt: nil,
 				}
 				mockRefreshTokenRepo.On("GetByTokenHash", mock.Anything, mock.Anything).Return(refreshToken, nil)
 			},
-			wantErr: false, // idempotent - don't reveal token exists
+			wantErr: false,
 		},
 		{
 			name: "success - no linked session",
@@ -137,7 +137,7 @@ func TestLogout(t *testing.T) {
 				AccessTokenExp: time.Now().Add(15 * time.Minute),
 				UserID:         userID,
 			},
-			setup: func(mockRefreshTokenRepo *MockRefreshTokenRepository, mockSessionRepo *MockUserSessionRepository, mockBlacklist *MockTokenBlacklistStore, mockTxMgr *MockTransactionManager) {
+			setup: func(mockRefreshTokenRepo *MockRefreshTokenRepository, mockSessionRepo *MockUserSessionRepository, mockBlacklist *MockInMemoryStore, mockTxMgr *MockTransactionManager) {
 				refreshToken := &entity.RefreshToken{
 					ID:        refreshTokenID,
 					UserID:    userID,
@@ -161,8 +161,8 @@ func TestLogout(t *testing.T) {
 				RefreshToken: "",
 				UserID:       userID,
 			},
-			setup: func(mockRefreshTokenRepo *MockRefreshTokenRepository, mockSessionRepo *MockUserSessionRepository, mockBlacklist *MockTokenBlacklistStore, mockTxMgr *MockTransactionManager) {
-				// no setup needed
+			setup: func(mockRefreshTokenRepo *MockRefreshTokenRepository, mockSessionRepo *MockUserSessionRepository, mockBlacklist *MockInMemoryStore, mockTxMgr *MockTransactionManager) {
+
 			},
 			wantErr: true,
 			errType: "bad_request",
@@ -173,7 +173,7 @@ func TestLogout(t *testing.T) {
 				RefreshToken: "test-refresh-token",
 				UserID:       userID,
 			},
-			setup: func(mockRefreshTokenRepo *MockRefreshTokenRepository, mockSessionRepo *MockUserSessionRepository, mockBlacklist *MockTokenBlacklistStore, mockTxMgr *MockTransactionManager) {
+			setup: func(mockRefreshTokenRepo *MockRefreshTokenRepository, mockSessionRepo *MockUserSessionRepository, mockBlacklist *MockInMemoryStore, mockTxMgr *MockTransactionManager) {
 				mockRefreshTokenRepo.On("GetByTokenHash", mock.Anything, mock.Anything).Return(nil, errors.ErrInternal("database error"))
 			},
 			wantErr: true,
@@ -187,7 +187,7 @@ func TestLogout(t *testing.T) {
 				AccessTokenExp: time.Now().Add(15 * time.Minute),
 				UserID:         userID,
 			},
-			setup: func(mockRefreshTokenRepo *MockRefreshTokenRepository, mockSessionRepo *MockUserSessionRepository, mockBlacklist *MockTokenBlacklistStore, mockTxMgr *MockTransactionManager) {
+			setup: func(mockRefreshTokenRepo *MockRefreshTokenRepository, mockSessionRepo *MockUserSessionRepository, mockBlacklist *MockInMemoryStore, mockTxMgr *MockTransactionManager) {
 				refreshToken := &entity.RefreshToken{
 					ID:        refreshTokenID,
 					UserID:    userID,
@@ -201,7 +201,6 @@ func TestLogout(t *testing.T) {
 				mockTxMgr.On("WithTransaction", mock.Anything, mock.Anything).Return(nil)
 				mockRefreshTokenRepo.On("Revoke", mock.Anything, refreshTokenID, "User logout").Return(nil)
 
-				// Redis fails, but operation should still succeed
 				mockBlacklist.On("BlacklistToken", mock.Anything, jti, mock.Anything).Return(errors.ErrInternal("redis down"))
 			},
 			wantErr: false,
@@ -211,10 +210,10 @@ func TestLogout(t *testing.T) {
 			req: &authdto.LogoutRequest{
 				RefreshToken:   "test-refresh-token",
 				AccessTokenJTI: jti,
-				AccessTokenExp: time.Now().Add(-5 * time.Minute), // already expired
+				AccessTokenExp: time.Now().Add(-5 * time.Minute),
 				UserID:         userID,
 			},
-			setup: func(mockRefreshTokenRepo *MockRefreshTokenRepository, mockSessionRepo *MockUserSessionRepository, mockBlacklist *MockTokenBlacklistStore, mockTxMgr *MockTransactionManager) {
+			setup: func(mockRefreshTokenRepo *MockRefreshTokenRepository, mockSessionRepo *MockUserSessionRepository, mockBlacklist *MockInMemoryStore, mockTxMgr *MockTransactionManager) {
 				refreshToken := &entity.RefreshToken{
 					ID:        refreshTokenID,
 					UserID:    userID,
@@ -228,7 +227,6 @@ func TestLogout(t *testing.T) {
 				mockTxMgr.On("WithTransaction", mock.Anything, mock.Anything).Return(nil)
 				mockRefreshTokenRepo.On("Revoke", mock.Anything, refreshTokenID, "User logout").Return(nil)
 
-				// Should not call BlacklistToken since token is already expired
 			},
 			wantErr: false,
 		},
@@ -239,23 +237,23 @@ func TestLogout(t *testing.T) {
 			mockTxMgr := NewMockTransactionManager()
 			mockRefreshTokenRepo := new(MockRefreshTokenRepository)
 			mockSessionRepo := new(MockUserSessionRepository)
-			mockBlacklist := new(MockTokenBlacklistStore)
+			mockBlacklist := new(MockInMemoryStore)
 
 			tt.setup(mockRefreshTokenRepo, mockSessionRepo, mockBlacklist, mockTxMgr)
 
 			uc := &usecase{
-				TxManager:           mockTxMgr,
-				RefreshTokenRepo:    mockRefreshTokenRepo,
-				UserSessionRepo:     mockSessionRepo,
-				TokenBlacklistStore: mockBlacklist,
-				Config:              &config.Config{},
+				TxManager:        mockTxMgr,
+				RefreshTokenRepo: mockRefreshTokenRepo,
+				UserSessionRepo:  mockSessionRepo,
+				InMemoryStore:    mockBlacklist,
+				Config:           &config.Config{},
 			}
 
 			err := uc.Logout(context.Background(), tt.req)
 
 			if tt.wantErr {
 				require.Error(t, err)
-				// Just verify error exists - specific error type checking not critical for this test
+
 			} else {
 				assert.NoError(t, err)
 			}

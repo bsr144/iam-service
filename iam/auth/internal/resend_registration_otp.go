@@ -15,7 +15,7 @@ func (uc *usecase) ResendRegistrationOTP(
 	ctx context.Context,
 	req *authdto.ResendRegistrationOTPRequest,
 ) (*authdto.ResendRegistrationOTPResponse, error) {
-	session, err := uc.Redis.GetRegistrationSession(ctx, req.RegistrationID)
+	session, err := uc.InMemoryStore.GetRegistrationSession(ctx, req.RegistrationID)
 	if err != nil {
 		return nil, err
 	}
@@ -60,7 +60,7 @@ func (uc *usecase) ResendRegistrationOTP(
 	}
 
 	otpExpiry := time.Now().Add(time.Duration(RegistrationOTPExpiryMinutes) * time.Minute)
-	if err := uc.Redis.UpdateRegistrationOTP(ctx, req.RegistrationID, otpHash, otpExpiry); err != nil {
+	if err := uc.InMemoryStore.UpdateRegistrationOTP(ctx, req.RegistrationID, otpHash, otpExpiry); err != nil {
 		return nil, err
 	}
 

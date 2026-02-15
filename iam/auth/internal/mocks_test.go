@@ -103,83 +103,6 @@ func (m *MockUserRepository) List(ctx context.Context, filter *usercontract.User
 	return args.Get(0).([]*entity.User), args.Get(1).(int64), args.Error(2)
 }
 
-type MockRegistrationSessionStore struct {
-	mock.Mock
-}
-
-func (m *MockRegistrationSessionStore) CreateRegistrationSession(ctx context.Context, session *entity.RegistrationSession, ttl time.Duration) error {
-	args := m.Called(ctx, session, ttl)
-	return args.Error(0)
-}
-
-func (m *MockRegistrationSessionStore) GetRegistrationSession(ctx context.Context, sessionID uuid.UUID) (*entity.RegistrationSession, error) {
-	args := m.Called(ctx, sessionID)
-	if args.Get(0) == nil {
-		return nil, args.Error(1)
-	}
-	return args.Get(0).(*entity.RegistrationSession), args.Error(1)
-}
-
-func (m *MockRegistrationSessionStore) UpdateRegistrationSession(ctx context.Context, session *entity.RegistrationSession, ttl time.Duration) error {
-	args := m.Called(ctx, session, ttl)
-	return args.Error(0)
-}
-
-func (m *MockRegistrationSessionStore) DeleteRegistrationSession(ctx context.Context, sessionID uuid.UUID) error {
-	args := m.Called(ctx, sessionID)
-	return args.Error(0)
-}
-
-func (m *MockRegistrationSessionStore) IncrementRegistrationAttempts(ctx context.Context, sessionID uuid.UUID) (int, error) {
-	args := m.Called(ctx, sessionID)
-	return args.Int(0), args.Error(1)
-}
-
-func (m *MockRegistrationSessionStore) UpdateRegistrationOTP(ctx context.Context, sessionID uuid.UUID, otpHash string, expiresAt time.Time) error {
-	args := m.Called(ctx, sessionID, otpHash, expiresAt)
-	return args.Error(0)
-}
-
-func (m *MockRegistrationSessionStore) MarkRegistrationVerified(ctx context.Context, sessionID uuid.UUID, tokenHash string) error {
-	args := m.Called(ctx, sessionID, tokenHash)
-	return args.Error(0)
-}
-
-func (m *MockRegistrationSessionStore) MarkRegistrationPasswordSet(ctx context.Context, sessionID uuid.UUID, passwordHash string, tokenHash string) error {
-	args := m.Called(ctx, sessionID, passwordHash, tokenHash)
-	return args.Error(0)
-}
-
-func (m *MockRegistrationSessionStore) GetRegistrationPasswordHash(ctx context.Context, sessionID uuid.UUID) (string, error) {
-	args := m.Called(ctx, sessionID)
-	return args.String(0), args.Error(1)
-}
-
-func (m *MockRegistrationSessionStore) LockRegistrationEmail(ctx context.Context, email string, ttl time.Duration) (bool, error) {
-	args := m.Called(ctx, email, ttl)
-	return args.Bool(0), args.Error(1)
-}
-
-func (m *MockRegistrationSessionStore) UnlockRegistrationEmail(ctx context.Context, email string) error {
-	args := m.Called(ctx, email)
-	return args.Error(0)
-}
-
-func (m *MockRegistrationSessionStore) IsRegistrationEmailLocked(ctx context.Context, email string) (bool, error) {
-	args := m.Called(ctx, email)
-	return args.Bool(0), args.Error(1)
-}
-
-func (m *MockRegistrationSessionStore) IncrementRegistrationRateLimit(ctx context.Context, email string, ttl time.Duration) (int64, error) {
-	args := m.Called(ctx, email, ttl)
-	return args.Get(0).(int64), args.Error(1)
-}
-
-func (m *MockRegistrationSessionStore) GetRegistrationRateLimitCount(ctx context.Context, email string) (int64, error) {
-	args := m.Called(ctx, email)
-	return args.Get(0).(int64), args.Error(1)
-}
-
 type MockEmailService struct {
 	mock.Mock
 }
@@ -459,26 +382,147 @@ func (m *MockUserSessionRepository) RevokeAllByUserID(ctx context.Context, userI
 	return args.Error(0)
 }
 
-type MockTokenBlacklistStore struct {
+type MockInMemoryStore struct {
 	mock.Mock
 }
 
-func (m *MockTokenBlacklistStore) BlacklistToken(ctx context.Context, jti string, ttl time.Duration) error {
+func (m *MockInMemoryStore) CreateRegistrationSession(ctx context.Context, session *entity.RegistrationSession, ttl time.Duration) error {
+	args := m.Called(ctx, session, ttl)
+	return args.Error(0)
+}
+
+func (m *MockInMemoryStore) GetRegistrationSession(ctx context.Context, sessionID uuid.UUID) (*entity.RegistrationSession, error) {
+	args := m.Called(ctx, sessionID)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).(*entity.RegistrationSession), args.Error(1)
+}
+
+func (m *MockInMemoryStore) UpdateRegistrationSession(ctx context.Context, session *entity.RegistrationSession, ttl time.Duration) error {
+	args := m.Called(ctx, session, ttl)
+	return args.Error(0)
+}
+
+func (m *MockInMemoryStore) DeleteRegistrationSession(ctx context.Context, sessionID uuid.UUID) error {
+	args := m.Called(ctx, sessionID)
+	return args.Error(0)
+}
+
+func (m *MockInMemoryStore) IncrementRegistrationAttempts(ctx context.Context, sessionID uuid.UUID) (int, error) {
+	args := m.Called(ctx, sessionID)
+	return args.Int(0), args.Error(1)
+}
+
+func (m *MockInMemoryStore) UpdateRegistrationOTP(ctx context.Context, sessionID uuid.UUID, otpHash string, expiresAt time.Time) error {
+	args := m.Called(ctx, sessionID, otpHash, expiresAt)
+	return args.Error(0)
+}
+
+func (m *MockInMemoryStore) MarkRegistrationVerified(ctx context.Context, sessionID uuid.UUID, tokenHash string) error {
+	args := m.Called(ctx, sessionID, tokenHash)
+	return args.Error(0)
+}
+
+func (m *MockInMemoryStore) MarkRegistrationPasswordSet(ctx context.Context, sessionID uuid.UUID, passwordHash string, tokenHash string) error {
+	args := m.Called(ctx, sessionID, passwordHash, tokenHash)
+	return args.Error(0)
+}
+
+func (m *MockInMemoryStore) GetRegistrationPasswordHash(ctx context.Context, sessionID uuid.UUID) (string, error) {
+	args := m.Called(ctx, sessionID)
+	return args.String(0), args.Error(1)
+}
+
+func (m *MockInMemoryStore) LockRegistrationEmail(ctx context.Context, email string, ttl time.Duration) (bool, error) {
+	args := m.Called(ctx, email, ttl)
+	return args.Bool(0), args.Error(1)
+}
+
+func (m *MockInMemoryStore) UnlockRegistrationEmail(ctx context.Context, email string) error {
+	args := m.Called(ctx, email)
+	return args.Error(0)
+}
+
+func (m *MockInMemoryStore) IsRegistrationEmailLocked(ctx context.Context, email string) (bool, error) {
+	args := m.Called(ctx, email)
+	return args.Bool(0), args.Error(1)
+}
+
+func (m *MockInMemoryStore) IncrementRegistrationRateLimit(ctx context.Context, email string, ttl time.Duration) (int64, error) {
+	args := m.Called(ctx, email, ttl)
+	return args.Get(0).(int64), args.Error(1)
+}
+
+func (m *MockInMemoryStore) GetRegistrationRateLimitCount(ctx context.Context, email string) (int64, error) {
+	args := m.Called(ctx, email)
+	return args.Get(0).(int64), args.Error(1)
+}
+
+func (m *MockInMemoryStore) CreateLoginSession(ctx context.Context, session *entity.LoginSession, ttl time.Duration) error {
+	args := m.Called(ctx, session, ttl)
+	return args.Error(0)
+}
+
+func (m *MockInMemoryStore) GetLoginSession(ctx context.Context, sessionID uuid.UUID) (*entity.LoginSession, error) {
+	args := m.Called(ctx, sessionID)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).(*entity.LoginSession), args.Error(1)
+}
+
+func (m *MockInMemoryStore) UpdateLoginSession(ctx context.Context, session *entity.LoginSession, ttl time.Duration) error {
+	args := m.Called(ctx, session, ttl)
+	return args.Error(0)
+}
+
+func (m *MockInMemoryStore) DeleteLoginSession(ctx context.Context, sessionID uuid.UUID) error {
+	args := m.Called(ctx, sessionID)
+	return args.Error(0)
+}
+
+func (m *MockInMemoryStore) IncrementLoginAttempts(ctx context.Context, sessionID uuid.UUID) (int, error) {
+	args := m.Called(ctx, sessionID)
+	return args.Int(0), args.Error(1)
+}
+
+func (m *MockInMemoryStore) UpdateLoginOTP(ctx context.Context, sessionID uuid.UUID, otpHash string, expiresAt time.Time) error {
+	args := m.Called(ctx, sessionID, otpHash, expiresAt)
+	return args.Error(0)
+}
+
+func (m *MockInMemoryStore) MarkLoginVerified(ctx context.Context, sessionID uuid.UUID) error {
+	args := m.Called(ctx, sessionID)
+	return args.Error(0)
+}
+
+func (m *MockInMemoryStore) IncrementLoginRateLimit(ctx context.Context, email string, ttl time.Duration) (int64, error) {
+	args := m.Called(ctx, email, ttl)
+	return args.Get(0).(int64), args.Error(1)
+}
+
+func (m *MockInMemoryStore) GetLoginRateLimitCount(ctx context.Context, email string) (int64, error) {
+	args := m.Called(ctx, email)
+	return args.Get(0).(int64), args.Error(1)
+}
+
+func (m *MockInMemoryStore) BlacklistToken(ctx context.Context, jti string, ttl time.Duration) error {
 	args := m.Called(ctx, jti, ttl)
 	return args.Error(0)
 }
 
-func (m *MockTokenBlacklistStore) IsTokenBlacklisted(ctx context.Context, jti string) (bool, error) {
+func (m *MockInMemoryStore) IsTokenBlacklisted(ctx context.Context, jti string) (bool, error) {
 	args := m.Called(ctx, jti)
 	return args.Bool(0), args.Error(1)
 }
 
-func (m *MockTokenBlacklistStore) BlacklistUser(ctx context.Context, userID uuid.UUID, timestamp time.Time, ttl time.Duration) error {
+func (m *MockInMemoryStore) BlacklistUser(ctx context.Context, userID uuid.UUID, timestamp time.Time, ttl time.Duration) error {
 	args := m.Called(ctx, userID, timestamp, ttl)
 	return args.Error(0)
 }
 
-func (m *MockTokenBlacklistStore) GetUserBlacklistTimestamp(ctx context.Context, userID uuid.UUID) (*time.Time, error) {
+func (m *MockInMemoryStore) GetUserBlacklistTimestamp(ctx context.Context, userID uuid.UUID) (*time.Time, error) {
 	args := m.Called(ctx, userID)
 	if args.Get(0) == nil {
 		return nil, args.Error(1)

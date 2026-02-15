@@ -19,7 +19,7 @@ func (uc *usecase) SetPassword(
 		return nil, err
 	}
 
-	session, err := uc.Redis.GetRegistrationSession(ctx, req.RegistrationID)
+	session, err := uc.InMemoryStore.GetRegistrationSession(ctx, req.RegistrationID)
 	if err != nil {
 		return nil, err
 	}
@@ -51,7 +51,7 @@ func (uc *usecase) SetPassword(
 		return nil, errors.ErrInternal("failed to generate new registration token").WithError(err)
 	}
 
-	if err := uc.Redis.MarkRegistrationPasswordSet(ctx, req.RegistrationID, passwordHashStr, tokenHash); err != nil {
+	if err := uc.InMemoryStore.MarkRegistrationPasswordSet(ctx, req.RegistrationID, passwordHashStr, tokenHash); err != nil {
 		return nil, errors.ErrInternal("failed to update registration session").WithError(err)
 	}
 

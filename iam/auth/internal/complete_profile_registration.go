@@ -22,7 +22,7 @@ func (uc *usecase) CompleteProfileRegistration(
 		return nil, err
 	}
 
-	session, err := uc.Redis.GetRegistrationSession(ctx, req.RegistrationID)
+	session, err := uc.InMemoryStore.GetRegistrationSession(ctx, req.RegistrationID)
 	if err != nil {
 		return nil, err
 	}
@@ -68,7 +68,7 @@ func (uc *usecase) CompleteProfileRegistration(
 		return nil, errors.ErrConflict("This email has already been registered")
 	}
 
-	passwordHashStr, err := uc.Redis.GetRegistrationPasswordHash(ctx, req.RegistrationID)
+	passwordHashStr, err := uc.InMemoryStore.GetRegistrationPasswordHash(ctx, req.RegistrationID)
 	if err != nil {
 		return nil, errors.ErrForbidden("Password has not been set")
 	}
@@ -124,8 +124,8 @@ func (uc *usecase) CompleteProfileRegistration(
 		return nil, errors.ErrInternal("failed to create user").WithError(err)
 	}
 
-	_ = uc.Redis.DeleteRegistrationSession(ctx, req.RegistrationID)
-	_ = uc.Redis.UnlockRegistrationEmail(ctx, session.Email)
+	_ = uc.InMemoryStore.DeleteRegistrationSession(ctx, req.RegistrationID)
+	_ = uc.InMemoryStore.UnlockRegistrationEmail(ctx, session.Email)
 
 	accessToken, refreshToken, expiresIn, err := uc.generateAuthTokensForRegistration(ctx, user.ID, session.Email)
 	if err != nil {

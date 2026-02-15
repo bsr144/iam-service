@@ -19,7 +19,7 @@ func (uc *usecase) VerifyLoginOTP(
 	ctx context.Context,
 	req *authdto.VerifyLoginOTPRequest,
 ) (*authdto.VerifyLoginOTPResponse, error) {
-	session, err := uc.LoginRedis.GetLoginSession(ctx, req.LoginSessionID)
+	session, err := uc.InMemoryStore.GetLoginSession(ctx, req.LoginSessionID)
 	if err != nil {
 		return nil, errors.New("SESSION_NOT_FOUND", "Login session not found or expired", http.StatusNotFound)
 	}
@@ -42,7 +42,7 @@ func (uc *usecase) VerifyLoginOTP(
 	}
 
 	if err := bcrypt.CompareHashAndPassword([]byte(session.OTPHash), []byte(req.OTPCode)); err != nil {
-		_, _ = uc.LoginRedis.IncrementLoginAttempts(ctx, req.LoginSessionID)
+		_, _ = uc.InMemoryStore.IncrementLoginAttempts(ctx, req.LoginSessionID)
 		remaining := session.RemainingAttempts() - 1
 		if remaining <= 0 {
 			return nil, errors.New("SESSION_LOCKED", "Too many failed attempts. Please start a new login.", http.StatusForbidden)
@@ -50,7 +50,7 @@ func (uc *usecase) VerifyLoginOTP(
 		return nil, errors.New("OTP_INVALID", "Invalid OTP code", http.StatusBadRequest)
 	}
 
-	if err := uc.LoginRedis.MarkLoginVerified(ctx, req.LoginSessionID); err != nil {
+	if err := uc.InMemoryStore.MarkLoginVerified(ctx, req.LoginSessionID); err != nil {
 		return nil, errors.ErrInternal("failed to mark session verified").WithError(err)
 	}
 
@@ -121,10 +121,8 @@ func (uc *usecase) VerifyLoginOTP(
 		return nil, errors.ErrInternal("failed to complete login").WithError(err)
 	}
 
-	// Best-effort cleanup: session is already verified and will auto-expire via Redis TTL
-	_ = uc.LoginRedis.DeleteLoginSession(ctx, req.LoginSessionID)
+	_ = uc.InMemoryStore.DeleteLoginSession(ctx, req.LoginSessionID)
 
-	// Profile fetch is non-critical — empty name in response is acceptable
 	profile, _ := uc.UserProfileRepo.GetByUserID(ctx, session.UserID)
 	fullName := ""
 	if profile != nil {

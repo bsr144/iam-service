@@ -59,7 +59,7 @@ func NewServer(cfg *config.Config) *Server {
 	if err != nil {
 		log.Fatal("failed to connect to redis:", err)
 	}
-	redisWrapper := implredis.NewRedis(redisClient)
+	inMemoryStore := implredis.NewRedis(redisClient)
 
 	txManager := postgres.NewTransactionManager(postgresDB)
 
@@ -98,12 +98,10 @@ func NewServer(cfg *config.Config) *Server {
 		productRepo,
 		permissionRepo,
 		emailService,
-		redisWrapper,
-		redisWrapper,
+		inMemoryStore,
 		userSessionRepo,
 		userTenantRegRepo,
 		productsByTenantRepo,
-		redisWrapper,
 		auditLogger,
 	)
 	roleUsecase := role.NewUsecase(
@@ -128,7 +126,7 @@ func NewServer(cfg *config.Config) *Server {
 		cfg,
 		masterdataCategoryRepo,
 		masterdataItemRepo,
-		redisWrapper,
+		inMemoryStore,
 	)
 
 	healthController := controller.NewHealthController(cfg, healthUsecase)
@@ -152,11 +150,11 @@ func NewServer(cfg *config.Config) *Server {
 	router.SetupHealthRoutes(v1, healthController)
 
 	iam := v1.Group("/iam")
-	router.SetupAuthRoutes(iam, cfg, authController, redisWrapper)
-	router.SetupRoleRoutes(iam, cfg, roleController, redisWrapper)
-	router.SetupUserRoutes(iam, cfg, userController, redisWrapper)
+	router.SetupAuthRoutes(iam, cfg, authController, inMemoryStore)
+	router.SetupRoleRoutes(iam, cfg, roleController, inMemoryStore)
+	router.SetupUserRoutes(iam, cfg, userController, inMemoryStore)
 
-	router.SetupMasterdataRoutes(v1, cfg, masterdataController, redisWrapper)
+	router.SetupMasterdataRoutes(v1, cfg, masterdataController, inMemoryStore)
 
 	return server
 }

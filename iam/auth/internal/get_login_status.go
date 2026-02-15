@@ -13,7 +13,7 @@ func (uc *usecase) GetLoginStatus(
 	ctx context.Context,
 	req *authdto.GetLoginStatusRequest,
 ) (*authdto.LoginStatusResponse, error) {
-	session, err := uc.LoginRedis.GetLoginSession(ctx, req.LoginSessionID)
+	session, err := uc.InMemoryStore.GetLoginSession(ctx, req.LoginSessionID)
 	if err != nil {
 		return nil, errors.New("SESSION_NOT_FOUND", "Login session not found or expired", http.StatusNotFound)
 	}

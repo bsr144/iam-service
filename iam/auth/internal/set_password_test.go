@@ -49,7 +49,7 @@ func TestSetPassword(t *testing.T) {
 		name          string
 		req           *authdto.SetPasswordRequest
 		setupToken    func() string
-		setupMocks    func(*MockRegistrationSessionStore, string)
+		setupMocks    func(*MockInMemoryStore, string)
 		expectedError string
 		expectedCode  string
 	}{
@@ -60,7 +60,7 @@ func TestSetPassword(t *testing.T) {
 				tokenString, _ := generateValidToken()
 				return tokenString
 			},
-			setupMocks: func(redis *MockRegistrationSessionStore, tokenHash string) {
+			setupMocks: func(redis *MockInMemoryStore, tokenHash string) {
 				session := &entity.RegistrationSession{
 					ID:                    registrationID,
 					Email:                 email,
@@ -79,7 +79,7 @@ func TestSetPassword(t *testing.T) {
 				tokenString, _ := generateValidToken()
 				return tokenString
 			},
-			setupMocks: func(redis *MockRegistrationSessionStore, tokenHash string) {
+			setupMocks: func(redis *MockInMemoryStore, tokenHash string) {
 				session := &entity.RegistrationSession{
 					ID:                    registrationID,
 					Email:                 email,
@@ -97,7 +97,7 @@ func TestSetPassword(t *testing.T) {
 			setupToken: func() string {
 				return "invalid-token"
 			},
-			setupMocks:    func(redis *MockRegistrationSessionStore, tokenHash string) {},
+			setupMocks:    func(redis *MockInMemoryStore, tokenHash string) {},
 			expectedError: "invalid",
 			expectedCode:  errors.CodeUnauthorized,
 		},
@@ -108,7 +108,7 @@ func TestSetPassword(t *testing.T) {
 				tokenString, _ := generateValidToken()
 				return tokenString
 			},
-			setupMocks: func(redis *MockRegistrationSessionStore, tokenHash string) {
+			setupMocks: func(redis *MockInMemoryStore, tokenHash string) {
 				session := &entity.RegistrationSession{
 					ID:                    registrationID,
 					Email:                 email,
@@ -128,7 +128,7 @@ func TestSetPassword(t *testing.T) {
 				tokenString, _ := generateValidToken()
 				return tokenString
 			},
-			setupMocks: func(redis *MockRegistrationSessionStore, tokenHash string) {
+			setupMocks: func(redis *MockInMemoryStore, tokenHash string) {
 				session := &entity.RegistrationSession{
 					ID:                    registrationID,
 					Email:                 email,
@@ -151,7 +151,7 @@ func TestSetPassword(t *testing.T) {
 				tokenString, _ := generateValidToken()
 				return tokenString
 			},
-			setupMocks: func(redis *MockRegistrationSessionStore, tokenHash string) {
+			setupMocks: func(redis *MockInMemoryStore, tokenHash string) {
 				session := &entity.RegistrationSession{
 					ID:                    registrationID,
 					Email:                 email,
@@ -174,7 +174,7 @@ func TestSetPassword(t *testing.T) {
 				tokenString, _ := generateValidToken()
 				return tokenString
 			},
-			setupMocks: func(redis *MockRegistrationSessionStore, tokenHash string) {
+			setupMocks: func(redis *MockInMemoryStore, tokenHash string) {
 				session := &entity.RegistrationSession{
 					ID:                    registrationID,
 					Email:                 email,
@@ -194,7 +194,7 @@ func TestSetPassword(t *testing.T) {
 				tokenString, _ := generateValidToken()
 				return tokenString
 			},
-			setupMocks: func(redis *MockRegistrationSessionStore, tokenHash string) {
+			setupMocks: func(redis *MockInMemoryStore, tokenHash string) {
 				session := &entity.RegistrationSession{
 					ID:                    registrationID,
 					Email:                 email,
@@ -211,7 +211,7 @@ func TestSetPassword(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			redis := &MockRegistrationSessionStore{}
+			redis := &MockInMemoryStore{}
 			tokenString := tt.setupToken()
 			_, tokenHash := generateValidToken()
 			if tokenString != "invalid-token" {
@@ -228,7 +228,7 @@ func TestSetPassword(t *testing.T) {
 
 			uc := &usecase{
 				Config: cfg,
-				Redis:  redis,
+				InMemoryStore:  redis,
 			}
 
 			tt.req.RegistrationID = registrationID

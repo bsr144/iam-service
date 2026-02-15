@@ -12,12 +12,7 @@ import (
 )
 
 type Usecase interface {
-	// Logout revokes a single session (refresh token + blacklists access token)
-	// Returns error-only (void operation per architecture conventions)
 	Logout(ctx context.Context, req *authdto.LogoutRequest) error
-
-	// LogoutAll revokes all sessions for a user (all refresh tokens + user-level blacklist)
-	// Returns error-only (void operation per architecture conventions)
 	LogoutAll(ctx context.Context, req *authdto.LogoutAllRequest) error
 
 	InitiateRegistration(ctx context.Context, req *authdto.InitiateRegistrationRequest) (*authdto.InitiateRegistrationResponse, error)
@@ -48,12 +43,10 @@ func NewUsecase(
 	productRepo contract.ProductRepository,
 	permissionRepo contract.PermissionRepository,
 	emailService contract.EmailService,
-	redis contract.RegistrationSessionStore,
-	loginRedis contract.LoginSessionStore,
+	inMemoryStore contract.InMemoryStore,
 	userSessionRepo contract.UserSessionRepository,
 	userTenantRegRepo contract.UserTenantRegistrationRepository,
 	productsByTenantRepo contract.ProductsByTenantRepository,
-	tokenBlacklistStore contract.TokenBlacklistStore, // NEW: token blacklist store
 	auditLogger logger.AuditLogger,
 ) Usecase {
 	return internal.NewUsecase(
@@ -70,12 +63,10 @@ func NewUsecase(
 		productRepo,
 		permissionRepo,
 		emailService,
-		redis,
-		loginRedis,
+		inMemoryStore,
 		userSessionRepo,
 		userTenantRegRepo,
 		productsByTenantRepo,
-		tokenBlacklistStore, // NEW: pass to internal constructor
 		auditLogger,
 	)
 }

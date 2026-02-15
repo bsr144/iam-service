@@ -15,7 +15,7 @@ func (uc *usecase) GetRegistrationStatus(
 	registrationID uuid.UUID,
 	email string,
 ) (*authdto.RegistrationStatusResponse, error) {
-	session, err := uc.Redis.GetRegistrationSession(ctx, registrationID)
+	session, err := uc.InMemoryStore.GetRegistrationSession(ctx, registrationID)
 	if err != nil {
 		return nil, err
 	}

@@ -37,7 +37,7 @@ func (uc *usecase) InitiateRegistration(
 	}
 
 	rateLimitTTL := time.Duration(RegistrationRateLimitWindow) * time.Minute
-	count, err := uc.Redis.IncrementRegistrationRateLimit(ctx, req.Email, rateLimitTTL)
+	count, err := uc.InMemoryStore.IncrementRegistrationRateLimit(ctx, req.Email, rateLimitTTL)
 	if err != nil {
 		return nil, err
 	}
@@ -45,7 +45,7 @@ func (uc *usecase) InitiateRegistration(
 		return nil, errors.ErrTooManyRequests("Too many registration attempts. Please try again later.")
 	}
 
-	emailLocked, err := uc.Redis.IsRegistrationEmailLocked(ctx, req.Email)
+	emailLocked, err := uc.InMemoryStore.IsRegistrationEmailLocked(ctx, req.Email)
 	if err != nil {
 		return nil, err
 	}
@@ -81,7 +81,7 @@ func (uc *usecase) InitiateRegistration(
 		ExpiresAt:             now.Add(sessionTTL),
 	}
 
-	locked, err := uc.Redis.LockRegistrationEmail(ctx, req.Email, sessionTTL)
+	locked, err := uc.InMemoryStore.LockRegistrationEmail(ctx, req.Email, sessionTTL)
 	if err != nil {
 		return nil, errors.ErrInternal("failed to lock email").WithError(err)
 	}
@@ -89,9 +89,9 @@ func (uc *usecase) InitiateRegistration(
 		return nil, errors.ErrConflict("An active registration already exists for this email")
 	}
 
-	if err := uc.Redis.CreateRegistrationSession(ctx, session, sessionTTL); err != nil {
+	if err := uc.InMemoryStore.CreateRegistrationSession(ctx, session, sessionTTL); err != nil {
 
-		_ = uc.Redis.UnlockRegistrationEmail(ctx, req.Email)
+		_ = uc.InMemoryStore.UnlockRegistrationEmail(ctx, req.Email)
 		return nil, err
 	}
 
