@@ -33,6 +33,7 @@ type UserDetailResponse struct {
 	LastName          string       `json:"last_name"`
 	FullName          string       `json:"full_name"`
 	PhoneNumber       *string      `json:"phone_number,omitempty"`
+	DateOfBirth       *string      `json:"date_of_birth,omitempty"`
 	Address           *string      `json:"address,omitempty"`
 	ProfilePictureURL *string      `json:"profile_picture_url,omitempty"`
 	EmailVerified     bool         `json:"email_verified"`

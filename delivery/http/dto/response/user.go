@@ -13,6 +13,8 @@ type UserResponse struct {
 	LastName    string             `json:"last_name"`
 	FullName    string             `json:"full_name"`
 	PhoneNumber *string            `json:"phone_number,omitempty"`
+	DateOfBirth *string            `json:"date_of_birth,omitempty"`
+	Address     *string            `json:"address,omitempty"`
 	Status      string             `json:"status"`
 	IsActive    bool               `json:"is_active"`
 	Roles       []UserRoleResponse `json:"roles,omitempty"`

@@ -65,6 +65,10 @@ func mapUserToDetailResponse(user *entity.User, profile *entity.UserProfile, aut
 		resp.PhoneNumber = profile.PhoneNumber
 		resp.Address = profile.Address
 		resp.ProfilePictureURL = profile.ProfilePictureURL
+		if profile.DateOfBirth != nil {
+			formatted := profile.DateOfBirth.Format("2006-01-02")
+			resp.DateOfBirth = &formatted
+		}
 	}
 
 	if authMethod != nil {
