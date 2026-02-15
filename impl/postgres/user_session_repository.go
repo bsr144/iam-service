@@ -47,11 +47,36 @@ func (r *userSessionRepository) UpdateLastActive(ctx context.Context, id uuid.UU
 	return nil
 }
 
+func (r *userSessionRepository) GetByRefreshTokenID(ctx context.Context, refreshTokenID uuid.UUID) (*entity.UserSession, error) {
+	var session entity.UserSession
+	err := r.getDB(ctx).
+		Where("refresh_token_id = ? AND status = ?", refreshTokenID, entity.UserSessionStatusActive).
+		First(&session).Error
+	if err != nil {
+		return nil, translateError(err, "user session")
+	}
+	return &session, nil
+}
+
 func (r *userSessionRepository) Revoke(ctx context.Context, id uuid.UUID) error {
 	now := time.Now()
 	if err := r.getDB(ctx).
 		Model(&entity.UserSession{}).
 		Where("id = ?", id).
+		Updates(map[string]interface{}{
+			"status":     entity.UserSessionStatusRevoked,
+			"revoked_at": now,
+		}).Error; err != nil {
+		return translateError(err, "user session")
+	}
+	return nil
+}
+
+func (r *userSessionRepository) RevokeAllByUserID(ctx context.Context, userID uuid.UUID) error {
+	now := time.Now()
+	if err := r.getDB(ctx).
+		Model(&entity.UserSession{}).
+		Where("user_id = ? AND status = ?", userID, entity.UserSessionStatusActive).
 		Updates(map[string]interface{}{
 			"status":     entity.UserSessionStatusRevoked,
 			"revoked_at": now,

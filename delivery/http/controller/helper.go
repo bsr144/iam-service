@@ -2,6 +2,7 @@ package controller
 
 import (
 	"net"
+	"time"
 
 	"iam-service/pkg/errors"
 	jwtpkg "iam-service/pkg/jwt"
@@ -97,6 +98,36 @@ func getUserAgent(c *fiber.Ctx) string {
 	}
 
 	return c.Get("User-Agent")
+}
+
+// extractClaimsForLogout extracts userID, JTI, and token expiry from JWT claims.
+// Tries multi-tenant claims first, falls back to legacy claims.
+func extractClaimsForLogout(c *fiber.Ctx) (userID uuid.UUID, jti string, tokenExp time.Time, err error) {
+	// Try multi-tenant claims first (set by middleware)
+	multiClaims := c.Locals("multi_tenant_claims")
+	if multiClaims != nil {
+		mc, ok := multiClaims.(*jwtpkg.MultiTenantClaims)
+		if ok {
+			userID = mc.UserID
+			jti = mc.RegisteredClaims.ID
+			if mc.ExpiresAt != nil {
+				tokenExp = mc.ExpiresAt.Time
+			}
+			return userID, jti, tokenExp, nil
+		}
+	}
+
+	// Fallback to legacy claims
+	claims, claimsErr := getUserClaims(c)
+	if claimsErr != nil {
+		return uuid.Nil, "", time.Time{}, claimsErr
+	}
+	userID = claims.UserID
+	jti = claims.RegisteredClaims.ID
+	if claims.ExpiresAt != nil {
+		tokenExp = claims.ExpiresAt.Time
+	}
+	return userID, jti, tokenExp, nil
 }
 
 func getTenantIDFromHeader(c *fiber.Ctx) (uuid.UUID, error) {

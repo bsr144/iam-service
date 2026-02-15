@@ -103,6 +103,7 @@ func NewServer(cfg *config.Config) *Server {
 		userSessionRepo,
 		userTenantRegRepo,
 		productsByTenantRepo,
+		redisWrapper,
 		auditLogger,
 	)
 	roleUsecase := role.NewUsecase(
@@ -151,11 +152,11 @@ func NewServer(cfg *config.Config) *Server {
 	router.SetupHealthRoutes(v1, healthController)
 
 	iam := v1.Group("/iam")
-	router.SetupAuthRoutes(iam, cfg, authController)
-	router.SetupRoleRoutes(iam, cfg, roleController)
-	router.SetupUserRoutes(iam, cfg, userController)
+	router.SetupAuthRoutes(iam, cfg, authController, redisWrapper)
+	router.SetupRoleRoutes(iam, cfg, roleController, redisWrapper)
+	router.SetupUserRoutes(iam, cfg, userController, redisWrapper)
 
-	router.SetupMasterdataRoutes(v1, cfg, masterdataController)
+	router.SetupMasterdataRoutes(v1, cfg, masterdataController, redisWrapper)
 
 	return server
 }

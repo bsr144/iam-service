@@ -22,8 +22,13 @@ type MockAuthUsecase struct {
 	mock.Mock
 }
 
-func (m *MockAuthUsecase) Logout(ctx context.Context, token string) error {
-	args := m.Called(ctx, token)
+func (m *MockAuthUsecase) Logout(ctx context.Context, req *authdto.LogoutRequest) error {
+	args := m.Called(ctx, req)
+	return args.Error(0)
+}
+
+func (m *MockAuthUsecase) LogoutAll(ctx context.Context, req *authdto.LogoutAllRequest) error {
+	args := m.Called(ctx, req)
 	return args.Error(0)
 }
 

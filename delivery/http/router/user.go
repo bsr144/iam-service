@@ -4,13 +4,14 @@ import (
 	"iam-service/config"
 	"iam-service/delivery/http/controller"
 	"iam-service/delivery/http/middleware"
+	"iam-service/iam/auth/contract"
 
 	"github.com/gofiber/fiber/v2"
 )
 
-func SetupUserRoutes(api fiber.Router, cfg *config.Config, userController *controller.UserController) {
+func SetupUserRoutes(api fiber.Router, cfg *config.Config, userController *controller.UserController, blacklistStore ...contract.TokenBlacklistStore) {
 	users := api.Group("/users")
-	users.Use(middleware.JWTAuth(cfg))
+	users.Use(middleware.JWTAuth(cfg, blacklistStore...))
 
 	users.Get("/me", userController.GetMe)
 	users.Put("/me", userController.UpdateMe)

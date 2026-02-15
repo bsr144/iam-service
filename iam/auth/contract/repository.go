@@ -89,8 +89,10 @@ type LoginSessionStore interface {
 type UserSessionRepository interface {
 	Create(ctx context.Context, session *entity.UserSession) error
 	GetByID(ctx context.Context, id uuid.UUID) (*entity.UserSession, error)
+	GetByRefreshTokenID(ctx context.Context, refreshTokenID uuid.UUID) (*entity.UserSession, error)
 	UpdateLastActive(ctx context.Context, id uuid.UUID) error
 	Revoke(ctx context.Context, id uuid.UUID) error
+	RevokeAllByUserID(ctx context.Context, userID uuid.UUID) error
 }
 
 type UserTenantRegistrationRepository interface {

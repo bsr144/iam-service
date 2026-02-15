@@ -4,11 +4,12 @@ import (
 	"iam-service/config"
 	"iam-service/delivery/http/controller"
 	"iam-service/delivery/http/middleware"
+	"iam-service/iam/auth/contract"
 
 	"github.com/gofiber/fiber/v2"
 )
 
-func SetupMasterdataRoutes(api fiber.Router, cfg *config.Config, mc *controller.MasterdataController) {
+func SetupMasterdataRoutes(api fiber.Router, cfg *config.Config, mc *controller.MasterdataController, blacklistStore ...contract.TokenBlacklistStore) {
 	masterdata := api.Group("/masterdata")
 
 	publicRoutes := masterdata.Group("")
@@ -31,7 +32,7 @@ func SetupMasterdataRoutes(api fiber.Router, cfg *config.Config, mc *controller.
 	}
 
 	protectedRoutes := masterdata.Group("")
-	protectedRoutes.Use(middleware.JWTAuth(cfg))
+	protectedRoutes.Use(middleware.JWTAuth(cfg, blacklistStore...))
 	protectedRoutes.Use(middleware.RequirePlatformAdmin())
 	{
 

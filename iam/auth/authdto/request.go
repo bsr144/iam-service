@@ -1,9 +1,28 @@
 package authdto
 
-import "github.com/google/uuid"
+import (
+	"time"
 
+	"github.com/google/uuid"
+)
+
+// LogoutRequest represents a logout request (single session)
 type LogoutRequest struct {
-	RefreshToken string `json:"refresh_token" validate:"required"`
+	RefreshToken string `json:"refresh_token" validate:"required"` // Refresh token to revoke
+	// Access token JTI extracted from JWT middleware (c.Locals("jti"))
+	AccessTokenJTI string    `json:"-"` // set by controller from JWT claims
+	AccessTokenExp time.Time `json:"-"` // set by controller from JWT claims expiry
+	UserID         uuid.UUID `json:"-"` // set by controller from JWT claims
+	IPAddress      string    `json:"-"` // set by controller from request context
+	UserAgent      string    `json:"-"` // set by controller from request context
+}
+
+// LogoutAllRequest represents a logout-all request (all sessions)
+type LogoutAllRequest struct {
+	// No request body needed - user ID comes from JWT
+	UserID    uuid.UUID `json:"-"` // set by controller from JWT claims
+	IPAddress string `json:"-"`    // set by controller from request context
+	UserAgent string `json:"-"`    // set by controller from request context
 }
 
 type InitiateRegistrationRequest struct {

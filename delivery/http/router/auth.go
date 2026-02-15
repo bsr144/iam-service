@@ -6,16 +6,20 @@ import (
 	"iam-service/config"
 	"iam-service/delivery/http/controller"
 	"iam-service/delivery/http/middleware"
+	"iam-service/iam/auth/contract"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/limiter"
 )
 
-func SetupAuthRoutes(api fiber.Router, cfg *config.Config, authController *controller.AuthController) {
+func SetupAuthRoutes(api fiber.Router, cfg *config.Config, authController *controller.AuthController, blacklistStore contract.TokenBlacklistStore) {
+	// Authenticated logout endpoints (require JWT)
 	auth := api.Group("/auth")
-	auth.Use(middleware.JWTAuth(cfg))
-	auth.Post("/logout", authController.Logout)
+	auth.Use(middleware.JWTAuth(cfg, blacklistStore))
+	auth.Post("/logout", authController.Logout)        // Logout single session
+	auth.Post("/logout-all", authController.LogoutAll) // Logout all sessions
 
+	// Public registration endpoints
 	registrations := api.Group("/registrations")
 	if !cfg.IsDevelopment() {
 		registrations.Use(limiter.New(limiter.Config{
@@ -41,6 +45,7 @@ func SetupAuthRoutes(api fiber.Router, cfg *config.Config, authController *contr
 	registrations.Post("/:id/complete-profile", authController.CompleteProfileRegistration)
 	registrations.Post("/:id/complete", authController.CompleteRegistration)
 
+	// Public login endpoints
 	login := api.Group("/login")
 	if !cfg.IsDevelopment() {
 		login.Use(limiter.New(limiter.Config{

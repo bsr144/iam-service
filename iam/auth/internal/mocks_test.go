@@ -415,3 +415,73 @@ func (m *MockPermissionRepository) GetCodesByRoleIDs(ctx context.Context, roleID
 	}
 	return args.Get(0).([]string), args.Error(1)
 }
+
+type MockUserSessionRepository struct {
+	mock.Mock
+}
+
+func (m *MockUserSessionRepository) Create(ctx context.Context, session *entity.UserSession) error {
+	args := m.Called(ctx, session)
+	if session.ID == uuid.Nil {
+		session.ID = uuid.New()
+	}
+	return args.Error(0)
+}
+
+func (m *MockUserSessionRepository) GetByID(ctx context.Context, id uuid.UUID) (*entity.UserSession, error) {
+	args := m.Called(ctx, id)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).(*entity.UserSession), args.Error(1)
+}
+
+func (m *MockUserSessionRepository) GetByRefreshTokenID(ctx context.Context, refreshTokenID uuid.UUID) (*entity.UserSession, error) {
+	args := m.Called(ctx, refreshTokenID)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).(*entity.UserSession), args.Error(1)
+}
+
+func (m *MockUserSessionRepository) UpdateLastActive(ctx context.Context, id uuid.UUID) error {
+	args := m.Called(ctx, id)
+	return args.Error(0)
+}
+
+func (m *MockUserSessionRepository) Revoke(ctx context.Context, id uuid.UUID) error {
+	args := m.Called(ctx, id)
+	return args.Error(0)
+}
+
+func (m *MockUserSessionRepository) RevokeAllByUserID(ctx context.Context, userID uuid.UUID) error {
+	args := m.Called(ctx, userID)
+	return args.Error(0)
+}
+
+type MockTokenBlacklistStore struct {
+	mock.Mock
+}
+
+func (m *MockTokenBlacklistStore) BlacklistToken(ctx context.Context, jti string, ttl time.Duration) error {
+	args := m.Called(ctx, jti, ttl)
+	return args.Error(0)
+}
+
+func (m *MockTokenBlacklistStore) IsTokenBlacklisted(ctx context.Context, jti string) (bool, error) {
+	args := m.Called(ctx, jti)
+	return args.Bool(0), args.Error(1)
+}
+
+func (m *MockTokenBlacklistStore) BlacklistUser(ctx context.Context, userID uuid.UUID, timestamp time.Time, ttl time.Duration) error {
+	args := m.Called(ctx, userID, timestamp, ttl)
+	return args.Error(0)
+}
+
+func (m *MockTokenBlacklistStore) GetUserBlacklistTimestamp(ctx context.Context, userID uuid.UUID) (*time.Time, error) {
+	args := m.Called(ctx, userID)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).(*time.Time), args.Error(1)
+}

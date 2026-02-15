@@ -25,6 +25,7 @@ type usecase struct {
 	UserSessionRepo      contract.UserSessionRepository
 	UserTenantRegRepo    contract.UserTenantRegistrationRepository
 	ProductsByTenantRepo contract.ProductsByTenantRepository
+	TokenBlacklistStore  contract.TokenBlacklistStore
 	AuditLogger          logger.AuditLogger
 }
 
@@ -47,6 +48,7 @@ func NewUsecase(
 	userSessionRepo contract.UserSessionRepository,
 	userTenantRegRepo contract.UserTenantRegistrationRepository,
 	productsByTenantRepo contract.ProductsByTenantRepository,
+	tokenBlacklistStore contract.TokenBlacklistStore,
 	auditLogger logger.AuditLogger,
 ) *usecase {
 	return &usecase{
@@ -68,6 +70,7 @@ func NewUsecase(
 		UserSessionRepo:      userSessionRepo,
 		UserTenantRegRepo:    userTenantRegRepo,
 		ProductsByTenantRepo: productsByTenantRepo,
+		TokenBlacklistStore:  tokenBlacklistStore,
 		AuditLogger:          auditLogger,
 	}
 }

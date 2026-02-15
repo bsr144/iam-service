@@ -48,6 +48,7 @@ func GenerateAccessToken(
 		BranchID:    branchID,
 		SessionID:   sessionID,
 		RegisteredClaims: jwt.RegisteredClaims{
+			ID:        uuid.New().String(),
 			Subject:   userID.String(),
 			Issuer:    config.Issuer,
 			Audience:  config.Audience,
@@ -93,6 +94,7 @@ func GenerateMultiTenantAccessToken(
 		Tenants:   tenants,
 		SessionID: sessionID,
 		RegisteredClaims: jwt.RegisteredClaims{
+			ID:        uuid.New().String(),
 			Subject:   userID.String(),
 			Issuer:    config.Issuer,
 			Audience:  config.Audience,

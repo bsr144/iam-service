@@ -2,6 +2,7 @@ package middleware
 
 import (
 	"iam-service/config"
+	"iam-service/iam/auth/contract"
 	"iam-service/pkg/errors"
 	jwtpkg "iam-service/pkg/jwt"
 	"strings"
@@ -9,7 +10,7 @@ import (
 	"github.com/gofiber/fiber/v2"
 )
 
-func JWTAuth(cfg *config.Config) fiber.Handler {
+func JWTAuth(cfg *config.Config, blacklistStore ...contract.TokenBlacklistStore) fiber.Handler {
 	tokenConfig := &jwtpkg.TokenConfig{
 		AccessSecret:  cfg.JWT.AccessSecret,
 		RefreshSecret: cfg.JWT.RefreshSecret,
@@ -26,6 +27,11 @@ func JWTAuth(cfg *config.Config) fiber.Handler {
 			tokenConfig.PublicKey = publicKey
 		}
 		tokenConfig.SigningMethod = "RS256"
+	}
+
+	var store contract.TokenBlacklistStore
+	if len(blacklistStore) > 0 {
+		store = blacklistStore[0]
 	}
 
 	return func(c *fiber.Ctx) error {
@@ -62,6 +68,18 @@ func JWTAuth(cfg *config.Config) fiber.Handler {
 			}
 			c.Locals(UserClaimsKey, legacyClaims)
 			c.Locals(MultiTenantClaimsKey, multiClaims)
+
+			// Store userID and jti as convenience locals
+			c.Locals("userID", multiClaims.UserID.String())
+			c.Locals("jti", multiClaims.RegisteredClaims.ID)
+
+			// Check token blacklist (fail-open: Redis errors allow request through)
+			if store != nil {
+				if rejected := checkBlacklist(c, store, multiClaims.RegisteredClaims.ID, multiClaims.UserID, multiClaims.RegisteredClaims); rejected != nil {
+					return rejected
+				}
+			}
+
 			return c.Next()
 		}
 
@@ -85,6 +103,17 @@ func JWTAuth(cfg *config.Config) fiber.Handler {
 		}
 
 		c.Locals(UserClaimsKey, claims)
+
+		// Store userID and jti as convenience locals
+		c.Locals("userID", claims.UserID.String())
+		c.Locals("jti", claims.RegisteredClaims.ID)
+
+		// Check token blacklist (fail-open: Redis errors allow request through)
+		if store != nil {
+			if rejected := checkBlacklist(c, store, claims.RegisteredClaims.ID, claims.UserID, claims.RegisteredClaims); rejected != nil {
+				return rejected
+			}
+		}
 
 		return c.Next()
 	}

@@ -51,7 +51,10 @@ func NewRegistrationController(cfg *config.Config, authUsecase auth.Usecase) *Au
 	}
 }
 
+// Logout revokes a single session (refresh token + access token blacklist)
+// Idempotent: returns 200 even if token already revoked/expired/not found
 func (rc *AuthController) Logout(c *fiber.Ctx) error {
+	// Parse request body for refresh token
 	var req authdto.LogoutRequest
 	if err := c.BodyParser(&req); err != nil {
 		return errors.ErrBadRequest("Invalid request body")
@@ -61,13 +64,55 @@ func (rc *AuthController) Logout(c *fiber.Ctx) error {
 		return errors.ErrValidationWithFields(convertValidationErrors(err.(validator.ValidationErrors)))
 	}
 
-	err := rc.authUsecase.Logout(c.UserContext(), req.RefreshToken)
+	// Extract claims from JWT middleware
+	userID, jti, tokenExp, err := extractClaimsForLogout(c)
 	if err != nil {
+		return err
+	}
+
+	// Populate framework values
+	req.UserID = userID
+	req.AccessTokenJTI = jti
+	req.AccessTokenExp = tokenExp
+	req.IPAddress = getClientIP(c).String()
+	req.UserAgent = getUserAgent(c)
+
+	// Call usecase (idempotent - no error for already-revoked tokens)
+	if err := rc.authUsecase.Logout(c.Context(), &req); err != nil {
+		// Error middleware will handle domain errors, but we return 200 for logout success
+		// even if token not found (idempotency)
 		return err
 	}
 
 	return c.Status(fiber.StatusOK).JSON(response.SuccessResponse(
 		"Logout successful",
+		nil,
+	))
+}
+
+// LogoutAll revokes all sessions for the authenticated user
+// Idempotent: returns 200 even if no sessions exist
+func (rc *AuthController) LogoutAll(c *fiber.Ctx) error {
+	// Extract claims from JWT middleware
+	userID, _, _, err := extractClaimsForLogout(c)
+	if err != nil {
+		return err
+	}
+
+	// Build request
+	req := &authdto.LogoutAllRequest{
+		UserID:    userID,
+		IPAddress: getClientIP(c).String(),
+		UserAgent: getUserAgent(c),
+	}
+
+	// Call usecase (idempotent)
+	if err := rc.authUsecase.LogoutAll(c.Context(), req); err != nil {
+		return err
+	}
+
+	return c.Status(fiber.StatusOK).JSON(response.SuccessResponse(
+		"All sessions logged out successfully",
 		nil,
 	))
 }
