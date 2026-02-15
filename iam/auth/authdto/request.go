@@ -39,7 +39,6 @@ type CompleteProfileRegistrationRequest struct {
 	Gender        string `json:"gender" validate:"required,oneof=male female other"`
 	MaritalStatus string `json:"marital_status" validate:"required,oneof=single married divorced widowed"`
 	Address       string `json:"address" validate:"required,min=10,max=500"`
-	PlaceOfBirth  string `json:"place_of_birth" validate:"required,min=2,max=100"`
 }
 
 type CompleteRegistrationRequest struct {

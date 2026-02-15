@@ -13,39 +13,31 @@ import (
 type UserRepository interface {
 	Create(ctx context.Context, user *entity.User) error
 	GetByID(ctx context.Context, id uuid.UUID) (*entity.User, error)
-	GetByEmail(ctx context.Context, tenantID uuid.UUID, email string) (*entity.User, error)
-	GetByEmailAnyTenant(ctx context.Context, email string) (*entity.User, error)
+	GetByEmail(ctx context.Context, email string) (*entity.User, error)
 	Update(ctx context.Context, user *entity.User) error
 	Delete(ctx context.Context, id uuid.UUID) error
-	EmailExistsInTenant(ctx context.Context, tenantID uuid.UUID, email string) (bool, error)
 	EmailExists(ctx context.Context, email string) (bool, error)
 	List(ctx context.Context, filter *usercontract.UserListFilter) ([]*entity.User, int64, error)
-	GetPendingApprovalUsers(ctx context.Context, tenantID uuid.UUID) ([]*entity.User, error)
 }
 type UserProfileRepository interface {
 	Create(ctx context.Context, profile *entity.UserProfile) error
 	GetByUserID(ctx context.Context, userID uuid.UUID) (*entity.UserProfile, error)
 	Update(ctx context.Context, profile *entity.UserProfile) error
 }
-type UserCredentialsRepository interface {
-	Create(ctx context.Context, credentials *entity.UserCredentials) error
-	GetByUserID(ctx context.Context, userID uuid.UUID) (*entity.UserCredentials, error)
-	Update(ctx context.Context, credentials *entity.UserCredentials) error
+type UserAuthMethodRepository interface {
+	Create(ctx context.Context, authMethod *entity.UserAuthMethod) error
+	GetByUserID(ctx context.Context, userID uuid.UUID) (*entity.UserAuthMethod, error)
+	Update(ctx context.Context, authMethod *entity.UserAuthMethod) error
 }
-type UserSecurityRepository interface {
-	Create(ctx context.Context, security *entity.UserSecurity) error
-	GetByUserID(ctx context.Context, userID uuid.UUID) (*entity.UserSecurity, error)
-	Update(ctx context.Context, security *entity.UserSecurity) error
+type UserSecurityStateRepository interface {
+	Create(ctx context.Context, securityState *entity.UserSecurityState) error
+	GetByUserID(ctx context.Context, userID uuid.UUID) (*entity.UserSecurityState, error)
+	Update(ctx context.Context, securityState *entity.UserSecurityState) error
 }
 type TenantRepository interface {
 	GetByID(ctx context.Context, id uuid.UUID) (*entity.Tenant, error)
 	GetBySlug(ctx context.Context, slug string) (*entity.Tenant, error)
 	Exists(ctx context.Context, id uuid.UUID) (bool, error)
-}
-type UserActivationTrackingRepository interface {
-	Create(ctx context.Context, tracking *entity.UserActivationTracking) error
-	GetByUserID(ctx context.Context, userID uuid.UUID) (*entity.UserActivationTracking, error)
-	Update(ctx context.Context, tracking *entity.UserActivationTracking) error
 }
 
 type RoleRepository interface {
