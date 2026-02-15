@@ -2,7 +2,6 @@ package internal
 
 import (
 	"context"
-	"net"
 	"net/http"
 	"strings"
 	"time"
@@ -90,7 +89,7 @@ func (uc *usecase) VerifyLoginOTP(
 		TokenHash:   refreshTokenHash,
 		TokenFamily: tokenFamily,
 		ExpiresAt:   time.Now().Add(uc.Config.JWT.RefreshExpiry),
-		IPAddress:   net.ParseIP(req.IPAddress),
+		IPAddress:   req.IPAddress,
 		UserAgent:   req.UserAgent,
 		CreatedAt:   time.Now(),
 	}
