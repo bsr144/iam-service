@@ -196,13 +196,29 @@ paths:
         '404':
           $ref: '#/components/responses/NotFound'
 
-  /auth/refresh:
+  # === REFRESH TOKEN ROTATION ===
+  /auth/refresh-token:
     post:
       tags: [Authentication]
-      summary: Refresh access token
+      summary: Refresh access token with rotation
       description: |
-        Exchanges a valid refresh token for a new access token and refresh token.
-        The old refresh token is invalidated (token rotation).
+        Exchanges a valid refresh token for a new access token and refresh token pair.
+
+        **Token Rotation:** The old refresh token is immediately revoked and replaced with a new one.
+        Each refresh token can only be used once.
+
+        **Theft Detection:** If a revoked refresh token is reused, the entire token family
+        is revoked to protect against token theft.
+
+        **Session Continuity:** The session ID (JTI) is preserved across rotations, maintaining
+        the same user session.
+
+        **User Status Check:** Fails if the user account is not ACTIVE.
+
+        **Rate Limiting:** 20 requests per minute per IP (sliding window).
+
+        **Error Responses:** All authentication failures return generic "invalid token"
+        message to prevent information leakage.
       operationId: refreshToken
       security: []
       requestBody:
@@ -211,15 +227,87 @@ paths:
           application/json:
             schema:
               $ref: '#/components/schemas/RefreshTokenRequest'
+            example:
+              refresh_token: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
       responses:
         '200':
           description: Tokens refreshed successfully
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/TokenResponse'
+                $ref: '#/components/schemas/RefreshTokenResponse'
+              example:
+                success: true
+                message: "Token refreshed successfully"
+                data:
+                  access_token: "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9..."
+                  refresh_token: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+                  expires_in: 900
+                  token_type: "Bearer"
+                  user:
+                    id: "018da8c0-751f-7347-bad1-aa78ab643c0f"
+                    email: "user@example.com"
+                    full_name: "John Doe"
+                    tenants:
+                      - tenant_id: "018da8c0-7520-7347-bad1-aa78ab643c0f"
+                        products:
+                          - product_id: "018da8c0-7521-7347-bad1-aa78ab643c0f"
+                            product_code: "CORE_APP"
+                            roles: ["USER", "ADMIN"]
+                            permissions: ["user:read", "user:write"]
+        '400':
+          description: Validation error - missing or malformed refresh_token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                success: false
+                error:
+                  code: "ERR_VALIDATION"
+                  message: "validation failed"
         '401':
-          $ref: '#/components/responses/Unauthorized'
+          description: |
+            Invalid, expired, revoked, or not found refresh token.
+            All authentication failures return the same generic error to prevent enumeration.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                invalid_token:
+                  summary: Invalid token signature or not found
+                  value:
+                    success: false
+                    error:
+                      code: "ERR_TOKEN_INVALID"
+                      message: "invalid token"
+                expired_token:
+                  summary: Token expired
+                  value:
+                    success: false
+                    error:
+                      code: "ERR_TOKEN_EXPIRED"
+                      message: "token has expired"
+        '403':
+          description: User account is inactive
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                success: false
+                error:
+                  code: "ERR_USER_INACTIVE"
+                  message: "user account is inactive"
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
 
   # === LOGOUT HARDENING ===
   /auth/logout:
@@ -1678,32 +1766,45 @@ components:
                 items:
                   type: string
 
+    # === REFRESH TOKEN ROTATION ===
     RefreshTokenRequest:
       type: object
+      description: Request to refresh access and refresh tokens
       properties:
         refresh_token:
           type: string
+          description: Current valid refresh token (HS256 JWT)
       required:
         - refresh_token
 
-    TokenResponse:
+    RefreshTokenResponse:
       type: object
+      description: New token pair with user context
       properties:
         success:
           type: boolean
+          example: true
+        message:
+          type: string
+          example: "Token refreshed successfully"
         data:
           type: object
           properties:
             access_token:
               type: string
+              description: New RS256 JWT access token
             refresh_token:
               type: string
-            token_type:
-              type: string
+              description: New HS256 refresh token (replaces the old one)
             expires_in:
               type: integer
-        meta:
-          $ref: '#/components/schemas/Meta'
+              description: Access token lifetime in seconds
+              example: 900
+            token_type:
+              type: string
+              example: "Bearer"
+            user:
+              $ref: '#/components/schemas/LoginUser'
 
     # === LOGOUT HARDENING ===
     LogoutRequest:
