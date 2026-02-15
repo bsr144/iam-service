@@ -2,7 +2,7 @@
 	"info": {
 		"_postman_id": "dapen-collection",
 		"name": "Dapen Collection",
-		"description": "Complete API collection for Dapen IAM Service.\n\n## Health Endpoints\n- GET /health - Basic health check\n- GET /health/ready - Readiness check\n- GET /health/live - Liveness check\n\n## Registration Flow Overview\n```\nCREATED → PENDING_VERIFICATION → VERIFIED → PASSWORD_SET → COMPLETE\n```\n\n## Registration Endpoints\n1. POST /registrations - Initiate registration\n2. POST /registrations/{id}/verify-otp - Verify OTP\n3. POST /registrations/{id}/resend-otp - Resend OTP\n4. POST /registrations/{id}/set-password - Set password\n5. POST /registrations/{id}/complete-profile - Complete profile\n6. GET /registrations/{id}/status - Check status\n\n## Login Flow Overview (OTP-based passwordless)\n```\nEMAIL → OTP_REQUIRED → OTP_VERIFIED → TOKENS_ISSUED\n```\n\n## Login Endpoints\n1. POST /login - Initiate login with email (sends OTP)\n2. POST /login/{id}/verify-otp - Verify OTP and get tokens\n3. POST /login/{id}/resend-otp - Resend OTP code\n4. GET /login/{id}/status - Check login session status\n\n## Masterdata Endpoints\n### Categories\n- GET /masterdata/categories - List categories\n- GET /masterdata/categories/{id} - Get category by ID\n- GET /masterdata/categories/code/{code} - Get category by code\n- POST /masterdata/categories - Create category\n- PUT /masterdata/categories/{id} - Update category\n- DELETE /masterdata/categories/{id} - Delete category\n\n### Items\n- GET /masterdata/items - List items\n- GET /masterdata/categories/{code}/items - Get items by category\n- GET /masterdata/categories/{code}/tree - Get category tree\n- GET /masterdata/categories/{code}/default - Get default item\n- GET /masterdata/items/{id} - Get item by ID\n- GET /masterdata/items/{code}/children - Get child items\n- POST /masterdata/items - Create item\n- PUT /masterdata/items/{id} - Update item\n- DELETE /masterdata/items/{id} - Delete item\n\n### Validation\n- POST /masterdata/validate - Validate item code\n- POST /masterdata/validate/batch - Validate multiple codes",
+		"description": "Complete API collection for Dapen IAM Service.\n\n## Health Endpoints\n- GET /health - Basic health check\n- GET /health/ready - Readiness check\n- GET /health/live - Liveness check\n\n## Registration Flow Overview\n```\nCREATED → PENDING_VERIFICATION → VERIFIED → PASSWORD_SET → COMPLETE\n```\n\n## Registration Endpoints\n1. POST /registrations - Initiate registration\n2. POST /registrations/{id}/verify-otp - Verify OTP\n3. POST /registrations/{id}/resend-otp - Resend OTP\n4. POST /registrations/{id}/set-password - Set password\n5. POST /registrations/{id}/complete-profile - Complete profile\n6. GET /registrations/{id}/status - Check status\n\n## Login Flow Overview (OTP-based passwordless)\n```\nEMAIL → OTP_REQUIRED → OTP_VERIFIED → TOKENS_ISSUED\n```\n\n## Login Endpoints\n1. POST /login - Initiate login with email (sends OTP)\n2. POST /login/{id}/verify-otp - Verify OTP and get tokens\n3. POST /login/{id}/resend-otp - Resend OTP code\n4. GET /login/{id}/status - Check login session status\n\n## Logout Endpoints\n1. POST /auth/logout - Logout current session (revoke refresh token + blacklist access token)\n2. POST /auth/logout-all - Logout all sessions (revoke all tokens + user-level blacklist)\n\n## Masterdata Endpoints\n### Categories\n- GET /masterdata/categories - List categories\n- GET /masterdata/categories/{id} - Get category by ID\n- GET /masterdata/categories/code/{code} - Get category by code\n- POST /masterdata/categories - Create category\n- PUT /masterdata/categories/{id} - Update category\n- DELETE /masterdata/categories/{id} - Delete category\n\n### Items\n- GET /masterdata/items - List items\n- GET /masterdata/categories/{code}/items - Get items by category\n- GET /masterdata/categories/{code}/tree - Get category tree\n- GET /masterdata/categories/{code}/default - Get default item\n- GET /masterdata/items/{id} - Get item by ID\n- GET /masterdata/items/{code}/children - Get child items\n- POST /masterdata/items - Create item\n- PUT /masterdata/items/{id} - Update item\n- DELETE /masterdata/items/{id} - Delete item\n\n### Validation\n- POST /masterdata/validate - Validate item code\n- POST /masterdata/validate/batch - Validate multiple codes",
 		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
 	},
 	"item": [
@@ -3050,6 +3050,310 @@
 				}
 			],
 			"description": "Login OTP flow: initiate login with email, verify OTP to get tokens, resend OTP, check status."
+		},
+		{
+			"name": "Logout",
+			"item": [
+				{
+					"name": "Logout (Single Session)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status code is 200', function() {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test('Response indicates success', function() {",
+									"    var jsonData = pm.response.json();",
+									"    pm.expect(jsonData.success).to.be.true;",
+									"});",
+									"",
+									"// Clear tokens after logout",
+									"pm.collectionVariables.set('access_token', '');",
+									"pm.collectionVariables.set('refresh_token', '');"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"refresh_token\": \"{{refresh_token}}\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/iam/auth/logout",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"iam",
+								"auth",
+								"logout"
+							]
+						},
+						"description": "Logout current session by revoking the refresh token and blacklisting the access token JTI.\n\n**Headers:** Authorization (Bearer access token)\n**Body:** { refresh_token }\n\n**Behavior:**\n- Idempotent: returns 200 even if token already revoked/expired/not found\n- BOLA-protected: verifies token ownership before revoking\n- Blacklists access token JTI in Redis (TTL = remaining token lifetime)\n- Revokes refresh token + linked session in DB transaction"
+					},
+					"response": [
+						{
+							"name": "200 - Logout Success",
+							"originalRequest": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Authorization",
+										"value": "Bearer {{access_token}}"
+									},
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n    \"refresh_token\": \"{{refresh_token}}\"\n}"
+								},
+								"url": {
+									"raw": "{{base_url}}/api/v1/iam/auth/logout",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"api",
+										"v1",
+										"iam",
+										"auth",
+										"logout"
+									]
+								}
+							},
+							"status": "OK",
+							"code": 200,
+							"_postman_previewlanguage": "json",
+							"header": [
+								{
+									"key": "Content-Type",
+									"value": "application/json"
+								}
+							],
+							"body": "{\n    \"success\": true,\n    \"message\": \"Logout successful\",\n    \"data\": null,\n    \"request_id\": \"req_abc123xyz\"\n}"
+						},
+						{
+							"name": "400 - Missing Refresh Token",
+							"originalRequest": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Authorization",
+										"value": "Bearer {{access_token}}"
+									},
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{}"
+								},
+								"url": {
+									"raw": "{{base_url}}/api/v1/iam/auth/logout",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"api",
+										"v1",
+										"iam",
+										"auth",
+										"logout"
+									]
+								}
+							},
+							"status": "Bad Request",
+							"code": 400,
+							"_postman_previewlanguage": "json",
+							"header": [
+								{
+									"key": "Content-Type",
+									"value": "application/json"
+								}
+							],
+							"body": "{\n    \"success\": false,\n    \"error\": \"ERR_BAD_REQUEST\",\n    \"message\": \"refresh token is required\",\n    \"request_id\": \"req_abc123xyz\"\n}"
+						},
+						{
+							"name": "401 - Missing Authorization",
+							"originalRequest": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n    \"refresh_token\": \"{{refresh_token}}\"\n}"
+								},
+								"url": {
+									"raw": "{{base_url}}/api/v1/iam/auth/logout",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"api",
+										"v1",
+										"iam",
+										"auth",
+										"logout"
+									]
+								}
+							},
+							"status": "Unauthorized",
+							"code": 401,
+							"_postman_previewlanguage": "json",
+							"header": [
+								{
+									"key": "Content-Type",
+									"value": "application/json"
+								}
+							],
+							"body": "{\n    \"success\": false,\n    \"error\": \"missing authorization header\",\n    \"code\": \"UNAUTHORIZED\",\n    \"request_id\": \"req_abc123xyz\"\n}"
+						}
+					]
+				},
+				{
+					"name": "Logout All Sessions",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status code is 200', function() {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test('Response indicates success', function() {",
+									"    var jsonData = pm.response.json();",
+									"    pm.expect(jsonData.success).to.be.true;",
+									"});",
+									"",
+									"// Clear tokens after logout-all",
+									"pm.collectionVariables.set('access_token', '');",
+									"pm.collectionVariables.set('refresh_token', '');"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/v1/iam/auth/logout-all",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"iam",
+								"auth",
+								"logout-all"
+							]
+						},
+						"description": "Logout all sessions for the authenticated user.\n\n**Headers:** Authorization (Bearer access token)\n**Body:** None required\n\n**Behavior:**\n- Revokes ALL refresh tokens and sessions in a single DB transaction\n- Sets user-level blacklist in Redis (timestamp-based, TTL = 15 min)\n- All access tokens issued before this timestamp are rejected by middleware\n- Idempotent: returns 200 even if user has no active sessions"
+					},
+					"response": [
+						{
+							"name": "200 - All Sessions Logged Out",
+							"originalRequest": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Authorization",
+										"value": "Bearer {{access_token}}"
+									}
+								],
+								"url": {
+									"raw": "{{base_url}}/api/v1/iam/auth/logout-all",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"api",
+										"v1",
+										"iam",
+										"auth",
+										"logout-all"
+									]
+								}
+							},
+							"status": "OK",
+							"code": 200,
+							"_postman_previewlanguage": "json",
+							"header": [
+								{
+									"key": "Content-Type",
+									"value": "application/json"
+								}
+							],
+							"body": "{\n    \"success\": true,\n    \"message\": \"All sessions logged out successfully\",\n    \"data\": null,\n    \"request_id\": \"req_abc123xyz\"\n}"
+						},
+						{
+							"name": "401 - Missing Authorization",
+							"originalRequest": {
+								"method": "POST",
+								"header": [],
+								"url": {
+									"raw": "{{base_url}}/api/v1/iam/auth/logout-all",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"api",
+										"v1",
+										"iam",
+										"auth",
+										"logout-all"
+									]
+								}
+							},
+							"status": "Unauthorized",
+							"code": 401,
+							"_postman_previewlanguage": "json",
+							"header": [
+								{
+									"key": "Content-Type",
+									"value": "application/json"
+								}
+							],
+							"body": "{\n    \"success\": false,\n    \"error\": \"missing authorization header\",\n    \"code\": \"UNAUTHORIZED\",\n    \"request_id\": \"req_abc123xyz\"\n}"
+						}
+					]
+				}
+			],
+			"description": "Logout endpoints: single session logout (revoke token + blacklist JTI) and logout-all (revoke all sessions + user-level blacklist). Both require JWT authentication and are idempotent."
 		},
 		{
 			"name": "Masterdata",
