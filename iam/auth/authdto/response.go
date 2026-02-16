@@ -36,6 +36,14 @@ type LoginUserResponse struct {
 	Tenants  []TenantResponse `json:"tenants,omitempty"`
 }
 
+type RefreshTokenResponse struct {
+	AccessToken  string            `json:"access_token"`
+	RefreshToken string            `json:"refresh_token"`
+	ExpiresIn    int               `json:"expires_in"`
+	TokenType    string            `json:"token_type"`
+	User         LoginUserResponse `json:"user"`
+}
+
 type OTPConfig struct {
 	Length                int `json:"length"`
 	ExpiresInMinutes      int `json:"expires_in_minutes"`

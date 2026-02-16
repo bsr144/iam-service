@@ -49,7 +49,9 @@ type RoleRepository interface {
 }
 type RefreshTokenRepository interface {
 	Create(ctx context.Context, token *entity.RefreshToken) error
+	GetByID(ctx context.Context, id uuid.UUID) (*entity.RefreshToken, error)
 	GetByTokenHash(ctx context.Context, tokenHash string) (*entity.RefreshToken, error)
+	SetReplacedBy(ctx context.Context, id uuid.UUID, replacedByID uuid.UUID) error
 	Revoke(ctx context.Context, id uuid.UUID, reason string) error
 	RevokeAllByUserID(ctx context.Context, userID uuid.UUID, reason string) error
 	RevokeByFamily(ctx context.Context, tokenFamily uuid.UUID, reason string) error
@@ -91,6 +93,7 @@ type UserSessionRepository interface {
 	GetByID(ctx context.Context, id uuid.UUID) (*entity.UserSession, error)
 	GetByRefreshTokenID(ctx context.Context, refreshTokenID uuid.UUID) (*entity.UserSession, error)
 	UpdateLastActive(ctx context.Context, id uuid.UUID) error
+	UpdateRefreshTokenID(ctx context.Context, sessionID uuid.UUID, refreshTokenID uuid.UUID) error
 	Revoke(ctx context.Context, id uuid.UUID) error
 	RevokeAllByUserID(ctx context.Context, userID uuid.UUID) error
 }

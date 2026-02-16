@@ -21,6 +21,12 @@ type LogoutAllRequest struct {
 	UserAgent string    `json:"-"`
 }
 
+type RefreshTokenRequest struct {
+	RefreshToken string `json:"refresh_token" validate:"required"`
+	IPAddress    string `json:"-"`
+	UserAgent    string `json:"-"`
+}
+
 type InitiateRegistrationRequest struct {
 	Email     string `json:"email" validate:"required,email,max=255"`
 	IPAddress string `json:"-"`

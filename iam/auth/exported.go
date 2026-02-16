@@ -14,6 +14,7 @@ import (
 type Usecase interface {
 	Logout(ctx context.Context, req *authdto.LogoutRequest) error
 	LogoutAll(ctx context.Context, req *authdto.LogoutAllRequest) error
+	RefreshToken(ctx context.Context, req *authdto.RefreshTokenRequest) (*authdto.RefreshTokenResponse, error)
 
 	InitiateRegistration(ctx context.Context, req *authdto.InitiateRegistrationRequest) (*authdto.InitiateRegistrationResponse, error)
 	VerifyRegistrationOTP(ctx context.Context, req *authdto.VerifyRegistrationOTPRequest) (*authdto.VerifyRegistrationOTPResponse, error)
