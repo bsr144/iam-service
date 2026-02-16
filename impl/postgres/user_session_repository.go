@@ -58,6 +58,16 @@ func (r *userSessionRepository) GetByRefreshTokenID(ctx context.Context, refresh
 	return &session, nil
 }
 
+func (r *userSessionRepository) UpdateRefreshTokenID(ctx context.Context, sessionID uuid.UUID, refreshTokenID uuid.UUID) error {
+	if err := r.getDB(ctx).
+		Model(&entity.UserSession{}).
+		Where("id = ?", sessionID).
+		Update("refresh_token_id", refreshTokenID).Error; err != nil {
+		return translateError(err, "user session")
+	}
+	return nil
+}
+
 func (r *userSessionRepository) Revoke(ctx context.Context, id uuid.UUID) error {
 	now := time.Now()
 	if err := r.getDB(ctx).

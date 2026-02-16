@@ -28,6 +28,15 @@ func (r *refreshTokenRepository) Create(ctx context.Context, token *entity.Refre
 	return nil
 }
 
+func (r *refreshTokenRepository) GetByID(ctx context.Context, id uuid.UUID) (*entity.RefreshToken, error) {
+	var token entity.RefreshToken
+	err := r.getDB(ctx).Where("id = ?", id).First(&token).Error
+	if err != nil {
+		return nil, translateError(err, "refresh token")
+	}
+	return &token, nil
+}
+
 func (r *refreshTokenRepository) GetByTokenHash(ctx context.Context, tokenHash string) (*entity.RefreshToken, error) {
 	var token entity.RefreshToken
 	err := r.getDB(ctx).Where("token_hash = ?", tokenHash).First(&token).Error
@@ -35,6 +44,16 @@ func (r *refreshTokenRepository) GetByTokenHash(ctx context.Context, tokenHash s
 		return nil, translateError(err, "refresh token")
 	}
 	return &token, nil
+}
+
+func (r *refreshTokenRepository) SetReplacedBy(ctx context.Context, id uuid.UUID, replacedByID uuid.UUID) error {
+	if err := r.getDB(ctx).
+		Model(&entity.RefreshToken{}).
+		Where("id = ?", id).
+		Update("replaced_by_token_id", replacedByID).Error; err != nil {
+		return translateError(err, "refresh token")
+	}
+	return nil
 }
 
 func (r *refreshTokenRepository) Revoke(ctx context.Context, id uuid.UUID, reason string) error {
