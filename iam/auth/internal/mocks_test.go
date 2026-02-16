@@ -251,6 +251,19 @@ type MockRefreshTokenRepository struct {
 	mock.Mock
 }
 
+func (m *MockRefreshTokenRepository) GetByID(ctx context.Context, id uuid.UUID) (*entity.RefreshToken, error) {
+	args := m.Called(ctx, id)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).(*entity.RefreshToken), args.Error(1)
+}
+
+func (m *MockRefreshTokenRepository) SetReplacedBy(ctx context.Context, id uuid.UUID, replacedByID uuid.UUID) error {
+	args := m.Called(ctx, id, replacedByID)
+	return args.Error(0)
+}
+
 func (m *MockRefreshTokenRepository) Create(ctx context.Context, token *entity.RefreshToken) error {
 	args := m.Called(ctx, token)
 
@@ -369,6 +382,11 @@ func (m *MockUserSessionRepository) GetByRefreshTokenID(ctx context.Context, ref
 
 func (m *MockUserSessionRepository) UpdateLastActive(ctx context.Context, id uuid.UUID) error {
 	args := m.Called(ctx, id)
+	return args.Error(0)
+}
+
+func (m *MockUserSessionRepository) UpdateRefreshTokenID(ctx context.Context, sessionID uuid.UUID, refreshTokenID uuid.UUID) error {
+	args := m.Called(ctx, sessionID, refreshTokenID)
 	return args.Error(0)
 }
 
@@ -528,4 +546,28 @@ func (m *MockInMemoryStore) GetUserBlacklistTimestamp(ctx context.Context, userI
 		return nil, args.Error(1)
 	}
 	return args.Get(0).(*time.Time), args.Error(1)
+}
+
+type MockUserTenantRegistrationRepository struct {
+	mock.Mock
+}
+
+func (m *MockUserTenantRegistrationRepository) ListActiveByUserID(ctx context.Context, userID uuid.UUID) ([]entity.UserTenantRegistration, error) {
+	args := m.Called(ctx, userID)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).([]entity.UserTenantRegistration), args.Error(1)
+}
+
+type MockProductsByTenantRepository struct {
+	mock.Mock
+}
+
+func (m *MockProductsByTenantRepository) ListActiveByTenantID(ctx context.Context, tenantID uuid.UUID) ([]entity.Product, error) {
+	args := m.Called(ctx, tenantID)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).([]entity.Product), args.Error(1)
 }
