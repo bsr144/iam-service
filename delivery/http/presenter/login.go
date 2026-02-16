@@ -73,6 +73,19 @@ func ToLoginStatusResponse(resp *authdto.LoginStatusResponse) *response.LoginSta
 	}
 }
 
+func ToRefreshTokenResponse(resp *authdto.RefreshTokenResponse) *response.RefreshTokenResponse {
+	if resp == nil {
+		return nil
+	}
+	return &response.RefreshTokenResponse{
+		AccessToken:  resp.AccessToken,
+		RefreshToken: resp.RefreshToken,
+		ExpiresIn:    resp.ExpiresIn,
+		TokenType:    resp.TokenType,
+		User:         *toLoginUserResponse(&resp.User),
+	}
+}
+
 func toLoginUserResponse(user *authdto.LoginUserResponse) *response.LoginUserResponse {
 	if user == nil {
 		return nil

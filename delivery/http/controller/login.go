@@ -11,6 +11,30 @@ import (
 	"github.com/google/uuid"
 )
 
+func (rc *AuthController) RefreshToken(c *fiber.Ctx) error {
+	var req authdto.RefreshTokenRequest
+	if err := c.BodyParser(&req); err != nil {
+		return errors.ErrBadRequest("Invalid request body")
+	}
+
+	if err := rc.validate.Struct(&req); err != nil {
+		return errors.ErrValidationWithFields(convertValidationErrors(err.(validator.ValidationErrors)))
+	}
+
+	req.IPAddress = getClientIP(c).String()
+	req.UserAgent = getUserAgent(c)
+
+	resp, err := rc.authUsecase.RefreshToken(c.Context(), &req)
+	if err != nil {
+		return err
+	}
+
+	return c.Status(fiber.StatusOK).JSON(response.SuccessResponse(
+		"Token refreshed successfully",
+		presenter.ToRefreshTokenResponse(resp),
+	))
+}
+
 func (rc *AuthController) InitiateLogin(c *fiber.Ctx) error {
 	var req authdto.InitiateLoginRequest
 	if err := c.BodyParser(&req); err != nil {

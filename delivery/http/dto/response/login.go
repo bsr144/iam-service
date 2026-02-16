@@ -50,6 +50,14 @@ type UnifiedLoginResponse struct {
 	User         *LoginUserResponse `json:"user,omitempty"`
 }
 
+type RefreshTokenResponse struct {
+	AccessToken  string            `json:"access_token"`
+	RefreshToken string            `json:"refresh_token"`
+	ExpiresIn    int               `json:"expires_in"`
+	TokenType    string            `json:"token_type"`
+	User         LoginUserResponse `json:"user"`
+}
+
 type ResendLoginOTPResponse struct {
 	Status           string    `json:"status"`
 	LoginSessionID   uuid.UUID `json:"login_session_id"`

@@ -32,6 +32,14 @@ func (m *MockAuthUsecase) LogoutAll(ctx context.Context, req *authdto.LogoutAllR
 	return args.Error(0)
 }
 
+func (m *MockAuthUsecase) RefreshToken(ctx context.Context, req *authdto.RefreshTokenRequest) (*authdto.RefreshTokenResponse, error) {
+	args := m.Called(ctx, req)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).(*authdto.RefreshTokenResponse), args.Error(1)
+}
+
 func (m *MockAuthUsecase) InitiateRegistration(ctx context.Context, req *authdto.InitiateRegistrationRequest) (*authdto.InitiateRegistrationResponse, error) {
 	args := m.Called(ctx, req)
 	if args.Get(0) == nil {

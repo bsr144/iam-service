@@ -18,6 +18,25 @@ func SetupAuthRoutes(api fiber.Router, cfg *config.Config, authController *contr
 	auth.Post("/logout", authController.Logout)
 	auth.Post("/logout-all", authController.LogoutAll)
 
+	refreshToken := api.Group("/auth")
+	if !cfg.IsDevelopment() {
+		refreshToken.Use(limiter.New(limiter.Config{
+			Max:               20,
+			Expiration:        1 * time.Minute,
+			LimiterMiddleware: limiter.SlidingWindow{},
+			KeyGenerator: func(c *fiber.Ctx) string {
+				return c.IP()
+			},
+			LimitReached: func(c *fiber.Ctx) error {
+				return c.Status(fiber.StatusTooManyRequests).JSON(fiber.Map{
+					"success": false,
+					"error":   "too many requests, please try again later",
+				})
+			},
+		}))
+	}
+	refreshToken.Post("/refresh-token", authController.RefreshToken)
+
 	registrations := api.Group("/registrations")
 	if !cfg.IsDevelopment() {
 		registrations.Use(limiter.New(limiter.Config{
