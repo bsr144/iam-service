@@ -79,17 +79,19 @@ func TestUsecase_GetParticipant(t *testing.T) {
 			name:          "error - invalid participant UUID",
 			participantID: "invalid-uuid",
 			tenantID:      tenantID.String(),
-			setup: func(partRepo *MockParticipantRepository, identRepo *MockParticipantIdentityRepository, addrRepo *MockParticipantAddressRepository, bankRepo *MockParticipantBankAccountRepository, famRepo *MockParticipantFamilyMemberRepository, empRepo *MockParticipantEmploymentRepository, benRepo *MockParticipantBeneficiaryRepository) {},
-			wantErr:       true,
-			errKind:       errors.KindBadRequest,
+			setup: func(partRepo *MockParticipantRepository, identRepo *MockParticipantIdentityRepository, addrRepo *MockParticipantAddressRepository, bankRepo *MockParticipantBankAccountRepository, famRepo *MockParticipantFamilyMemberRepository, empRepo *MockParticipantEmploymentRepository, benRepo *MockParticipantBeneficiaryRepository) {
+			},
+			wantErr: true,
+			errKind: errors.KindBadRequest,
 		},
 		{
 			name:          "error - invalid tenant UUID",
 			participantID: participantID.String(),
 			tenantID:      "invalid-uuid",
-			setup: func(partRepo *MockParticipantRepository, identRepo *MockParticipantIdentityRepository, addrRepo *MockParticipantAddressRepository, bankRepo *MockParticipantBankAccountRepository, famRepo *MockParticipantFamilyMemberRepository, empRepo *MockParticipantEmploymentRepository, benRepo *MockParticipantBeneficiaryRepository) {},
-			wantErr:       true,
-			errKind:       errors.KindBadRequest,
+			setup: func(partRepo *MockParticipantRepository, identRepo *MockParticipantIdentityRepository, addrRepo *MockParticipantAddressRepository, bankRepo *MockParticipantBankAccountRepository, famRepo *MockParticipantFamilyMemberRepository, empRepo *MockParticipantEmploymentRepository, benRepo *MockParticipantBeneficiaryRepository) {
+			},
+			wantErr: true,
+			errKind: errors.KindBadRequest,
 		},
 		{
 			name:          "error - participant not found",
@@ -137,7 +139,6 @@ func TestUsecase_GetParticipant(t *testing.T) {
 			if tt.wantErr {
 				assert.Error(t, err)
 				assert.Nil(t, resp)
-				// Note: Invalid UUID errors are wrapped by fmt.Errorf, not AppError
 			} else {
 				require.NoError(t, err)
 				require.NotNil(t, resp)

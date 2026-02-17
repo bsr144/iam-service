@@ -32,7 +32,6 @@ func SetupParticipantRoutes(api fiber.Router, ctrl *controller.ParticipantContro
 		ctrl.UpdatePersonalData,
 	)
 
-	// Identity sub-resource
 	participants.Put("/:id/identities",
 		middleware.RequireTenantPermission("participant:update"),
 		ctrl.SaveIdentity,
@@ -42,7 +41,6 @@ func SetupParticipantRoutes(api fiber.Router, ctrl *controller.ParticipantContro
 		ctrl.DeleteIdentity,
 	)
 
-	// Address sub-resource
 	participants.Put("/:id/addresses",
 		middleware.RequireTenantPermission("participant:update"),
 		ctrl.SaveAddress,
@@ -52,7 +50,6 @@ func SetupParticipantRoutes(api fiber.Router, ctrl *controller.ParticipantContro
 		ctrl.DeleteAddress,
 	)
 
-	// Bank account sub-resource
 	participants.Put("/:id/bank-accounts",
 		middleware.RequireTenantPermission("participant:update"),
 		ctrl.SaveBankAccount,
@@ -62,7 +59,6 @@ func SetupParticipantRoutes(api fiber.Router, ctrl *controller.ParticipantContro
 		ctrl.DeleteBankAccount,
 	)
 
-	// Family member sub-resource
 	participants.Put("/:id/family-members",
 		middleware.RequireTenantPermission("participant:update"),
 		ctrl.SaveFamilyMember,
@@ -72,13 +68,11 @@ func SetupParticipantRoutes(api fiber.Router, ctrl *controller.ParticipantContro
 		ctrl.DeleteFamilyMember,
 	)
 
-	// Employment sub-resource
 	participants.Put("/:id/employment",
 		middleware.RequireTenantPermission("participant:update"),
 		ctrl.SaveEmployment,
 	)
 
-	// Beneficiary sub-resource
 	participants.Put("/:id/beneficiaries",
 		middleware.RequireTenantPermission("participant:update"),
 		ctrl.SaveBeneficiary,
@@ -88,19 +82,16 @@ func SetupParticipantRoutes(api fiber.Router, ctrl *controller.ParticipantContro
 		ctrl.DeleteBeneficiary,
 	)
 
-	// File upload (5MB limit for this route)
 	participants.Post("/:id/files",
 		middleware.RequireTenantPermission("participant:update"),
 		ctrl.UploadFile,
 	)
 
-	// Status history
 	participants.Get("/:id/status-history",
 		middleware.RequireTenantPermission("participant:read"),
 		ctrl.GetStatusHistory,
 	)
 
-	// Workflow actions
 	participants.Post("/:id/submit",
 		middleware.RequireTenantPermission("participant:submit"),
 		ctrl.Submit,

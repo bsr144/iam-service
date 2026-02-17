@@ -9,8 +9,6 @@ import (
 	"github.com/google/uuid"
 )
 
-// Helper functions for tests
-
 func newTestUsecase(
 	txManager *MockTransactionManager,
 	participantRepo *MockParticipantRepository,
@@ -130,13 +128,13 @@ func createMockEmployment(participantID uuid.UUID) *entity.ParticipantEmployment
 func createMockBeneficiary(participantID, familyMemberID uuid.UUID) *entity.ParticipantBeneficiary {
 	now := time.Now()
 	return &entity.ParticipantBeneficiary{
-		ID:               uuid.New(),
-		ParticipantID:    participantID,
-		FamilyMemberID:   familyMemberID,
-		AccountNumber:    strPtr("1234567890"),
-		Version:          1,
-		CreatedAt:        now,
-		UpdatedAt:        now,
+		ID:             uuid.New(),
+		ParticipantID:  participantID,
+		FamilyMemberID: familyMemberID,
+		AccountNumber:  strPtr("1234567890"),
+		Version:        1,
+		CreatedAt:      now,
+		UpdatedAt:      now,
 	}
 }
 

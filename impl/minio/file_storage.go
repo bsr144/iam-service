@@ -61,7 +61,6 @@ func (fs *fileStorage) ensureBucketExists(ctx context.Context, bucket string) er
 	if !exists {
 		err = fs.client.MakeBucket(ctx, bucket, minio.MakeBucketOptions{})
 		if err != nil {
-			// Handle race: another process may have created the bucket concurrently
 			exists2, err2 := fs.client.BucketExists(ctx, bucket)
 			if err2 != nil || !exists2 {
 				return fmt.Errorf("create bucket: %w", err)

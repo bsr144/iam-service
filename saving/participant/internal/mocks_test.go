@@ -12,7 +12,6 @@ import (
 	"github.com/stretchr/testify/mock"
 )
 
-// MockTransactionManager mocks the transaction manager
 type MockTransactionManager struct {
 	mock.Mock
 }
@@ -20,7 +19,7 @@ type MockTransactionManager struct {
 func (m *MockTransactionManager) WithTransaction(ctx context.Context, fn func(context.Context) error) error {
 	args := m.Called(ctx, fn)
 	if args.Get(0) == nil {
-		// Execute the function in the same context (no real transaction)
+
 		if fn != nil {
 			return fn(ctx)
 		}
@@ -29,7 +28,6 @@ func (m *MockTransactionManager) WithTransaction(ctx context.Context, fn func(co
 	return args.Error(0)
 }
 
-// MockParticipantRepository mocks the participant repository
 type MockParticipantRepository struct {
 	mock.Mock
 }
@@ -65,7 +63,6 @@ func (m *MockParticipantRepository) List(ctx context.Context, filter *contract.P
 	return args.Get(0).([]*entity.Participant), args.Get(1).(int64), args.Error(2)
 }
 
-// MockParticipantIdentityRepository mocks the identity repository
 type MockParticipantIdentityRepository struct {
 	mock.Mock
 }
@@ -101,7 +98,6 @@ func (m *MockParticipantIdentityRepository) SoftDelete(ctx context.Context, id u
 	return args.Error(0)
 }
 
-// MockParticipantAddressRepository mocks the address repository
 type MockParticipantAddressRepository struct {
 	mock.Mock
 }
@@ -137,7 +133,6 @@ func (m *MockParticipantAddressRepository) SoftDelete(ctx context.Context, id uu
 	return args.Error(0)
 }
 
-// MockParticipantBankAccountRepository mocks the bank account repository
 type MockParticipantBankAccountRepository struct {
 	mock.Mock
 }
@@ -178,7 +173,6 @@ func (m *MockParticipantBankAccountRepository) ClearPrimary(ctx context.Context,
 	return args.Error(0)
 }
 
-// MockParticipantFamilyMemberRepository mocks the family member repository
 type MockParticipantFamilyMemberRepository struct {
 	mock.Mock
 }
@@ -214,7 +208,6 @@ func (m *MockParticipantFamilyMemberRepository) SoftDelete(ctx context.Context, 
 	return args.Error(0)
 }
 
-// MockParticipantEmploymentRepository mocks the employment repository
 type MockParticipantEmploymentRepository struct {
 	mock.Mock
 }
@@ -250,7 +243,6 @@ func (m *MockParticipantEmploymentRepository) SoftDelete(ctx context.Context, id
 	return args.Error(0)
 }
 
-// MockParticipantBeneficiaryRepository mocks the beneficiary repository
 type MockParticipantBeneficiaryRepository struct {
 	mock.Mock
 }
@@ -286,7 +278,6 @@ func (m *MockParticipantBeneficiaryRepository) SoftDelete(ctx context.Context, i
 	return args.Error(0)
 }
 
-// MockParticipantStatusHistoryRepository mocks the status history repository
 type MockParticipantStatusHistoryRepository struct {
 	mock.Mock
 }
@@ -304,7 +295,6 @@ func (m *MockParticipantStatusHistoryRepository) ListByParticipantID(ctx context
 	return args.Get(0).([]*entity.ParticipantStatusHistory), args.Error(1)
 }
 
-// MockFileStorageAdapter mocks the file storage adapter
 type MockFileStorageAdapter struct {
 	mock.Mock
 }

@@ -7,9 +7,9 @@ import (
 
 	"iam-service/delivery/http/middleware"
 	"iam-service/delivery/http/presenter"
+	"iam-service/pkg/errors"
 	"iam-service/saving/participant"
 	"iam-service/saving/participant/participantdto"
-	"iam-service/pkg/errors"
 
 	"github.com/go-playground/validator/v10"
 	"github.com/gofiber/fiber/v2"
@@ -637,7 +637,7 @@ func (ctrl *ParticipantController) DeleteBeneficiary(c *fiber.Ctx) error {
 }
 
 func (ctrl *ParticipantController) UploadFile(c *fiber.Ctx) error {
-	const maxFileSize = 5 * 1024 * 1024 // 5MB
+	const maxFileSize = 5 * 1024 * 1024
 
 	pID, err := uuid.Parse(c.Params("id"))
 	if err != nil {
@@ -703,7 +703,6 @@ func (ctrl *ParticipantController) UploadFile(c *fiber.Ctx) error {
 	}
 	defer file.Close()
 
-	// Magic-byte detection: verify actual file content matches declared Content-Type
 	buf := make([]byte, 512)
 	n, err := file.Read(buf)
 	if err != nil && err != io.EOF {
