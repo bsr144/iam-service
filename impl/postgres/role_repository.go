@@ -28,7 +28,7 @@ func (r *roleRepository) Create(ctx context.Context, role *entity.Role) error {
 
 func (r *roleRepository) GetByID(ctx context.Context, id uuid.UUID) (*entity.Role, error) {
 	var role entity.Role
-	err := r.getDB(ctx).Where("id = ?", id).First(&role).Error
+	err := r.getDB(ctx).Where("id = ? AND deleted_at IS NULL", id).First(&role).Error
 	if err != nil {
 		return nil, translateError(err, "role")
 	}
@@ -76,4 +76,15 @@ func (r *roleRepository) GetByIDs(ctx context.Context, ids []uuid.UUID) ([]*enti
 		return nil, translateError(err, "roles")
 	}
 	return roles, nil
+}
+
+func (r *roleRepository) GetByCodeAndApplication(ctx context.Context, applicationID uuid.UUID, code string) (*entity.Role, error) {
+	var role entity.Role
+	err := r.getDB(ctx).Table("roles").
+		Where("application_id = ? AND code = ? AND status = ? AND deleted_at IS NULL", applicationID, code, "ACTIVE").
+		First(&role).Error
+	if err != nil {
+		return nil, translateError(err, "role")
+	}
+	return &role, nil
 }
