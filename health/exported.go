@@ -1,6 +1,6 @@
 package health
 
-import "iam-service/iam/health/internal"
+import "iam-service/health/internal"
 
 type Usecase interface {
 	CheckHealth() error
