@@ -23,3 +23,13 @@ const (
 	RegistrationRateLimitPerHour = 3
 	RegistrationRateLimitWindow  = 60
 )
+
+const (
+	LoginSessionExpiryMinutes = 10
+	LoginOTPExpiryMinutes     = 5
+	LoginOTPMaxAttempts       = 5
+	LoginOTPMaxResends        = 3
+	LoginOTPResendCooldown    = 60
+	LoginRateLimitPerHour     = 5
+	LoginRateLimitWindow      = 60
+)

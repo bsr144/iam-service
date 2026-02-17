@@ -20,10 +20,9 @@ import (
 
 func (uc *usecase) VerifyRegistrationOTP(
 	ctx context.Context,
-	registrationID uuid.UUID,
 	req *authdto.VerifyRegistrationOTPRequest,
 ) (*authdto.VerifyRegistrationOTPResponse, error) {
-	session, err := uc.Redis.GetRegistrationSession(ctx, registrationID)
+	session, err := uc.InMemoryStore.GetRegistrationSession(ctx, req.RegistrationID)
 	if err != nil {
 		return nil, err
 	}
@@ -59,7 +58,7 @@ func (uc *usecase) VerifyRegistrationOTP(
 	err = bcrypt.CompareHashAndPassword([]byte(session.OTPHash), []byte(req.OTPCode))
 	if err != nil {
 
-		attempts, incErr := uc.Redis.IncrementRegistrationAttempts(ctx, registrationID)
+		attempts, incErr := uc.InMemoryStore.IncrementRegistrationAttempts(ctx, req.RegistrationID)
 		if incErr != nil {
 			return nil, incErr
 		}
@@ -75,26 +74,26 @@ func (uc *usecase) VerifyRegistrationOTP(
 			})
 	}
 
-	token, tokenHash, err := uc.generateRegistrationCompleteToken(registrationID, req.Email)
+	token, tokenHash, err := uc.generateRegistrationCompleteToken(req.RegistrationID, req.Email)
 	if err != nil {
 		return nil, errors.ErrInternal("failed to generate registration token").WithError(err)
 	}
 
-	if err := uc.Redis.MarkRegistrationVerified(ctx, registrationID, tokenHash); err != nil {
+	if err := uc.InMemoryStore.MarkRegistrationVerified(ctx, req.RegistrationID, tokenHash); err != nil {
 		return nil, err
 	}
 
 	tokenExpiry := time.Now().Add(time.Duration(RegistrationCompleteTokenExpiryMinutes) * time.Minute)
 
 	return &authdto.VerifyRegistrationOTPResponse{
-		RegistrationID:    registrationID.String(),
+		RegistrationID:    req.RegistrationID.String(),
 		Status:            string(entity.RegistrationSessionStatusVerified),
 		Message:           "Email verified successfully",
 		RegistrationToken: token,
 		TokenExpiresAt:    tokenExpiry,
 		NextStep: authdto.NextStep{
 			Action:         "set_password",
-			Endpoint:       fmt.Sprintf("/api/iam/v1/registrations/%s/set-password", registrationID.String()),
+			Endpoint:       fmt.Sprintf("/api/iam/v1/registrations/%s/set-password", req.RegistrationID.String()),
 			RequiredFields: []string{"password", "confirmation_password"},
 		},
 	}, nil

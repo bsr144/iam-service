@@ -70,17 +70,16 @@ func (p *PasswordResetToken) IsUsed() bool {
 
 type RefreshToken struct {
 	ID                uuid.UUID  `json:"id" gorm:"column:id;primaryKey;type:uuid;default:uuidv7()" db:"id"`
-	TenantID          uuid.UUID  `json:"tenant_id" gorm:"column:tenant_id;not null" db:"tenant_id"`
-	UserID            uuid.UUID  `json:"user_id" gorm:"column:user_id;not null" db:"user_id"`
-	TokenHash         string     `json:"-" gorm:"column:token_hash;uniqueIndex;not null" db:"token_hash"`
+	UserID            uuid.UUID  `json:"user_id" gorm:"column:user_id;type:uuid;not null" db:"user_id"`
+	TokenHash         string     `json:"-" gorm:"column:token_hash;type:varchar(64);uniqueIndex;not null" db:"token_hash"`
 	TokenFamily       uuid.UUID  `json:"token_family" gorm:"column:token_family;type:uuid;default:uuidv7();not null" db:"token_family"`
 	ExpiresAt         time.Time  `json:"expires_at" gorm:"column:expires_at;not null" db:"expires_at"`
 	RevokedAt         *time.Time `json:"revoked_at,omitempty" gorm:"column:revoked_at" db:"revoked_at"`
-	RevokedReason     *string    `json:"revoked_reason,omitempty" gorm:"column:revoked_reason" db:"revoked_reason"`
-	ReplacedByTokenID *uuid.UUID `json:"replaced_by_token_id,omitempty" gorm:"column:replaced_by_token_id" db:"replaced_by_token_id"`
-	IPAddress         net.IP     `json:"ip_address,omitempty" gorm:"column:ip_address" db:"ip_address"`
-	UserAgent         string     `json:"user_agent,omitempty" gorm:"column:user_agent" db:"user_agent"`
-	CreatedAt         time.Time  `json:"created_at" gorm:"column:created_at" db:"created_at"`
+	RevokedReason     *string    `json:"revoked_reason,omitempty" gorm:"column:revoked_reason;type:varchar(100)" db:"revoked_reason"`
+	ReplacedByTokenID *uuid.UUID `json:"replaced_by_token_id,omitempty" gorm:"column:replaced_by_token_id;type:uuid" db:"replaced_by_token_id"`
+	IPAddress         string     `json:"ip_address,omitempty" gorm:"column:ip_address;type:inet" db:"ip_address"`
+	UserAgent         string     `json:"user_agent,omitempty" gorm:"column:user_agent;type:text" db:"user_agent"`
+	CreatedAt         time.Time  `json:"created_at" gorm:"column:created_at;not null" db:"created_at"`
 }
 
 func (RefreshToken) TableName() string {

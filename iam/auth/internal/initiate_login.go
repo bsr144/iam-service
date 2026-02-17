@@ -1,0 +1,91 @@
+package internal
+
+import (
+	"context"
+	"net/http"
+	"strings"
+	"time"
+
+	"iam-service/entity"
+	"iam-service/iam/auth/authdto"
+	"iam-service/pkg/errors"
+
+	"github.com/google/uuid"
+)
+
+func (uc *usecase) InitiateLogin(
+	ctx context.Context,
+	req *authdto.InitiateLoginRequest,
+) (*authdto.UnifiedLoginResponse, error) {
+	start := time.Now()
+	defer func() {
+		elapsed := time.Since(start)
+		if elapsed < 500*time.Millisecond {
+			time.Sleep(500*time.Millisecond - elapsed)
+		}
+	}()
+
+	email := strings.ToLower(strings.TrimSpace(req.Email))
+
+	count, err := uc.InMemoryStore.IncrementLoginRateLimit(ctx, email, time.Duration(LoginRateLimitWindow)*time.Minute)
+	if err != nil {
+		return nil, errors.ErrInternal("failed to check rate limit").WithError(err)
+	}
+	if count > int64(LoginRateLimitPerHour) {
+		return nil, errors.New("RATE_LIMITED", "Too many login attempts. Please try again later.", http.StatusTooManyRequests)
+	}
+
+	user, err := uc.UserRepo.GetByEmail(ctx, email)
+	if err != nil {
+		return nil, errors.New("INVALID_CREDENTIALS", "If an account exists with this email, an OTP has been sent.", http.StatusOK)
+	}
+
+	if !user.IsActive() {
+		return nil, errors.New("INVALID_CREDENTIALS", "If an account exists with this email, an OTP has been sent.", http.StatusOK)
+	}
+
+	otp, otpHash, err := uc.generateOTP()
+	if err != nil {
+		return nil, errors.ErrInternal("failed to generate OTP").WithError(err)
+	}
+
+	now := time.Now()
+	sessionExpiry := time.Duration(LoginSessionExpiryMinutes) * time.Minute
+	otpExpiry := time.Duration(LoginOTPExpiryMinutes) * time.Minute
+
+	session := &entity.LoginSession{
+		ID:                    uuid.New(),
+		UserID:                user.ID,
+		Email:                 email,
+		Status:                entity.LoginSessionStatusPendingVerification,
+		OTPHash:               otpHash,
+		OTPCreatedAt:          now,
+		OTPExpiresAt:          now.Add(otpExpiry),
+		Attempts:              0,
+		MaxAttempts:           LoginOTPMaxAttempts,
+		ResendCount:           0,
+		MaxResends:            LoginOTPMaxResends,
+		ResendCooldownSeconds: LoginOTPResendCooldown,
+		IPAddress:             req.IPAddress,
+		UserAgent:             req.UserAgent,
+		CreatedAt:             now,
+		ExpiresAt:             now.Add(sessionExpiry),
+	}
+
+	if err := uc.InMemoryStore.CreateLoginSession(ctx, session, sessionExpiry); err != nil {
+		return nil, errors.ErrInternal("failed to create login session").WithError(err)
+	}
+
+	uc.sendEmailAsync(ctx, func(ctx context.Context) error {
+		return uc.EmailService.SendOTP(ctx, email, otp, LoginOTPExpiryMinutes)
+	})
+
+	return authdto.NewOTPRequiredResponse(
+		session.ID,
+		maskEmailForRegistration(email),
+		session.ExpiresAt,
+		session.OTPExpiresAt,
+		LoginOTPMaxAttempts,
+		LoginOTPMaxResends,
+	), nil
+}

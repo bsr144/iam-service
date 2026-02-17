@@ -8,16 +8,15 @@ import (
 )
 
 type usecase struct {
-	TxManager                  contract.TransactionManager
-	Config                     *config.Config
-	UserRepo                   contract.UserRepository
-	UserProfileRepo            contract.UserProfileRepository
-	UserCredentialsRepo        contract.UserCredentialsRepository
-	UserSecurityRepo           contract.UserSecurityRepository
-	TenantRepo                 contract.TenantRepository
-	RoleRepo                   contract.RoleRepository
-	UserActivationTrackingRepo contract.UserActivationTrackingRepository
-	UserRoleRepo               contract.UserRoleRepository
+	TxManager             contract.TransactionManager
+	Config                *config.Config
+	UserRepo              contract.UserRepository
+	UserProfileRepo       contract.UserProfileRepository
+	UserAuthMethodRepo    contract.UserAuthMethodRepository
+	UserSecurityStateRepo contract.UserSecurityStateRepository
+	TenantRepo            contract.TenantRepository
+	RoleRepo              contract.RoleRepository
+	UserRoleRepo          contract.UserRoleRepository
 }
 
 func NewUsecase(
@@ -25,82 +24,79 @@ func NewUsecase(
 	cfg *config.Config,
 	userRepo contract.UserRepository,
 	userProfileRepo contract.UserProfileRepository,
-	userCredentialsRepo contract.UserCredentialsRepository,
-	userSecurityRepo contract.UserSecurityRepository,
+	userAuthMethodRepo contract.UserAuthMethodRepository,
+	userSecurityStateRepo contract.UserSecurityStateRepository,
 	tenantRepo contract.TenantRepository,
 	roleRepo contract.RoleRepository,
-	userActivationTrackingRepo contract.UserActivationTrackingRepository,
 	userRoleRepo contract.UserRoleRepository,
 ) *usecase {
 	return &usecase{
-		TxManager:                  txManager,
-		Config:                     cfg,
-		UserRepo:                   userRepo,
-		UserProfileRepo:            userProfileRepo,
-		UserCredentialsRepo:        userCredentialsRepo,
-		UserSecurityRepo:           userSecurityRepo,
-		TenantRepo:                 tenantRepo,
-		RoleRepo:                   roleRepo,
-		UserActivationTrackingRepo: userActivationTrackingRepo,
-		UserRoleRepo:               userRoleRepo,
+		TxManager:             txManager,
+		Config:                cfg,
+		UserRepo:              userRepo,
+		UserProfileRepo:       userProfileRepo,
+		UserAuthMethodRepo:    userAuthMethodRepo,
+		UserSecurityStateRepo: userSecurityStateRepo,
+		TenantRepo:            tenantRepo,
+		RoleRepo:              roleRepo,
+		UserRoleRepo:          userRoleRepo,
 	}
 }
 
-func mapUserToDetailResponse(user *entity.User, profile *entity.UserProfile, credentials *entity.UserCredentials, security *entity.UserSecurity) *userdto.UserDetailResponse {
+func mapUserToDetailResponse(user *entity.User, profile *entity.UserProfile, authMethod *entity.UserAuthMethod, securityState *entity.UserSecurityState) *userdto.UserDetailResponse {
 	resp := &userdto.UserDetailResponse{
-		ID:               user.ID,
-		Email:            user.Email,
-		EmailVerified:    user.EmailVerified,
-		IsActive:         user.IsActive,
-		IsServiceAccount: user.IsServiceAccount,
-		TenantID:         user.TenantID,
-		BranchID:         user.BranchID,
-		CreatedAt:        user.CreatedAt,
-		UpdatedAt:        user.UpdatedAt,
+		ID:        user.ID,
+		Email:     user.Email,
+		Status:    string(user.Status),
+		IsActive:  user.IsActive(),
+		CreatedAt: user.CreatedAt,
+		UpdatedAt: user.UpdatedAt,
+	}
+
+	if securityState != nil {
+		resp.EmailVerified = securityState.EmailVerified
+		resp.LastLoginAt = securityState.LastLoginAt
 	}
 
 	if profile != nil {
 		resp.FirstName = profile.FirstName
 		resp.LastName = profile.LastName
 		resp.FullName = profile.FullName()
-		resp.Phone = profile.Phone
+		resp.PhoneNumber = profile.PhoneNumber
 		resp.Address = profile.Address
-		resp.AvatarURL = profile.AvatarURL
-		resp.PreferredLanguage = profile.PreferredLanguage
-		resp.Timezone = profile.Timezone
+		resp.ProfilePictureURL = profile.ProfilePictureURL
+		if profile.DateOfBirth != nil {
+			formatted := profile.DateOfBirth.Format("2006-01-02")
+			resp.DateOfBirth = &formatted
+		}
 	}
 
-	if credentials != nil {
-		resp.PINSet = credentials.PINHash != nil
-	}
-
-	if security != nil {
-		resp.LastLoginAt = security.LastLoginAt
+	if authMethod != nil {
+		resp.PINSet = authMethod.MethodType == string(entity.AuthMethodPIN)
 	}
 
 	return resp
 }
 
-func mapUserToListItem(user *entity.User, profile *entity.UserProfile, security *entity.UserSecurity) userdto.UserListItem {
+func mapUserToListItem(user *entity.User, profile *entity.UserProfile, securityState *entity.UserSecurityState) userdto.UserListItem {
 	item := userdto.UserListItem{
-		ID:            user.ID,
-		Email:         user.Email,
-		EmailVerified: user.EmailVerified,
-		IsActive:      user.IsActive,
-		TenantID:      user.TenantID,
-		BranchID:      user.BranchID,
-		CreatedAt:     user.CreatedAt,
+		ID:        user.ID,
+		Email:     user.Email,
+		Status:    string(user.Status),
+		IsActive:  user.IsActive(),
+		CreatedAt: user.CreatedAt,
+	}
+
+	if securityState != nil {
+		item.EmailVerified = securityState.EmailVerified
+		item.LastLoginAt = securityState.LastLoginAt
 	}
 
 	if profile != nil {
 		item.FirstName = profile.FirstName
 		item.LastName = profile.LastName
 		item.FullName = profile.FullName()
-		item.Phone = profile.Phone
-	}
-
-	if security != nil {
-		item.LastLoginAt = security.LastLoginAt
+		item.PhoneNumber = profile.PhoneNumber
 	}
 
 	return item

@@ -50,7 +50,6 @@ func NewRegistrationController(cfg *config.Config, authUsecase auth.Usecase) *Au
 		validate:    validate,
 	}
 }
-
 func (rc *AuthController) Logout(c *fiber.Ctx) error {
 	var req authdto.LogoutRequest
 	if err := c.BodyParser(&req); err != nil {
@@ -61,13 +60,45 @@ func (rc *AuthController) Logout(c *fiber.Ctx) error {
 		return errors.ErrValidationWithFields(convertValidationErrors(err.(validator.ValidationErrors)))
 	}
 
-	err := rc.authUsecase.Logout(c.UserContext(), req.RefreshToken)
+	userID, jti, tokenExp, err := extractClaimsForLogout(c)
 	if err != nil {
+		return err
+	}
+
+	req.UserID = userID
+	req.AccessTokenJTI = jti
+	req.AccessTokenExp = tokenExp
+	req.IPAddress = getClientIP(c).String()
+	req.UserAgent = getUserAgent(c)
+
+	if err := rc.authUsecase.Logout(c.Context(), &req); err != nil {
+
 		return err
 	}
 
 	return c.Status(fiber.StatusOK).JSON(response.SuccessResponse(
 		"Logout successful",
+		nil,
+	))
+}
+func (rc *AuthController) LogoutAll(c *fiber.Ctx) error {
+	userID, _, _, err := extractClaimsForLogout(c)
+	if err != nil {
+		return err
+	}
+
+	req := &authdto.LogoutAllRequest{
+		UserID:    userID,
+		IPAddress: getClientIP(c).String(),
+		UserAgent: getUserAgent(c),
+	}
+
+	if err := rc.authUsecase.LogoutAll(c.Context(), req); err != nil {
+		return err
+	}
+
+	return c.Status(fiber.StatusOK).JSON(response.SuccessResponse(
+		"All sessions logged out successfully",
 		nil,
 	))
 }
@@ -82,10 +113,10 @@ func (rc *AuthController) InitiateRegistration(c *fiber.Ctx) error {
 		return errors.ErrValidationWithFields(convertValidationErrors(err.(validator.ValidationErrors)))
 	}
 
-	ipAddress := getClientIP(c).String()
-	userAgent := getUserAgent(c)
+	req.IPAddress = getClientIP(c).String()
+	req.UserAgent = getUserAgent(c)
 
-	resp, err := rc.authUsecase.InitiateRegistration(c.Context(), &req, ipAddress, userAgent)
+	resp, err := rc.authUsecase.InitiateRegistration(c.Context(), &req)
 	if err != nil {
 		return err
 	}
@@ -111,7 +142,9 @@ func (rc *AuthController) VerifyRegistrationOTP(c *fiber.Ctx) error {
 		return errors.ErrValidationWithFields(convertValidationErrors(err.(validator.ValidationErrors)))
 	}
 
-	resp, err := rc.authUsecase.VerifyRegistrationOTP(c.Context(), registrationID, &req)
+	req.RegistrationID = registrationID
+
+	resp, err := rc.authUsecase.VerifyRegistrationOTP(c.Context(), &req)
 	if err != nil {
 		return err
 	}
@@ -137,7 +170,9 @@ func (rc *AuthController) ResendRegistrationOTP(c *fiber.Ctx) error {
 		return errors.ErrValidationWithFields(convertValidationErrors(err.(validator.ValidationErrors)))
 	}
 
-	resp, err := rc.authUsecase.ResendRegistrationOTP(c.Context(), registrationID, &req)
+	req.RegistrationID = registrationID
+
+	resp, err := rc.authUsecase.ResendRegistrationOTP(c.Context(), &req)
 	if err != nil {
 		return err
 	}
@@ -195,7 +230,10 @@ func (rc *AuthController) SetPassword(c *fiber.Ctx) error {
 		return errors.ErrValidationWithFields(convertValidationErrors(err.(validator.ValidationErrors)))
 	}
 
-	resp, err := rc.authUsecase.SetPassword(c.Context(), registrationID, registrationToken, &req)
+	req.RegistrationID = registrationID
+	req.RegistrationToken = registrationToken
+
+	resp, err := rc.authUsecase.SetPassword(c.Context(), &req)
 	if err != nil {
 		return err
 	}
@@ -231,7 +269,10 @@ func (rc *AuthController) CompleteProfileRegistration(c *fiber.Ctx) error {
 		return errors.ErrValidationWithFields(convertValidationErrors(err.(validator.ValidationErrors)))
 	}
 
-	resp, err := rc.authUsecase.CompleteProfileRegistration(c.Context(), registrationID, registrationToken, &req)
+	req.RegistrationID = registrationID
+	req.RegistrationToken = registrationToken
+
+	resp, err := rc.authUsecase.CompleteProfileRegistration(c.Context(), &req)
 	if err != nil {
 		return err
 	}
@@ -267,10 +308,12 @@ func (rc *AuthController) CompleteRegistration(c *fiber.Ctx) error {
 		return errors.ErrValidationWithFields(convertValidationErrors(err.(validator.ValidationErrors)))
 	}
 
-	ipAddress := getClientIP(c).String()
-	userAgent := getUserAgent(c)
+	req.RegistrationID = registrationID
+	req.RegistrationToken = registrationToken
+	req.IPAddress = getClientIP(c).String()
+	req.UserAgent = getUserAgent(c)
 
-	resp, err := rc.authUsecase.CompleteRegistration(c.Context(), registrationID, registrationToken, &req, ipAddress, userAgent)
+	resp, err := rc.authUsecase.CompleteRegistration(c.Context(), &req)
 	if err != nil {
 		return err
 	}

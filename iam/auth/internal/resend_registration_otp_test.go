@@ -23,14 +23,14 @@ func TestResendRegistrationOTP(t *testing.T) {
 	tests := []struct {
 		name          string
 		req           *authdto.ResendRegistrationOTPRequest
-		setupMocks    func(*MockRegistrationSessionStore, *MockEmailService)
+		setupMocks    func(*MockInMemoryStore, *MockEmailService)
 		expectedError string
 		expectedCode  string
 	}{
 		{
 			name: "success - OTP resent",
 			req:  &authdto.ResendRegistrationOTPRequest{Email: email},
-			setupMocks: func(redis *MockRegistrationSessionStore, emailSvc *MockEmailService) {
+			setupMocks: func(redis *MockInMemoryStore, emailSvc *MockEmailService) {
 				session := &entity.RegistrationSession{
 					ID:                    registrationID,
 					Email:                 email,
@@ -49,7 +49,7 @@ func TestResendRegistrationOTP(t *testing.T) {
 		{
 			name: "error - registration not found",
 			req:  &authdto.ResendRegistrationOTPRequest{Email: email},
-			setupMocks: func(redis *MockRegistrationSessionStore, emailSvc *MockEmailService) {
+			setupMocks: func(redis *MockInMemoryStore, emailSvc *MockEmailService) {
 				redis.On("GetRegistrationSession", mock.Anything, registrationID).Return(nil, errors.ErrNotFound("registration not found"))
 			},
 			expectedError: "not found",
@@ -58,7 +58,7 @@ func TestResendRegistrationOTP(t *testing.T) {
 		{
 			name: "error - email mismatch",
 			req:  &authdto.ResendRegistrationOTPRequest{Email: "wrong@example.com"},
-			setupMocks: func(redis *MockRegistrationSessionStore, emailSvc *MockEmailService) {
+			setupMocks: func(redis *MockInMemoryStore, emailSvc *MockEmailService) {
 				session := &entity.RegistrationSession{
 					ID:        registrationID,
 					Email:     email,
@@ -73,7 +73,7 @@ func TestResendRegistrationOTP(t *testing.T) {
 		{
 			name: "error - session expired",
 			req:  &authdto.ResendRegistrationOTPRequest{Email: email},
-			setupMocks: func(redis *MockRegistrationSessionStore, emailSvc *MockEmailService) {
+			setupMocks: func(redis *MockInMemoryStore, emailSvc *MockEmailService) {
 				session := &entity.RegistrationSession{
 					ID:        registrationID,
 					Email:     email,
@@ -88,7 +88,7 @@ func TestResendRegistrationOTP(t *testing.T) {
 		{
 			name: "error - already verified",
 			req:  &authdto.ResendRegistrationOTPRequest{Email: email},
-			setupMocks: func(redis *MockRegistrationSessionStore, emailSvc *MockEmailService) {
+			setupMocks: func(redis *MockInMemoryStore, emailSvc *MockEmailService) {
 				verifiedAt := time.Now()
 				session := &entity.RegistrationSession{
 					ID:         registrationID,
@@ -105,7 +105,7 @@ func TestResendRegistrationOTP(t *testing.T) {
 		{
 			name: "error - max resends exceeded",
 			req:  &authdto.ResendRegistrationOTPRequest{Email: email},
-			setupMocks: func(redis *MockRegistrationSessionStore, emailSvc *MockEmailService) {
+			setupMocks: func(redis *MockInMemoryStore, emailSvc *MockEmailService) {
 				session := &entity.RegistrationSession{
 					ID:          registrationID,
 					Email:       email,
@@ -122,7 +122,7 @@ func TestResendRegistrationOTP(t *testing.T) {
 		{
 			name: "error - resend cooldown",
 			req:  &authdto.ResendRegistrationOTPRequest{Email: email},
-			setupMocks: func(redis *MockRegistrationSessionStore, emailSvc *MockEmailService) {
+			setupMocks: func(redis *MockInMemoryStore, emailSvc *MockEmailService) {
 				lastResent := time.Now().Add(-30 * time.Second)
 				session := &entity.RegistrationSession{
 					ID:                    registrationID,
@@ -143,18 +143,20 @@ func TestResendRegistrationOTP(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			redis := new(MockRegistrationSessionStore)
+			redis := new(MockInMemoryStore)
 			emailSvc := new(MockEmailService)
 			tt.setupMocks(redis, emailSvc)
 
 			uc := &usecase{
 				Config:       &config.Config{},
-				Redis:        redis,
+				InMemoryStore:        redis,
 				EmailService: emailSvc,
 			}
 
 			ctx := context.Background()
-			resp, err := uc.ResendRegistrationOTP(ctx, registrationID, tt.req)
+			tt.req.RegistrationID = registrationID
+
+			resp, err := uc.ResendRegistrationOTP(ctx, tt.req)
 
 			if tt.expectedError != "" {
 				require.Error(t, err)

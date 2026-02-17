@@ -2,6 +2,7 @@ package middleware
 
 import (
 	"iam-service/config"
+	"iam-service/iam/auth/contract"
 	"iam-service/pkg/errors"
 	jwtpkg "iam-service/pkg/jwt"
 	"strings"
@@ -9,13 +10,28 @@ import (
 	"github.com/gofiber/fiber/v2"
 )
 
-func JWTAuth(cfg *config.Config) fiber.Handler {
+func JWTAuth(cfg *config.Config, blacklistStore ...contract.TokenBlacklistStore) fiber.Handler {
 	tokenConfig := &jwtpkg.TokenConfig{
 		AccessSecret:  cfg.JWT.AccessSecret,
 		RefreshSecret: cfg.JWT.RefreshSecret,
 		AccessExpiry:  cfg.JWT.AccessExpiry,
 		RefreshExpiry: cfg.JWT.RefreshExpiry,
 		Issuer:        cfg.JWT.Issuer,
+	}
+
+	if cfg.JWT.SigningMethod == "RS256" {
+		if privateKey, err := jwtpkg.LoadPrivateKeyFromFile(cfg.JWT.PrivateKeyPath); err == nil {
+			tokenConfig.PrivateKey = privateKey
+		}
+		if publicKey, err := jwtpkg.LoadPublicKeyFromFile(cfg.JWT.PublicKeyPath); err == nil {
+			tokenConfig.PublicKey = publicKey
+		}
+		tokenConfig.SigningMethod = "RS256"
+	}
+
+	var store contract.TokenBlacklistStore
+	if len(blacklistStore) > 0 {
+		store = blacklistStore[0]
 	}
 
 	return func(c *fiber.Ctx) error {
@@ -42,6 +58,29 @@ func JWTAuth(cfg *config.Config) fiber.Handler {
 
 		tokenString := parts[1]
 
+		multiClaims, multiErr := jwtpkg.ParseMultiTenantAccessToken(tokenString, tokenConfig)
+		if multiErr == nil && len(multiClaims.Tenants) > 0 {
+			legacyClaims := &jwtpkg.JWTClaims{
+				UserID:           multiClaims.UserID,
+				Email:            multiClaims.Email,
+				SessionID:        multiClaims.SessionID,
+				RegisteredClaims: multiClaims.RegisteredClaims,
+			}
+			c.Locals(UserClaimsKey, legacyClaims)
+			c.Locals(MultiTenantClaimsKey, multiClaims)
+
+			c.Locals("userID", multiClaims.UserID.String())
+			c.Locals("jti", multiClaims.RegisteredClaims.ID)
+
+			if store != nil {
+				if rejected := checkBlacklist(c, store, multiClaims.RegisteredClaims.ID, multiClaims.UserID, multiClaims.RegisteredClaims); rejected != nil {
+					return rejected
+				}
+			}
+
+			return c.Next()
+		}
+
 		claims, err := jwtpkg.ParseAccessToken(tokenString, tokenConfig)
 		if err != nil {
 			var appErr *errors.AppError
@@ -62,6 +101,15 @@ func JWTAuth(cfg *config.Config) fiber.Handler {
 		}
 
 		c.Locals(UserClaimsKey, claims)
+
+		c.Locals("userID", claims.UserID.String())
+		c.Locals("jti", claims.RegisteredClaims.ID)
+
+		if store != nil {
+			if rejected := checkBlacklist(c, store, claims.RegisteredClaims.ID, claims.UserID, claims.RegisteredClaims); rejected != nil {
+				return rejected
+			}
+		}
 
 		return c.Next()
 	}

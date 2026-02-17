@@ -10,17 +10,19 @@ import (
 	"iam-service/delivery/http/dto/response"
 	"iam-service/delivery/http/middleware"
 	"iam-service/delivery/http/router"
+	"iam-service/health"
 	"iam-service/iam/auth"
-	"iam-service/iam/health"
 	"iam-service/iam/role"
 	"iam-service/iam/user"
 	"iam-service/impl/mailer"
+	implminio "iam-service/impl/minio"
 	"iam-service/impl/postgres"
 	implredis "iam-service/impl/redis"
 	"iam-service/infrastructure"
 	"iam-service/masterdata"
 	apperrors "iam-service/pkg/errors"
 	"iam-service/pkg/logger"
+	"iam-service/saving/participant"
 	"log"
 
 	"github.com/gofiber/fiber/v2"
@@ -59,25 +61,42 @@ func NewServer(cfg *config.Config) *Server {
 	if err != nil {
 		log.Fatal("failed to connect to redis:", err)
 	}
-	redisWrapper := implredis.NewRedis(redisClient)
+	inMemoryStore := implredis.NewRedis(redisClient)
 
 	txManager := postgres.NewTransactionManager(postgresDB)
 
 	authUserRepo := postgres.NewUserRepository(postgresDB)
 	userProfileRepo := postgres.NewUserProfileRepository(postgresDB)
-	userCredentialsRepo := postgres.NewUserCredentialsRepository(postgresDB)
-	userSecurityRepo := postgres.NewUserSecurityRepository(postgresDB)
+	userAuthMethodRepo := postgres.NewUserAuthMethodRepository(postgresDB)
+	userSecurityStateRepo := postgres.NewUserSecurityStateRepository(postgresDB)
 	tenantRepo := postgres.NewTenantRepository(postgresDB)
-	userActivationTrackingRepo := postgres.NewUserActivationTrackingRepository(postgresDB)
 	roleRepo := postgres.NewRoleRepository(postgresDB)
 	refreshTokenRepo := postgres.NewRefreshTokenRepository(postgresDB)
 	userRoleRepo := postgres.NewUserRoleRepository(postgresDB)
 	productRepo := postgres.NewProductRepository(postgresDB)
 	permissionRepo := postgres.NewPermissionRepository(postgresDB)
 	rolePermissionRepo := postgres.NewRolePermissionRepository(postgresDB)
+	userSessionRepo := postgres.NewUserSessionRepository(postgresDB)
+	userTenantRegRepo := postgres.NewUserTenantRegistrationRepository(postgresDB)
+	productsByTenantRepo := postgres.NewProductsByTenantRepository(postgresDB)
 
 	masterdataCategoryRepo := postgres.NewMasterdataCategoryRepository(postgresDB)
 	masterdataItemRepo := postgres.NewMasterdataItemRepository(postgresDB)
+
+	participantRepo := postgres.NewParticipantRepository(postgresDB)
+	participantIdentityRepo := postgres.NewParticipantIdentityRepository(postgresDB)
+	participantAddressRepo := postgres.NewParticipantAddressRepository(postgresDB)
+	participantBankAccountRepo := postgres.NewParticipantBankAccountRepository(postgresDB)
+	participantFamilyMemberRepo := postgres.NewParticipantFamilyMemberRepository(postgresDB)
+	participantEmploymentRepo := postgres.NewParticipantEmploymentRepository(postgresDB)
+	participantBeneficiaryRepo := postgres.NewParticipantBeneficiaryRepository(postgresDB)
+	participantStatusHistoryRepo := postgres.NewParticipantStatusHistoryRepository(postgresDB)
+
+	minioClient, err := infrastructure.NewMinIOClient(cfg)
+	if err != nil {
+		log.Fatal("failed to connect to minio:", err)
+	}
+	fileStorage := implminio.NewFileStorage(minioClient)
 
 	emailService := mailer.NewEmailService(&cfg.Email)
 
@@ -87,17 +106,19 @@ func NewServer(cfg *config.Config) *Server {
 		cfg,
 		authUserRepo,
 		userProfileRepo,
-		userCredentialsRepo,
-		userSecurityRepo,
+		userAuthMethodRepo,
+		userSecurityStateRepo,
 		tenantRepo,
-		userActivationTrackingRepo,
 		roleRepo,
 		refreshTokenRepo,
 		userRoleRepo,
 		productRepo,
 		permissionRepo,
 		emailService,
-		redisWrapper,
+		inMemoryStore,
+		userSessionRepo,
+		userTenantRegRepo,
+		productsByTenantRepo,
 		auditLogger,
 	)
 	roleUsecase := role.NewUsecase(
@@ -112,18 +133,30 @@ func NewServer(cfg *config.Config) *Server {
 		cfg,
 		authUserRepo,
 		userProfileRepo,
-		userCredentialsRepo,
-		userSecurityRepo,
+		userAuthMethodRepo,
+		userSecurityStateRepo,
 		tenantRepo,
 		roleRepo,
-		userActivationTrackingRepo,
 		userRoleRepo,
 	)
 	masterdataUsecase := masterdata.NewUsecase(
 		cfg,
 		masterdataCategoryRepo,
 		masterdataItemRepo,
-		redisWrapper,
+		inMemoryStore,
+	)
+	participantUsecase := participant.NewUsecase(
+		cfg,
+		txManager,
+		participantRepo,
+		participantIdentityRepo,
+		participantAddressRepo,
+		participantBankAccountRepo,
+		participantFamilyMemberRepo,
+		participantEmploymentRepo,
+		participantBeneficiaryRepo,
+		participantStatusHistoryRepo,
+		fileStorage,
 	)
 
 	healthController := controller.NewHealthController(cfg, healthUsecase)
@@ -131,6 +164,7 @@ func NewServer(cfg *config.Config) *Server {
 	roleController := controller.NewRoleController(cfg, roleUsecase)
 	userController := controller.NewUserController(cfg, userUsecase)
 	masterdataController := controller.NewMasterdataController(cfg, masterdataUsecase)
+	participantController := controller.NewParticipantController(participantUsecase)
 
 	server := &Server{
 		app:    app,
@@ -145,13 +179,15 @@ func NewServer(cfg *config.Config) *Server {
 	v1 := api.Group("/v1")
 
 	router.SetupHealthRoutes(v1, healthController)
+	router.SetupMasterdataRoutes(v1, cfg, masterdataController, inMemoryStore)
 
 	iam := v1.Group("/iam")
-	router.SetupAuthRoutes(iam, cfg, authController)
-	router.SetupRoleRoutes(iam, cfg, roleController)
-	router.SetupUserRoutes(iam, cfg, userController)
+	router.SetupAuthRoutes(iam, cfg, authController, inMemoryStore)
+	router.SetupRoleRoutes(iam, cfg, roleController, inMemoryStore)
+	router.SetupUserRoutes(iam, cfg, userController, inMemoryStore)
 
-	router.SetupMasterdataRoutes(v1, cfg, masterdataController)
+	jwtMiddleware := middleware.JWTAuth(cfg, inMemoryStore)
+	router.SetupParticipantRoutes(iam, participantController, jwtMiddleware)
 
 	return server
 }

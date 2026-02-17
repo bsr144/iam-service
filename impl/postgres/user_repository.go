@@ -32,25 +32,16 @@ func (r *userRepository) Create(ctx context.Context, user *entity.User) error {
 
 func (r *userRepository) GetByID(ctx context.Context, id uuid.UUID) (*entity.User, error) {
 	var user entity.User
-	err := r.getDB(ctx).Where("id = ?", id).First(&user).Error
+	err := r.getDB(ctx).Where("id = ? AND deleted_at IS NULL", id).First(&user).Error
 	if err != nil {
 		return nil, translateError(err, "user")
 	}
 	return &user, nil
 }
 
-func (r *userRepository) GetByEmail(ctx context.Context, tenantID uuid.UUID, email string) (*entity.User, error) {
+func (r *userRepository) GetByEmail(ctx context.Context, email string) (*entity.User, error) {
 	var user entity.User
-	err := r.getDB(ctx).Where("tenant_id = ? AND email = ?", tenantID, email).First(&user).Error
-	if err != nil {
-		return nil, translateError(err, "user")
-	}
-	return &user, nil
-}
-
-func (r *userRepository) GetByEmailAnyTenant(ctx context.Context, email string) (*entity.User, error) {
-	var user entity.User
-	err := r.getDB(ctx).Where("email = ?", email).First(&user).Error
+	err := r.getDB(ctx).Where("email = ? AND deleted_at IS NULL", email).First(&user).Error
 	if err != nil {
 		return nil, translateError(err, "user")
 	}
@@ -64,21 +55,10 @@ func (r *userRepository) Update(ctx context.Context, user *entity.User) error {
 	return nil
 }
 
-func (r *userRepository) EmailExistsInTenant(ctx context.Context, tenantID uuid.UUID, email string) (bool, error) {
-	var count int64
-	err := r.getDB(ctx).Model(&entity.User{}).
-		Where("tenant_id = ? AND email = ?", tenantID, email).
-		Count(&count).Error
-	if err != nil {
-		return false, translateError(err, "user")
-	}
-	return count > 0, nil
-}
-
 func (r *userRepository) EmailExists(ctx context.Context, email string) (bool, error) {
 	var count int64
 	err := r.getDB(ctx).Model(&entity.User{}).
-		Where("email = ?", email).
+		Where("email = ? AND deleted_at IS NULL", email).
 		Count(&count).Error
 	if err != nil {
 		return false, translateError(err, "user")
@@ -89,11 +69,11 @@ func (r *userRepository) EmailExists(ctx context.Context, email string) (bool, e
 func (r *userRepository) Delete(ctx context.Context, id uuid.UUID) error {
 	now := time.Now()
 	result := r.getDB(ctx).Model(&entity.User{}).
-		Where("id = ?", id).
+		Where("id = ? AND deleted_at IS NULL", id).
 		Updates(map[string]interface{}{
-			"deleted_at": now,
-			"is_active":  false,
-			"updated_at": now,
+			"deleted_at":        now,
+			"status":            string(entity.UserStatusLocked),
+			"status_changed_at": now,
 		})
 	if result.Error != nil {
 		return translateError(result.Error, "user")
@@ -110,16 +90,8 @@ func (r *userRepository) List(ctx context.Context, filter *contract.UserListFilt
 
 	query := r.getDB(ctx).Model(&entity.User{}).Where("deleted_at IS NULL")
 
-	if filter.TenantID != nil {
-		query = query.Where("tenant_id = ?", *filter.TenantID)
-	}
-
-	if filter.BranchID != nil {
-		query = query.Where("branch_id = ?", *filter.BranchID)
-	}
-
-	if filter.IsActive != nil {
-		query = query.Where("is_active = ?", *filter.IsActive)
+	if filter.Status != nil {
+		query = query.Where("status = ?", string(*filter.Status))
 	}
 
 	if filter.Search != "" {
@@ -168,17 +140,4 @@ func (r *userRepository) List(ctx context.Context, filter *contract.UserListFilt
 	}
 
 	return users, total, nil
-}
-
-func (r *userRepository) GetPendingApprovalUsers(ctx context.Context, tenantID uuid.UUID) ([]*entity.User, error) {
-	var users []*entity.User
-	err := r.getDB(ctx).
-		Where("tenant_id = ? AND deleted_at IS NULL", tenantID).
-		Where("id IN (SELECT user_id FROM user_activation_tracking WHERE awaiting_admin_approval = true AND admin_approval_at IS NULL)").
-		Order("created_at DESC").
-		Find(&users).Error
-	if err != nil {
-		return nil, translateError(err, "user")
-	}
-	return users, nil
 }

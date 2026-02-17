@@ -7,16 +7,17 @@ import (
 )
 
 type UserResponse struct {
-	ID        uuid.UUID          `json:"id"`
-	Email     string             `json:"email"`
-	FirstName string             `json:"first_name"`
-	LastName  string             `json:"last_name"`
-	FullName  string             `json:"full_name"`
-	Phone     *string            `json:"phone,omitempty"`
-	IsActive  bool               `json:"is_active"`
-	TenantID  *uuid.UUID         `json:"tenant_id,omitempty"`
-	BranchID  *uuid.UUID         `json:"branch_id,omitempty"`
-	Roles     []UserRoleResponse `json:"roles,omitempty"`
+	ID          uuid.UUID          `json:"id"`
+	Email       string             `json:"email"`
+	FirstName   string             `json:"first_name"`
+	LastName    string             `json:"last_name"`
+	FullName    string             `json:"full_name"`
+	PhoneNumber *string            `json:"phone_number,omitempty"`
+	DateOfBirth *string            `json:"date_of_birth,omitempty"`
+	Address     *string            `json:"address,omitempty"`
+	Status      string             `json:"status"`
+	IsActive    bool               `json:"is_active"`
+	Roles       []UserRoleResponse `json:"roles,omitempty"`
 }
 
 type UserRoleResponse struct {
@@ -25,13 +26,13 @@ type UserRoleResponse struct {
 }
 
 type UserListItemResponse struct {
-	ID        uuid.UUID  `json:"id"`
-	Email     string     `json:"email"`
-	FullName  string     `json:"full_name"`
-	Phone     *string    `json:"phone,omitempty"`
-	IsActive  bool       `json:"is_active"`
-	TenantID  *uuid.UUID `json:"tenant_id,omitempty"`
-	CreatedAt time.Time  `json:"created_at"`
+	ID          uuid.UUID `json:"id"`
+	Email       string    `json:"email"`
+	FullName    string    `json:"full_name"`
+	PhoneNumber *string   `json:"phone_number,omitempty"`
+	Status      string    `json:"status"`
+	IsActive    bool      `json:"is_active"`
+	CreatedAt   time.Time `json:"created_at"`
 }
 
 type CreateUserResponse struct {

@@ -18,6 +18,7 @@ func ToItemResponse(item *masterdatadto.ItemResponse) *response.MasterdataItemRe
 		ParentItemID: item.ParentItemID,
 		Status:       item.Status,
 		IsDefault:    item.IsDefault,
+		Metadata:     item.Metadata,
 	}
 }
 
@@ -48,6 +49,7 @@ func ToItemTreeResponse(items []*masterdatadto.ItemResponse) []*response.Masterd
 			AltName:      item.AltName,
 			ParentItemID: item.ParentItemID,
 			Status:       item.Status,
+			Metadata:     item.Metadata,
 			Children:     []*response.MasterdataItemTreeResponse{},
 		}
 		itemMap[item.ID.String()] = node

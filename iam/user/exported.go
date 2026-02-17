@@ -29,11 +29,10 @@ func NewUsecase(
 	cfg *config.Config,
 	userRepo contract.UserRepository,
 	userProfileRepo contract.UserProfileRepository,
-	userCredentialsRepo contract.UserCredentialsRepository,
-	userSecurityRepo contract.UserSecurityRepository,
+	userAuthMethodRepo contract.UserAuthMethodRepository,
+	userSecurityStateRepo contract.UserSecurityStateRepository,
 	tenantRepo contract.TenantRepository,
 	roleRepo contract.RoleRepository,
-	userActivationTrackingRepo contract.UserActivationTrackingRepository,
 	userRoleRepo contract.UserRoleRepository,
 ) Usecase {
 	return internal.NewUsecase(
@@ -41,11 +40,10 @@ func NewUsecase(
 		cfg,
 		userRepo,
 		userProfileRepo,
-		userCredentialsRepo,
-		userSecurityRepo,
+		userAuthMethodRepo,
+		userSecurityStateRepo,
 		tenantRepo,
 		roleRepo,
-		userActivationTrackingRepo,
 		userRoleRepo,
 	)
 }

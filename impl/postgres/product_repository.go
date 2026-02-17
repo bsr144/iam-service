@@ -19,6 +19,12 @@ func NewProductRepository(db *gorm.DB) *productRepository {
 	}
 }
 
+func NewProductsByTenantRepository(db *gorm.DB) *productRepository {
+	return &productRepository{
+		baseRepository: baseRepository{db: db},
+	}
+}
+
 func (r *productRepository) GetByCodeAndTenant(ctx context.Context, tenantID uuid.UUID, code string) (*entity.Product, error) {
 	var product entity.Product
 	err := r.getDB(ctx).Where("tenant_id = ? AND code = ? AND is_active = ? AND deleted_at IS NULL",
@@ -37,4 +43,15 @@ func (r *productRepository) GetByIDAndTenant(ctx context.Context, productID, ten
 		return nil, translateError(err, "product")
 	}
 	return &product, nil
+}
+
+func (r *productRepository) ListActiveByTenantID(ctx context.Context, tenantID uuid.UUID) ([]entity.Product, error) {
+	var products []entity.Product
+	err := r.getDB(ctx).
+		Where("tenant_id = ? AND is_active = ? AND deleted_at IS NULL", tenantID, true).
+		Find(&products).Error
+	if err != nil {
+		return nil, translateError(err, "product")
+	}
+	return products, nil
 }

@@ -10,7 +10,8 @@ import (
 )
 
 const (
-	UserClaimsKey = "user_claims"
+	UserClaimsKey         = "user_claims"
+	MultiTenantClaimsKey  = "multi_tenant_claims"
 )
 
 func GetUserClaims(c *fiber.Ctx) (*jwtpkg.JWTClaims, error) {
@@ -25,6 +26,20 @@ func GetUserClaims(c *fiber.Ctx) (*jwtpkg.JWTClaims, error) {
 	}
 
 	return jwtClaims, nil
+}
+
+func GetMultiTenantClaims(c *fiber.Ctx) (*jwtpkg.MultiTenantClaims, error) {
+	claims := c.Locals(MultiTenantClaimsKey)
+	if claims == nil {
+		return nil, errors.ErrUnauthorized("multi-tenant claims not found in context")
+	}
+
+	multiClaims, ok := claims.(*jwtpkg.MultiTenantClaims)
+	if !ok {
+		return nil, errors.ErrInternal("invalid multi-tenant claims type in context")
+	}
+
+	return multiClaims, nil
 }
 
 func GetUserID(c *fiber.Ctx) (uuid.UUID, error) {
@@ -109,4 +124,55 @@ func GetTenantIDFromHeader(c *fiber.Ctx) (uuid.UUID, error) {
 	}
 
 	return tenantID, nil
+}
+
+func ExtractTenantContext() fiber.Handler {
+	return func(c *fiber.Ctx) error {
+		multiClaims, err := GetMultiTenantClaims(c)
+		if err != nil {
+			appErr := errors.ErrUnauthorized("authentication required")
+			return c.Status(appErr.HTTPStatus).JSON(fiber.Map{
+				"success": false,
+				"error":   appErr.Message,
+				"code":    appErr.Code,
+			})
+		}
+
+		tenantID, err := GetTenantIDFromHeader(c)
+		if err != nil {
+			appErr := errors.ErrBadRequest("X-Tenant-ID header is required")
+			return c.Status(appErr.HTTPStatus).JSON(fiber.Map{
+				"success": false,
+				"error":   appErr.Message,
+				"code":    appErr.Code,
+			})
+		}
+
+		if !multiClaims.HasTenant(tenantID) {
+			appErr := errors.ErrForbidden("access denied to this tenant")
+			return c.Status(appErr.HTTPStatus).JSON(fiber.Map{
+				"success": false,
+				"error":   appErr.Message,
+				"code":    appErr.Code,
+			})
+		}
+
+		c.Locals("tenant_id", tenantID)
+
+		return c.Next()
+	}
+}
+
+func GetTenantIDFromContext(c *fiber.Ctx) (uuid.UUID, error) {
+	tenantID := c.Locals("tenant_id")
+	if tenantID == nil {
+		return uuid.Nil, errors.ErrForbidden("tenant context not found")
+	}
+
+	tid, ok := tenantID.(uuid.UUID)
+	if !ok {
+		return uuid.Nil, errors.ErrInternal("invalid tenant ID type in context")
+	}
+
+	return tid, nil
 }

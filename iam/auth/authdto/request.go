@@ -1,41 +1,75 @@
 package authdto
 
+import (
+	"time"
+
+	"github.com/google/uuid"
+)
+
 type LogoutRequest struct {
+	RefreshToken   string    `json:"refresh_token" validate:"required"`
+	AccessTokenJTI string    `json:"-"`
+	AccessTokenExp time.Time `json:"-"`
+	UserID         uuid.UUID `json:"-"`
+	IPAddress      string    `json:"-"`
+	UserAgent      string    `json:"-"`
+}
+
+type LogoutAllRequest struct {
+	UserID    uuid.UUID `json:"-"`
+	IPAddress string    `json:"-"`
+	UserAgent string    `json:"-"`
+}
+
+type RefreshTokenRequest struct {
 	RefreshToken string `json:"refresh_token" validate:"required"`
+	IPAddress    string `json:"-"`
+	UserAgent    string `json:"-"`
 }
 
 type InitiateRegistrationRequest struct {
-	Email string `json:"email" validate:"required,email,max=255"`
+	Email     string `json:"email" validate:"required,email,max=255"`
+	IPAddress string `json:"-"`
+	UserAgent string `json:"-"`
 }
 
 type VerifyRegistrationOTPRequest struct {
-	Email   string `json:"email" validate:"required,email"`
-	OTPCode string `json:"otp_code" validate:"required,len=6,numeric"`
+	RegistrationID uuid.UUID `json:"-"`
+	Email          string    `json:"email" validate:"required,email"`
+	OTPCode        string    `json:"otp_code" validate:"required,len=6,numeric"`
 }
 
 type ResendRegistrationOTPRequest struct {
-	Email string `json:"email" validate:"required,email"`
+	RegistrationID uuid.UUID `json:"-"`
+	Email          string    `json:"email" validate:"required,email"`
 }
 
 type SetPasswordRequest struct {
-	Password             string `json:"password" validate:"required,min=8,max=128"`
-	ConfirmationPassword string `json:"confirmation_password" validate:"required,eqfield=Password"`
+	RegistrationID       uuid.UUID `json:"-"`
+	RegistrationToken    string    `json:"-"`
+	Password             string    `json:"password" validate:"required,min=8,max=128"`
+	ConfirmationPassword string    `json:"confirmation_password" validate:"required,eqfield=Password"`
 }
 
 type CompleteProfileRegistrationRequest struct {
-	FullName      string `json:"full_name" validate:"required,min=1,max=200"`
-	PhoneNumber   string `json:"phone_number" validate:"required,e164"`
-	DateOfBirth   string `json:"date_of_birth" validate:"required"`
-	Gender        string `json:"gender" validate:"required,oneof=male female other"`
-	MaritalStatus string `json:"marital_status" validate:"required,oneof=single married divorced widowed"`
-	Address       string `json:"address" validate:"required,min=10,max=500"`
-	PlaceOfBirth  string `json:"place_of_birth" validate:"required,min=2,max=100"`
+	RegistrationID    uuid.UUID `json:"-"`
+	RegistrationToken string    `json:"-"`
+	FullName          string    `json:"full_name" validate:"required,min=1,max=200"`
+	PhoneNumber       string    `json:"phone_number" validate:"required,e164"`
+	DateOfBirth       string    `json:"date_of_birth" validate:"required"`
+	Gender            string    `json:"gender" validate:"required,oneof=male female other"`
+	MaritalStatus     string    `json:"marital_status" validate:"required,oneof=single married divorced widowed"`
+	Address           string    `json:"address" validate:"required,min=10,max=500"`
 }
 
 type CompleteRegistrationRequest struct {
-	Password             string  `json:"password" validate:"required,min=8,max=128"`
-	PasswordConfirmation string  `json:"password_confirmation" validate:"required,eqfield=Password"`
-	FirstName            string  `json:"first_name" validate:"required,min=1,max=100"`
-	LastName             string  `json:"last_name" validate:"required,min=1,max=100"`
-	PhoneNumber          *string `json:"phone_number,omitempty" validate:"omitempty,e164"`
+	RegistrationID       uuid.UUID `json:"-"`
+	RegistrationToken    string    `json:"-"`
+	IPAddress            string    `json:"-"`
+	UserAgent            string    `json:"-"`
+	Password             string    `json:"password" validate:"required,min=8,max=128"`
+	PasswordConfirmation string    `json:"password_confirmation" validate:"required,eqfield=Password"`
+	FirstName            string    `json:"first_name" validate:"required,min=1,max=100"`
+	LastName             string    `json:"last_name" validate:"required,min=1,max=100"`
+	PhoneNumber          *string   `json:"phone_number,omitempty" validate:"omitempty,e164"`
 }

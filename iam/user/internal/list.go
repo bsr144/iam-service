@@ -2,6 +2,8 @@ package internal
 
 import (
 	"context"
+
+	"iam-service/entity"
 	"iam-service/iam/user/contract"
 	"iam-service/iam/user/userdto"
 	"iam-service/pkg/errors"
@@ -13,8 +15,6 @@ func (uc *usecase) List(ctx context.Context, tenantID *uuid.UUID, req *userdto.L
 	req.SetDefaults()
 
 	filter := &contract.UserListFilter{
-		TenantID:  tenantID,
-		BranchID:  req.BranchID,
 		RoleID:    req.RoleID,
 		Search:    req.Search,
 		Page:      req.Page,
@@ -23,12 +23,9 @@ func (uc *usecase) List(ctx context.Context, tenantID *uuid.UUID, req *userdto.L
 		SortOrder: req.SortOrder,
 	}
 
-	if req.Status == "active" {
-		isActive := true
-		filter.IsActive = &isActive
-	} else if req.Status == "inactive" {
-		isActive := false
-		filter.IsActive = &isActive
+	if req.Status != "" {
+		status := entity.UserStatus(req.Status)
+		filter.Status = &status
 	}
 
 	users, total, err := uc.UserRepo.List(ctx, filter)
@@ -39,8 +36,8 @@ func (uc *usecase) List(ctx context.Context, tenantID *uuid.UUID, req *userdto.L
 	items := make([]userdto.UserListItem, 0, len(users))
 	for _, user := range users {
 		profile, _ := uc.UserProfileRepo.GetByUserID(ctx, user.ID)
-		security, _ := uc.UserSecurityRepo.GetByUserID(ctx, user.ID)
-		items = append(items, mapUserToListItem(user, profile, security))
+		securityState, _ := uc.UserSecurityStateRepo.GetByUserID(ctx, user.ID)
+		items = append(items, mapUserToListItem(user, profile, securityState))
 	}
 
 	totalPages := int(total) / req.PerPage

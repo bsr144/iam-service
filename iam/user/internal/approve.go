@@ -20,46 +20,16 @@ func (uc *usecase) Approve(ctx context.Context, id uuid.UUID, approverID uuid.UU
 		return nil, err
 	}
 
-	tracking, err := uc.UserActivationTrackingRepo.GetByUserID(ctx, id)
-	if err != nil {
-		if errors.IsNotFound(err) {
-			return nil, errors.ErrBadRequest("user activation tracking not found")
-		}
-		return nil, err
+	if user.Status != entity.UserStatusPendingVerification {
+		return nil, errors.ErrBadRequest("user is not pending verification")
 	}
 
-	if tracking.IsActivated() {
-		return nil, errors.ErrBadRequest("user is already activated")
-	}
+	now := time.Now()
+	user.Status = entity.UserStatusActive
+	user.StatusChangedAt = &now
+	user.StatusChangedBy = &approverID
 
-	if tracking.IsAdminRegistered() {
-		return nil, errors.ErrBadRequest("user has already been approved by admin")
-	}
-
-	err = uc.TxManager.WithTransaction(ctx, func(txCtx context.Context) error {
-		now := time.Now()
-		tracking.AdminCreated = true
-		tracking.AdminCreatedAt = &now
-		tracking.AdminCreatedBy = &approverID
-
-		if err := tracking.AddStatusTransition("admin_approved", "admin"); err != nil {
-			return err
-		}
-
-		if tracking.IsUserRegistered() {
-			if err := tracking.Activate(); err != nil {
-				return err
-			}
-			user.IsActive = true
-			if err := uc.UserRepo.Update(txCtx, user); err != nil {
-				return err
-			}
-		}
-
-		return uc.UserActivationTrackingRepo.Update(txCtx, tracking)
-	})
-
-	if err != nil {
+	if err := uc.UserRepo.Update(ctx, user); err != nil {
 		return nil, errors.ErrInternal("failed to approve user").WithError(err)
 	}
 
@@ -67,18 +37,4 @@ func (uc *usecase) Approve(ctx context.Context, id uuid.UUID, approverID uuid.UU
 		UserID:  id,
 		Message: "User approved successfully",
 	}, nil
-}
-
-func (uc *usecase) AwaitingAdminApproval(ctx context.Context, userID uuid.UUID) (*entity.UserActivationTracking, error) {
-	tracking, err := uc.UserActivationTrackingRepo.GetByUserID(ctx, userID)
-	if err != nil {
-		if errors.IsNotFound(err) {
-			return nil, nil
-		}
-		return nil, err
-	}
-	if tracking.IsPendingAdminApproval() {
-		return tracking, nil
-	}
-	return nil, nil
 }

@@ -55,3 +55,146 @@ func RequireRole(roleCode string) fiber.Handler {
 		return c.Next()
 	}
 }
+
+func RequireTenantRole(roleCodes ...string) fiber.Handler {
+	return func(c *fiber.Ctx) error {
+		multiClaims, err := GetMultiTenantClaims(c)
+		if err != nil {
+			appErr := errors.ErrUnauthorized("authentication required")
+			return c.Status(appErr.HTTPStatus).JSON(fiber.Map{
+				"success": false,
+				"error":   appErr.Message,
+				"code":    appErr.Code,
+			})
+		}
+
+		tenantID, err := GetTenantIDFromHeader(c)
+		if err != nil {
+			appErr := errors.ErrBadRequest("X-Tenant-ID header is required")
+			return c.Status(appErr.HTTPStatus).JSON(fiber.Map{
+				"success": false,
+				"error":   appErr.Message,
+				"code":    appErr.Code,
+			})
+		}
+
+		if !multiClaims.HasTenant(tenantID) {
+			appErr := errors.ErrForbidden("access denied to this tenant")
+			return c.Status(appErr.HTTPStatus).JSON(fiber.Map{
+				"success": false,
+				"error":   appErr.Message,
+				"code":    appErr.Code,
+			})
+		}
+
+		tenantClaim := multiClaims.GetTenantClaim(tenantID)
+		if tenantClaim == nil {
+			appErr := errors.ErrForbidden("tenant not found in claims")
+			return c.Status(appErr.HTTPStatus).JSON(fiber.Map{
+				"success": false,
+				"error":   appErr.Message,
+				"code":    appErr.Code,
+			})
+		}
+
+		hasRole := false
+		for _, product := range tenantClaim.Products {
+			for _, role := range product.Roles {
+				for _, requiredRole := range roleCodes {
+					if role == requiredRole {
+						hasRole = true
+						break
+					}
+				}
+				if hasRole {
+					break
+				}
+			}
+			if hasRole {
+				break
+			}
+		}
+
+		if !hasRole {
+			appErr := errors.ErrAccessForbidden("insufficient permissions for this tenant")
+			return c.Status(appErr.HTTPStatus).JSON(fiber.Map{
+				"success": false,
+				"error":   appErr.Message,
+				"code":    appErr.Code,
+			})
+		}
+
+		return c.Next()
+	}
+}
+
+func RequireAnyTenantRole(roleCodes ...string) fiber.Handler {
+	return RequireTenantRole(roleCodes...)
+}
+
+func RequireTenantPermission(permissionCode string) fiber.Handler {
+	return func(c *fiber.Ctx) error {
+		multiClaims, err := GetMultiTenantClaims(c)
+		if err != nil {
+			appErr := errors.ErrUnauthorized("authentication required")
+			return c.Status(appErr.HTTPStatus).JSON(fiber.Map{
+				"success": false,
+				"error":   appErr.Message,
+				"code":    appErr.Code,
+			})
+		}
+
+		tenantID, err := GetTenantIDFromHeader(c)
+		if err != nil {
+			appErr := errors.ErrBadRequest("X-Tenant-ID header is required")
+			return c.Status(appErr.HTTPStatus).JSON(fiber.Map{
+				"success": false,
+				"error":   appErr.Message,
+				"code":    appErr.Code,
+			})
+		}
+
+		if !multiClaims.HasTenant(tenantID) {
+			appErr := errors.ErrForbidden("access denied to this tenant")
+			return c.Status(appErr.HTTPStatus).JSON(fiber.Map{
+				"success": false,
+				"error":   appErr.Message,
+				"code":    appErr.Code,
+			})
+		}
+
+		tenantClaim := multiClaims.GetTenantClaim(tenantID)
+		if tenantClaim == nil {
+			appErr := errors.ErrForbidden("tenant not found in claims")
+			return c.Status(appErr.HTTPStatus).JSON(fiber.Map{
+				"success": false,
+				"error":   appErr.Message,
+				"code":    appErr.Code,
+			})
+		}
+
+		hasPermission := false
+		for _, product := range tenantClaim.Products {
+			for _, perm := range product.Permissions {
+				if perm == permissionCode {
+					hasPermission = true
+					break
+				}
+			}
+			if hasPermission {
+				break
+			}
+		}
+
+		if !hasPermission {
+			appErr := errors.ErrAccessForbidden("insufficient permissions for this operation")
+			return c.Status(appErr.HTTPStatus).JSON(fiber.Map{
+				"success": false,
+				"error":   appErr.Message,
+				"code":    appErr.Code,
+			})
+		}
+
+		return c.Next()
+	}
+}

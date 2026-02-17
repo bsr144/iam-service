@@ -3,19 +3,19 @@ info:
   title: IAM System API
   description: |
     Generic Multi-Tenant Identity and Access Management System API.
-    
+
     ## Overview
     This API provides authentication, authorization, and user management capabilities
     for multi-tenant applications.
-    
+
     ## Authentication
     Most endpoints require a JWT Bearer token in the Authorization header.
-    Tokens are obtained via the `/auth/login` and `/auth/verify-pin` endpoints.
-    
+    Tokens are obtained via the OTP-based login flow (`/login` → `/login/{id}/verify-otp`).
+
     ## Multi-Tenancy
     The `X-Tenant-Code` header is required for authentication endpoints to identify
     the tenant context. For authenticated requests, the tenant is extracted from the JWT.
-    
+
     ## Rate Limiting
     All endpoints are rate-limited. See the rate limit headers in responses:
     - `X-RateLimit-Limit`: Maximum requests allowed
@@ -40,99 +40,235 @@ servers:
 tags:
   - name: Authentication
     description: User authentication and token management
+  - name: Registration
+    description: User registration flow
   - name: Users
     description: User management operations
   - name: Profile
     description: Current user profile operations
-  - name: Applications
-    description: Application management
   - name: Roles
     description: Role management
-  - name: Permissions
-    description: Permission management
-  - name: Branches
-    description: Branch management
-  - name: Tenants
-    description: Tenant management (Platform Admin)
-  - name: Audit
-    description: Audit log queries
+  - name: Masterdata
+    description: Master data categories and items
+  - name: Participants
+    description: Participant management and data collection
   - name: Health
     description: Health check endpoints
 
 paths:
   # ==========================================
+  # HEALTH
+  # ==========================================
+  /health:
+    get:
+      tags: [Health]
+      summary: Basic health check
+      description: Returns basic health status. Used for liveness probes.
+      operationId: healthCheck
+      security: []
+      responses:
+        '200':
+          description: Service is healthy
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthResponse'
+
+  /health/ready:
+    get:
+      tags: [Health]
+      summary: Readiness check
+      description: Checks all dependencies. Used for readiness probes.
+      operationId: readinessCheck
+      security: []
+      responses:
+        '200':
+          description: Service is ready
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReadinessResponse'
+        '503':
+          description: Service is not ready
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReadinessResponse'
+
+  /health/live:
+    get:
+      tags: [Health]
+      summary: Liveness check
+      description: Simple liveness probe. Returns 200 if the process is alive.
+      operationId: livenessCheck
+      security: []
+      responses:
+        '200':
+          description: Service is alive
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthResponse'
+
+  # ==========================================
   # AUTHENTICATION
   # ==========================================
-  /auth/login:
+  # === LOGIN (OTP-based passwordless) ===
+  /login:
     post:
       tags: [Authentication]
-      summary: User login with email and password
+      summary: Initiate login with email
       description: |
-        Authenticates user with email and password. If PIN is set, returns a partial
-        token that must be used with `/auth/verify-pin`. If PIN is not set (first login),
-        returns full tokens with `requires_pin_setup: true`.
-      operationId: login
+        Sends a 6-digit OTP to the user's email. Returns a login session ID
+        for subsequent OTP verification. Always returns 200 to prevent user enumeration.
+        Enforces 500ms minimum response time for timing attack prevention.
+      operationId: initiateLogin
       security: []
-      parameters:
-        - $ref: '#/components/parameters/TenantCode'
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/LoginRequest'
+              $ref: '#/components/schemas/InitiateLoginRequest'
       responses:
         '200':
-          description: Login successful or PIN required
+          description: OTP sent (or generic response if user not found)
           content:
             application/json:
               schema:
-                oneOf:
-                  - $ref: '#/components/schemas/LoginPartialResponse'
-                  - $ref: '#/components/schemas/LoginSuccessResponse'
+                $ref: '#/components/schemas/InitiateLoginResponse'
         '400':
           $ref: '#/components/responses/BadRequest'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '403':
-          $ref: '#/components/responses/Forbidden'
         '429':
           $ref: '#/components/responses/TooManyRequests'
 
-  /auth/verify-pin:
+  /login/{id}/verify-otp:
     post:
       tags: [Authentication]
-      summary: Verify PIN after password authentication
-      description: Completes the two-factor authentication by verifying the 6-digit PIN.
-      operationId: verifyPin
+      summary: Verify login OTP and get tokens
+      description: |
+        Verifies the 6-digit OTP code. On success, returns access and refresh tokens
+        with multi-tenant claims. The login session is deleted from Redis after verification.
+      operationId: verifyLoginOTP
       security: []
+      parameters:
+        - $ref: '#/components/parameters/LoginSessionId'
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/VerifyPinRequest'
+              $ref: '#/components/schemas/VerifyLoginOTPRequest'
       responses:
         '200':
-          description: PIN verified, login successful
+          description: OTP verified, tokens issued
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/LoginSuccessResponse'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
+                $ref: '#/components/schemas/VerifyLoginOTPResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
         '403':
           $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '410':
+          description: Session or OTP expired
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
         '429':
           $ref: '#/components/responses/TooManyRequests'
 
-  /auth/refresh:
+  /login/{id}/resend-otp:
     post:
       tags: [Authentication]
-      summary: Refresh access token
+      summary: Resend login OTP
       description: |
-        Exchanges a valid refresh token for a new access token and refresh token.
-        The old refresh token is invalidated (token rotation).
+        Generates and sends a new OTP. Previous OTP is invalidated.
+        Subject to cooldown (60s) and max resend limits (3 per session).
+      operationId: resendLoginOTP
+      security: []
+      parameters:
+        - $ref: '#/components/parameters/LoginSessionId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ResendLoginOTPRequest'
+      responses:
+        '200':
+          description: New OTP sent
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ResendLoginOTPResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '410':
+          description: Session expired
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+
+  /login/{id}/status:
+    get:
+      tags: [Authentication]
+      summary: Check login session status
+      description: Returns the current state of a login session including remaining attempts and resends.
+      operationId: getLoginStatus
+      security: []
+      parameters:
+        - $ref: '#/components/parameters/LoginSessionId'
+        - name: email
+          in: query
+          required: true
+          description: Email associated with the login session
+          schema:
+            type: string
+            format: email
+      responses:
+        '200':
+          description: Login session status
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LoginStatusResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  # === REFRESH TOKEN ROTATION ===
+  /auth/refresh-token:
+    post:
+      tags: [Authentication]
+      summary: Refresh access token with rotation
+      description: |
+        Exchanges a valid refresh token for a new access token and refresh token pair.
+
+        **Token Rotation:** The old refresh token is immediately revoked and replaced with a new one.
+        Each refresh token can only be used once.
+
+        **Theft Detection:** If a revoked refresh token is reused, the entire token family
+        is revoked to protect against token theft.
+
+        **Session Continuity:** The session ID (JTI) is preserved across rotations, maintaining
+        the same user session.
+
+        **User Status Check:** Fails if the user account is not ACTIVE.
+
+        **Rate Limiting:** 20 requests per minute per IP (sliding window).
+
+        **Error Responses:** All authentication failures return generic "invalid token"
+        message to prevent information leakage.
       operationId: refreshToken
       security: []
       requestBody:
@@ -141,215 +277,368 @@ paths:
           application/json:
             schema:
               $ref: '#/components/schemas/RefreshTokenRequest'
+            example:
+              refresh_token: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
       responses:
         '200':
           description: Tokens refreshed successfully
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/TokenResponse'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-
-  /auth/logout:
-    post:
-      tags: [Authentication]
-      summary: Logout and revoke tokens
-      description: Revokes the current access token and optionally the refresh token.
-      operationId: logout
-      security:
-        - BearerAuth: []
-      requestBody:
-        required: false
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/LogoutRequest'
-      responses:
-        '200':
-          description: Logged out successfully
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/SuccessResponse'
-
-  /auth/register:
-    post:
-      tags: [Authentication]
-      summary: Register new user
-      description: |
-        Registers a new user account. An email verification OTP will be sent.
-        After email verification, account status becomes PENDING_APPROVAL if
-        tenant requires approval, otherwise ACTIVE.
-      operationId: register
-      security: []
-      parameters:
-        - $ref: '#/components/parameters/TenantCode'
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/RegisterRequest'
-      responses:
-        '201':
-          description: Registration successful
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/RegisterResponse'
+                $ref: '#/components/schemas/RefreshTokenResponse'
+              example:
+                success: true
+                message: "Token refreshed successfully"
+                data:
+                  access_token: "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9..."
+                  refresh_token: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+                  expires_in: 900
+                  token_type: "Bearer"
+                  user:
+                    id: "018da8c0-751f-7347-bad1-aa78ab643c0f"
+                    email: "user@example.com"
+                    full_name: "John Doe"
+                    tenants:
+                      - tenant_id: "018da8c0-7520-7347-bad1-aa78ab643c0f"
+                        products:
+                          - product_id: "018da8c0-7521-7347-bad1-aa78ab643c0f"
+                            product_code: "CORE_APP"
+                            roles: ["USER", "ADMIN"]
+                            permissions: ["user:read", "user:write"]
         '400':
-          $ref: '#/components/responses/BadRequest'
-        '409':
-          description: Email already exists
+          description: Validation error - missing or malformed refresh_token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                success: false
+                error:
+                  code: "ERR_VALIDATION"
+                  message: "validation failed"
+        '401':
+          description: |
+            Invalid, expired, revoked, or not found refresh token.
+            All authentication failures return the same generic error to prevent enumeration.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                invalid_token:
+                  summary: Invalid token signature or not found
+                  value:
+                    success: false
+                    error:
+                      code: "ERR_TOKEN_INVALID"
+                      message: "invalid token"
+                expired_token:
+                  summary: Token expired
+                  value:
+                    success: false
+                    error:
+                      code: "ERR_TOKEN_EXPIRED"
+                      message: "token has expired"
+        '403':
+          description: User account is inactive
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                success: false
+                error:
+                  code: "ERR_USER_INACTIVE"
+                  message: "user account is inactive"
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '500':
+          description: Internal server error
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
 
-  /auth/verify-email:
+  # === LOGOUT HARDENING ===
+  /auth/logout:
     post:
       tags: [Authentication]
-      summary: Verify email with OTP
-      description: Verifies the user's email address using the OTP sent during registration.
-      operationId: verifyEmail
-      security: []
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/VerifyEmailRequest'
-      responses:
-        '200':
-          description: Email verified successfully
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/SuccessResponse'
-        '400':
-          $ref: '#/components/responses/BadRequest'
-
-  /auth/setup-pin:
-    post:
-      tags: [Authentication]
-      summary: Set up PIN for two-factor authentication
-      description: Sets up the 6-digit PIN for the authenticated user.
-      operationId: setupPin
-      security:
-        - BearerAuth: []
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/SetupPinRequest'
-      responses:
-        '200':
-          description: PIN set up successfully
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/SuccessResponse'
-        '400':
-          $ref: '#/components/responses/BadRequest'
-
-  /auth/change-password:
-    post:
-      tags: [Authentication]
-      summary: Change password
-      description: Changes the current user's password. Requires current password verification.
-      operationId: changePassword
-      security:
-        - BearerAuth: []
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/ChangePasswordRequest'
-      responses:
-        '200':
-          description: Password changed successfully
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/SuccessResponse'
-        '400':
-          $ref: '#/components/responses/BadRequest'
-
-  /auth/forgot-password:
-    post:
-      tags: [Authentication]
-      summary: Request password reset
+      summary: Logout current session
       description: |
-        Sends a password reset email with a reset token.
-        Always returns 200 to prevent email enumeration.
-      operationId: forgotPassword
-      security: []
-      parameters:
-        - $ref: '#/components/parameters/TenantCode'
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/ForgotPasswordRequest'
-      responses:
-        '200':
-          description: Reset email sent (if email exists)
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/SuccessResponse'
+        Revokes the current session by:
+        - Revoking the provided refresh token in the database
+        - Blacklisting the current access token (JTI) in Redis
+        - Invalidating the user session
 
-  /auth/reset-password:
-    post:
-      tags: [Authentication]
-      summary: Reset password with token
-      description: Resets the password using the token from the reset email.
-      operationId: resetPassword
-      security: []
+        **Idempotent**: Returns 200 even if the refresh token is already revoked,
+        expired, or not found. This prevents information leakage about token validity.
+
+        **Security**: Requires valid JWT in Authorization header. The access token's
+        JTI is automatically extracted from the JWT claims.
+      operationId: logout
+      security:
+        - BearerAuth: []
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/ResetPasswordRequest'
+              $ref: '#/components/schemas/LogoutRequest'
+            example:
+              refresh_token: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
       responses:
         '200':
-          description: Password reset successfully
+          description: Logout successful (idempotent)
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/SuccessResponse'
+              example:
+                success: true
+                message: "Logout successful"
+                data: null
         '400':
           $ref: '#/components/responses/BadRequest'
-
-  /auth/google:
-    post:
-      tags: [Authentication]
-      summary: Google OAuth login
-      description: Authenticates or registers a user using Google OAuth.
-      operationId: googleAuth
-      security: []
-      parameters:
-        - $ref: '#/components/parameters/TenantCode'
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/GoogleAuthRequest'
-      responses:
-        '200':
-          description: Authentication successful
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/LoginSuccessResponse'
         '401':
           $ref: '#/components/responses/Unauthorized'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+
+  /auth/logout-all:
+    post:
+      tags: [Authentication]
+      summary: Logout all sessions
+      description: |
+        Revokes **all** sessions for the authenticated user by:
+        - Revoking all refresh tokens in the database
+        - Adding user to user-level blacklist in Redis (invalidates all access tokens)
+        - Invalidating all user sessions
+
+        **Use case**: Security incident response, password change, or user-initiated
+        "logout from all devices" action.
+
+        **Idempotent**: Returns 200 even if the user has no active sessions.
+
+        **Security**: Requires valid JWT in Authorization header. User ID is
+        automatically extracted from the JWT claims.
+      operationId: logoutAll
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: All sessions logged out successfully (idempotent)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+              example:
+                success: true
+                message: "All sessions logged out successfully"
+                data: null
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+
+  # ==========================================
+  # REGISTRATION
+  # ==========================================
+  /registrations:
+    post:
+      tags: [Registration]
+      summary: Initiate user registration
+      description: |
+        Starts the multi-step registration flow. Sends a 6-digit OTP to the provided email
+        for verification. Returns a registration session ID used in subsequent steps.
+      operationId: initiateRegistration
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/InitiateRegistrationRequest'
+      responses:
+        '201':
+          description: Registration initiated, OTP sent
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InitiateRegistrationResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '409':
+          description: Email already registered
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+
+  /registrations/{id}/verify-otp:
+    post:
+      tags: [Registration]
+      summary: Verify registration OTP
+      description: Verifies the OTP sent to the user's email during registration.
+      operationId: verifyRegistrationOTP
+      security: []
+      parameters:
+        - $ref: '#/components/parameters/RegistrationSessionId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/VerifyRegistrationOTPRequest'
+      responses:
+        '200':
+          description: OTP verified successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '410':
+          description: Session or OTP expired
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+
+  /registrations/{id}/resend-otp:
+    post:
+      tags: [Registration]
+      summary: Resend registration OTP
+      description: |
+        Generates and sends a new OTP. Previous OTP is invalidated.
+        Subject to cooldown (60s) and max resend limits (3 per session).
+      operationId: resendRegistrationOTP
+      security: []
+      parameters:
+        - $ref: '#/components/parameters/RegistrationSessionId'
+      responses:
+        '200':
+          description: New OTP sent
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '410':
+          description: Session expired
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+
+  /registrations/{id}/status:
+    get:
+      tags: [Registration]
+      summary: Get registration session status
+      description: Returns the current state of a registration session.
+      operationId: getRegistrationStatus
+      security: []
+      parameters:
+        - $ref: '#/components/parameters/RegistrationSessionId'
+      responses:
+        '200':
+          description: Registration session status
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RegistrationStatusResponse'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /registrations/{id}/set-password:
+    post:
+      tags: [Registration]
+      summary: Set password during registration
+      description: Sets the user's password as part of the multi-step registration flow.
+      operationId: setPassword
+      security: []
+      parameters:
+        - $ref: '#/components/parameters/RegistrationSessionId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SetPasswordRequest'
+      responses:
+        '200':
+          description: Password set successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /registrations/{id}/complete-profile:
+    post:
+      tags: [Registration]
+      summary: Complete profile during registration
+      description: Fills in profile information as part of the multi-step registration flow.
+      operationId: completeProfileRegistration
+      security: []
+      parameters:
+        - $ref: '#/components/parameters/RegistrationSessionId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CompleteProfileRequest'
+      responses:
+        '200':
+          description: Profile completed successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /registrations/{id}/complete:
+    post:
+      tags: [Registration]
+      summary: Complete registration
+      description: Finalizes the registration, creating the user account.
+      operationId: completeRegistration
+      security: []
+      parameters:
+        - $ref: '#/components/parameters/RegistrationSessionId'
+      responses:
+        '201':
+          description: Registration completed, user account created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CompleteRegistrationResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          description: Conflict - registration already completed or email taken
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
 
   # ==========================================
   # USERS - PROFILE
@@ -399,7 +688,7 @@ paths:
     get:
       tags: [Users]
       summary: List users
-      description: Returns a paginated list of users. Requires `user:read` permission.
+      description: Returns a paginated list of users. Requires platform admin role.
       operationId: listUsers
       security:
         - BearerAuth: []
@@ -417,16 +706,6 @@ paths:
           description: Search by email, first name, or last name
           schema:
             type: string
-        - name: branch_id
-          in: query
-          schema:
-            type: string
-            format: uuid
-        - name: role_id
-          in: query
-          schema:
-            type: string
-            format: uuid
       responses:
         '200':
           description: Users retrieved successfully
@@ -434,12 +713,14 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/UserListResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
         '403':
           $ref: '#/components/responses/Forbidden'
     post:
       tags: [Users]
       summary: Create user
-      description: Creates a new user. Requires `user:create` permission.
+      description: Creates a new user. Requires platform admin role.
       operationId: createUser
       security:
         - BearerAuth: []
@@ -458,6 +739,10 @@ paths:
                 $ref: '#/components/schemas/UserResponse'
         '400':
           $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
         '409':
           description: Email already exists
           content:
@@ -469,7 +754,7 @@ paths:
     get:
       tags: [Users]
       summary: Get user by ID
-      description: Returns a user by ID. Requires `user:read` permission.
+      description: Returns a user by ID. Requires platform admin role.
       operationId: getUser
       security:
         - BearerAuth: []
@@ -482,12 +767,16 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/UserDetailResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
         '404':
           $ref: '#/components/responses/NotFound'
     put:
       tags: [Users]
       summary: Update user
-      description: Updates a user. Requires `user:update` permission.
+      description: Updates a user. Requires platform admin role.
       operationId: updateUser
       security:
         - BearerAuth: []
@@ -506,6 +795,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/UserResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
         '404':
           $ref: '#/components/responses/NotFound'
         '409':
@@ -517,7 +812,7 @@ paths:
     delete:
       tags: [Users]
       summary: Delete user
-      description: Soft deletes a user. Requires `user:delete` permission.
+      description: Soft deletes a user. Requires platform admin role.
       operationId: deleteUser
       security:
         - BearerAuth: []
@@ -526,6 +821,10 @@ paths:
       responses:
         '204':
           description: User deleted successfully
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
         '404':
           $ref: '#/components/responses/NotFound'
 
@@ -533,7 +832,7 @@ paths:
     post:
       tags: [Users]
       summary: Approve user registration
-      description: Approves a pending user. Requires `user:approve` permission.
+      description: Approves a pending user. Requires platform admin role.
       operationId: approveUser
       security:
         - BearerAuth: []
@@ -546,6 +845,10 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/UserResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
         '422':
           description: User not in PENDING_APPROVAL status
           content:
@@ -557,7 +860,7 @@ paths:
     post:
       tags: [Users]
       summary: Reject user registration
-      description: Rejects a pending user. Requires `user:approve` permission.
+      description: Rejects a pending user. Requires platform admin role.
       operationId: rejectUser
       security:
         - BearerAuth: []
@@ -582,12 +885,16 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/UserResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
 
   /users/{id}/unlock:
     post:
       tags: [Users]
       summary: Unlock user account
-      description: Unlocks a locked user account. Requires `user:update` permission.
+      description: Unlocks a locked user account. Requires platform admin role.
       operationId: unlockUser
       security:
         - BearerAuth: []
@@ -600,12 +907,18 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/UserResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
 
   /users/{id}/reset-pin:
     post:
       tags: [Users]
       summary: Reset user PIN
-      description: Resets a user's PIN. User must set up new PIN on next login.
+      description: Resets a user's PIN. User must set up new PIN on next login. Requires platform admin role.
       operationId: resetUserPin
       security:
         - BearerAuth: []
@@ -618,210 +931,24 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/SuccessResponse'
-
-  /users/{id}/roles:
-    get:
-      tags: [Users]
-      summary: Get user roles
-      description: Returns all roles assigned to a user.
-      operationId: getUserRoles
-      security:
-        - BearerAuth: []
-      parameters:
-        - $ref: '#/components/parameters/UserId'
-      responses:
-        '200':
-          description: Roles retrieved successfully
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/UserRolesResponse'
-    post:
-      tags: [Users]
-      summary: Assign role to user
-      description: Assigns a role to a user. Requires `role:update` permission.
-      operationId: assignUserRole
-      security:
-        - BearerAuth: []
-      parameters:
-        - $ref: '#/components/parameters/UserId'
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/AssignRoleRequest'
-      responses:
-        '201':
-          description: Role assigned successfully
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/SuccessResponse'
-
-  /users/{id}/roles/{assignmentId}:
-    delete:
-      tags: [Users]
-      summary: Remove role from user
-      description: Removes a role assignment from a user.
-      operationId: removeUserRole
-      security:
-        - BearerAuth: []
-      parameters:
-        - $ref: '#/components/parameters/UserId'
-        - name: assignmentId
-          in: path
-          required: true
-          schema:
-            type: string
-            format: uuid
-      responses:
-        '204':
-          description: Role removed successfully
-
-  # ==========================================
-  # APPLICATIONS
-  # ==========================================
-  /applications:
-    get:
-      tags: [Applications]
-      summary: List applications
-      operationId: listApplications
-      security:
-        - BearerAuth: []
-      parameters:
-        - $ref: '#/components/parameters/Page'
-        - $ref: '#/components/parameters/PerPage'
-      responses:
-        '200':
-          description: Applications retrieved successfully
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ApplicationListResponse'
-    post:
-      tags: [Applications]
-      summary: Create application
-      operationId: createApplication
-      security:
-        - BearerAuth: []
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/CreateApplicationRequest'
-      responses:
-        '201':
-          description: Application created successfully
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ApplicationResponse'
-
-  /applications/{id}:
-    get:
-      tags: [Applications]
-      summary: Get application by ID
-      operationId: getApplication
-      security:
-        - BearerAuth: []
-      parameters:
-        - name: id
-          in: path
-          required: true
-          schema:
-            type: string
-            format: uuid
-      responses:
-        '200':
-          description: Application retrieved successfully
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ApplicationResponse'
-    put:
-      tags: [Applications]
-      summary: Update application
-      operationId: updateApplication
-      security:
-        - BearerAuth: []
-      parameters:
-        - name: id
-          in: path
-          required: true
-          schema:
-            type: string
-            format: uuid
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/UpdateApplicationRequest'
-      responses:
-        '200':
-          description: Application updated successfully
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ApplicationResponse'
-    delete:
-      tags: [Applications]
-      summary: Delete application
-      operationId: deleteApplication
-      security:
-        - BearerAuth: []
-      parameters:
-        - name: id
-          in: path
-          required: true
-          schema:
-            type: string
-            format: uuid
-      responses:
-        '204':
-          description: Application deleted successfully
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
 
   # ==========================================
   # ROLES
   # ==========================================
-  /applications/{appId}/roles:
-    get:
-      tags: [Roles]
-      summary: List roles for application
-      operationId: listRoles
-      security:
-        - BearerAuth: []
-      parameters:
-        - name: appId
-          in: path
-          required: true
-          schema:
-            type: string
-            format: uuid
-        - $ref: '#/components/parameters/Page'
-        - $ref: '#/components/parameters/PerPage'
-      responses:
-        '200':
-          description: Roles retrieved successfully
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/RoleListResponse'
+  /roles:
     post:
       tags: [Roles]
       summary: Create role
+      description: Creates a new role. Requires platform admin role.
       operationId: createRole
       security:
         - BearerAuth: []
-      parameters:
-        - name: appId
-          in: path
-          required: true
-          schema:
-            type: string
-            format: uuid
       requestBody:
         required: true
         content:
@@ -835,14 +962,96 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/RoleResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          description: Role code already exists
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
 
-  /roles/{id}:
+  # ==========================================
+  # MASTERDATA
+  # ==========================================
+  /masterdata/categories:
     get:
-      tags: [Roles]
-      summary: Get role by ID
-      operationId: getRole
+      tags: [Masterdata]
+      summary: List categories
+      description: Returns a list of master data categories.
+      operationId: listCategories
+      security: []
+      parameters:
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/PerPage'
+      responses:
+        '200':
+          description: Categories retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CategoryListResponse'
+    post:
+      tags: [Masterdata]
+      summary: Create category
+      description: Creates a new master data category. Requires platform admin role.
+      operationId: createCategory
       security:
         - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateCategoryRequest'
+      responses:
+        '201':
+          description: Category created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CategoryResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /masterdata/categories/code/{code}:
+    get:
+      tags: [Masterdata]
+      summary: Get category by code
+      description: Returns a master data category by its code.
+      operationId: getCategoryByCode
+      security: []
+      parameters:
+        - name: code
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Category retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CategoryResponse'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /masterdata/categories/{id}:
+    get:
+      tags: [Masterdata]
+      summary: Get category by ID
+      description: Returns a master data category by its UUID.
+      operationId: getCategoryByID
+      security: []
       parameters:
         - name: id
           in: path
@@ -852,15 +1061,18 @@ paths:
             format: uuid
       responses:
         '200':
-          description: Role retrieved successfully
+          description: Category retrieved successfully
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/RoleDetailResponse'
+                $ref: '#/components/schemas/CategoryResponse'
+        '404':
+          $ref: '#/components/responses/NotFound'
     put:
-      tags: [Roles]
-      summary: Update role
-      operationId: updateRole
+      tags: [Masterdata]
+      summary: Update category
+      description: Updates a master data category. Requires platform admin role.
+      operationId: updateCategory
       security:
         - BearerAuth: []
       parameters:
@@ -875,18 +1087,27 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/UpdateRoleRequest'
+              $ref: '#/components/schemas/UpdateCategoryRequest'
       responses:
         '200':
-          description: Role updated successfully
+          description: Category updated successfully
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/RoleResponse'
+                $ref: '#/components/schemas/CategoryResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
     delete:
-      tags: [Roles]
-      summary: Delete role
-      operationId: deleteRole
+      tags: [Masterdata]
+      summary: Delete category
+      description: Soft deletes a master data category. Requires platform admin role.
+      operationId: deleteCategory
       security:
         - BearerAuth: []
       parameters:
@@ -898,14 +1119,212 @@ paths:
             format: uuid
       responses:
         '204':
-          description: Role deleted successfully
+          description: Category deleted successfully
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
 
-  /roles/{id}/permissions:
+  /masterdata/categories/{id}/children:
+    get:
+      tags: [Masterdata]
+      summary: Get category children
+      description: Returns child categories for the given parent category.
+      operationId: getCategoryChildren
+      security: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Children retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CategoryListResponse'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /masterdata/items:
+    get:
+      tags: [Masterdata]
+      summary: List items
+      description: Returns a list of master data items.
+      operationId: listItems
+      security: []
+      parameters:
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/PerPage'
+      responses:
+        '200':
+          description: Items retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ItemListResponse'
+    post:
+      tags: [Masterdata]
+      summary: Create item
+      description: Creates a new master data item. Requires platform admin role.
+      operationId: createItem
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateItemRequest'
+      responses:
+        '201':
+          description: Item created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ItemResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /masterdata/items/tree/{categoryCode}:
+    get:
+      tags: [Masterdata]
+      summary: Get item tree by category code
+      description: Returns the full item tree for a given category code.
+      operationId: getItemTree
+      security: []
+      parameters:
+        - name: categoryCode
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Item tree retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ItemTreeResponse'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /masterdata/items/by-parent/{categoryCode}/{parentCode}:
+    get:
+      tags: [Masterdata]
+      summary: List items by parent code
+      description: Returns items under a specific parent item within a category.
+      operationId: listItemsByParent
+      security: []
+      parameters:
+        - name: categoryCode
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: parentCode
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Items retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ItemListResponse'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /masterdata/items/default/{categoryCode}:
+    get:
+      tags: [Masterdata]
+      summary: Get default item for category
+      description: Returns the default item for a given category code.
+      operationId: getDefaultItem
+      security: []
+      parameters:
+        - name: categoryCode
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Default item retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ItemResponse'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /masterdata/items/code/{categoryCode}/{itemCode}:
+    get:
+      tags: [Masterdata]
+      summary: Get item by category and item code
+      description: Returns a specific item identified by its category code and item code.
+      operationId: getItemByCode
+      security: []
+      parameters:
+        - name: categoryCode
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: itemCode
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Item retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ItemResponse'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /masterdata/items/{id}:
+    get:
+      tags: [Masterdata]
+      summary: Get item by ID
+      description: Returns a master data item by its UUID.
+      operationId: getItemByID
+      security: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Item retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ItemResponse'
+        '404':
+          $ref: '#/components/responses/NotFound'
     put:
-      tags: [Roles]
-      summary: Update role permissions
-      description: Replaces all permissions for a role.
-      operationId: updateRolePermissions
+      tags: [Masterdata]
+      summary: Update item
+      description: Updates a master data item. Requires platform admin role.
+      operationId: updateItem
       security:
         - BearerAuth: []
       parameters:
@@ -915,6 +1334,712 @@ paths:
           schema:
             type: string
             format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateItemRequest'
+      responses:
+        '200':
+          description: Item updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ItemResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    delete:
+      tags: [Masterdata]
+      summary: Delete item
+      description: Soft deletes a master data item. Requires platform admin role.
+      operationId: deleteItem
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '204':
+          description: Item deleted successfully
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /masterdata/items/{id}/children:
+    get:
+      tags: [Masterdata]
+      summary: Get item children
+      description: Returns child items for the given parent item.
+      operationId: getItemChildren
+      security: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Children retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ItemListResponse'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /masterdata/validate:
+    post:
+      tags: [Masterdata]
+      summary: Validate a single code
+      description: Validates that a category/item code exists and is active.
+      operationId: validateCode
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ValidateCodeRequest'
+      responses:
+        '200':
+          description: Validation result
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidateCodeResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+
+  /masterdata/validate/batch:
+    post:
+      tags: [Masterdata]
+      summary: Validate multiple codes
+      description: Validates multiple category/item codes in a single request.
+      operationId: validateCodes
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ValidateCodesRequest'
+      responses:
+        '200':
+          description: Batch validation results
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidateCodesResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+
+  # ==========================================
+  # PARTICIPANTS
+  # ==========================================
+  /participants:
+    post:
+      tags: [Participants]
+      summary: Create participant
+      description: Creates a new participant record. Requires `participant:create` permission.
+      operationId: createParticipant
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateParticipantRequest'
+      responses:
+        '201':
+          description: Participant created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ParticipantResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+    get:
+      tags: [Participants]
+      summary: List participants
+      description: Returns a paginated list of participants. Requires `participant:read` permission.
+      operationId: listParticipants
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/PerPage'
+        - $ref: '#/components/parameters/SortBy'
+        - $ref: '#/components/parameters/SortOrder'
+      responses:
+        '200':
+          description: Participants retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ParticipantListResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /participants/{id}:
+    get:
+      tags: [Participants]
+      summary: Get participant by ID
+      description: Returns a participant by ID. Requires `participant:read` permission.
+      operationId: getParticipant
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/ParticipantId'
+      responses:
+        '200':
+          description: Participant retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ParticipantDetailResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    delete:
+      tags: [Participants]
+      summary: Delete participant
+      description: Soft deletes a participant. Requires `participant:delete` permission.
+      operationId: deleteParticipant
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/ParticipantId'
+      responses:
+        '204':
+          description: Participant deleted successfully
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /participants/{id}/personal-data:
+    put:
+      tags: [Participants]
+      summary: Update participant personal data
+      description: Updates the personal data of a participant. Requires `participant:update` permission.
+      operationId: updateParticipantPersonalData
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/ParticipantId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdatePersonalDataRequest'
+      responses:
+        '200':
+          description: Personal data updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ParticipantResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /participants/{id}/identities:
+    put:
+      tags: [Participants]
+      summary: Save participant identity
+      description: Creates or updates the identity document for a participant. Requires `participant:update` permission.
+      operationId: saveParticipantIdentity
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/ParticipantId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SaveIdentityRequest'
+      responses:
+        '200':
+          description: Identity saved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /participants/{id}/identities/{identityId}:
+    delete:
+      tags: [Participants]
+      summary: Delete participant identity
+      description: Removes an identity document from a participant. Requires `participant:update` permission.
+      operationId: deleteParticipantIdentity
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/ParticipantId'
+        - name: identityId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '204':
+          description: Identity deleted successfully
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /participants/{id}/addresses:
+    put:
+      tags: [Participants]
+      summary: Save participant address
+      description: Creates or updates an address for a participant. Requires `participant:update` permission.
+      operationId: saveParticipantAddress
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/ParticipantId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SaveAddressRequest'
+      responses:
+        '200':
+          description: Address saved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /participants/{id}/addresses/{addressId}:
+    delete:
+      tags: [Participants]
+      summary: Delete participant address
+      description: Removes an address from a participant. Requires `participant:update` permission.
+      operationId: deleteParticipantAddress
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/ParticipantId'
+        - name: addressId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '204':
+          description: Address deleted successfully
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /participants/{id}/bank-accounts:
+    put:
+      tags: [Participants]
+      summary: Save participant bank account
+      description: Creates or updates a bank account for a participant. Requires `participant:update` permission.
+      operationId: saveParticipantBankAccount
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/ParticipantId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SaveBankAccountRequest'
+      responses:
+        '200':
+          description: Bank account saved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /participants/{id}/bank-accounts/{accountId}:
+    delete:
+      tags: [Participants]
+      summary: Delete participant bank account
+      description: Removes a bank account from a participant. Requires `participant:update` permission.
+      operationId: deleteParticipantBankAccount
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/ParticipantId'
+        - name: accountId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '204':
+          description: Bank account deleted successfully
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /participants/{id}/family-members:
+    put:
+      tags: [Participants]
+      summary: Save participant family member
+      description: Creates or updates a family member record for a participant. Requires `participant:update` permission.
+      operationId: saveParticipantFamilyMember
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/ParticipantId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SaveFamilyMemberRequest'
+      responses:
+        '200':
+          description: Family member saved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /participants/{id}/family-members/{memberId}:
+    delete:
+      tags: [Participants]
+      summary: Delete participant family member
+      description: Removes a family member record from a participant. Requires `participant:update` permission.
+      operationId: deleteParticipantFamilyMember
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/ParticipantId'
+        - name: memberId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '204':
+          description: Family member deleted successfully
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /participants/{id}/employment:
+    put:
+      tags: [Participants]
+      summary: Save participant employment
+      description: Creates or updates the employment information for a participant. Requires `participant:update` permission.
+      operationId: saveParticipantEmployment
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/ParticipantId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SaveEmploymentRequest'
+      responses:
+        '200':
+          description: Employment saved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /participants/{id}/beneficiaries:
+    put:
+      tags: [Participants]
+      summary: Save participant beneficiary
+      description: Creates or updates a beneficiary for a participant. Requires `participant:update` permission.
+      operationId: saveParticipantBeneficiary
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/ParticipantId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SaveBeneficiaryRequest'
+      responses:
+        '200':
+          description: Beneficiary saved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /participants/{id}/beneficiaries/{beneficiaryId}:
+    delete:
+      tags: [Participants]
+      summary: Delete participant beneficiary
+      description: Removes a beneficiary from a participant. Requires `participant:update` permission.
+      operationId: deleteParticipantBeneficiary
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/ParticipantId'
+        - name: beneficiaryId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '204':
+          description: Beneficiary deleted successfully
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /participants/{id}/files:
+    post:
+      tags: [Participants]
+      summary: Upload participant file
+      description: Uploads a file (max 5MB) associated with a participant. Requires `participant:update` permission.
+      operationId: uploadParticipantFile
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/ParticipantId'
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                file:
+                  type: string
+                  format: binary
+                  description: File to upload (max 5MB)
+                type:
+                  type: string
+                  description: File type identifier
+              required:
+                - file
+                - type
+      responses:
+        '201':
+          description: File uploaded successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FileUploadResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '413':
+          description: File too large (max 5MB)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /participants/{id}/status-history:
+    get:
+      tags: [Participants]
+      summary: Get participant status history
+      description: Returns the status change history for a participant. Requires `participant:read` permission.
+      operationId: getParticipantStatusHistory
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/ParticipantId'
+      responses:
+        '200':
+          description: Status history retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StatusHistoryResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /participants/{id}/submit:
+    post:
+      tags: [Participants]
+      summary: Submit participant for review
+      description: Submits a participant record for approval. Requires `participant:submit` permission.
+      operationId: submitParticipant
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/ParticipantId'
+      responses:
+        '200':
+          description: Participant submitted successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ParticipantResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          description: Participant not in a submittable state
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /participants/{id}/approve:
+    post:
+      tags: [Participants]
+      summary: Approve participant
+      description: Approves a participant record. Requires `participant:approve` permission.
+      operationId: approveParticipant
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/ParticipantId'
+      responses:
+        '200':
+          description: Participant approved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ParticipantResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          description: Participant not in a reviewable state
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /participants/{id}/reject:
+    post:
+      tags: [Participants]
+      summary: Reject participant
+      description: Rejects a participant record. Requires `participant:reject` permission.
+      operationId: rejectParticipant
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/ParticipantId'
       requestBody:
         required: true
         content:
@@ -922,303 +2047,32 @@ paths:
             schema:
               type: object
               properties:
-                permission_ids:
-                  type: array
-                  items:
-                    type: string
-                    format: uuid
+                reason:
+                  type: string
+                  description: Rejection reason
               required:
-                - permission_ids
+                - reason
       responses:
         '200':
-          description: Permissions updated successfully
+          description: Participant rejected successfully
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/SuccessResponse'
-
-  # ==========================================
-  # PERMISSIONS
-  # ==========================================
-  /applications/{appId}/permissions:
-    get:
-      tags: [Permissions]
-      summary: List permissions for application
-      operationId: listPermissions
-      security:
-        - BearerAuth: []
-      parameters:
-        - name: appId
-          in: path
-          required: true
-          schema:
-            type: string
-            format: uuid
-        - $ref: '#/components/parameters/Page'
-        - $ref: '#/components/parameters/PerPage'
-      responses:
-        '200':
-          description: Permissions retrieved successfully
+                $ref: '#/components/schemas/ParticipantResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          description: Participant not in a reviewable state
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/PermissionListResponse'
-    post:
-      tags: [Permissions]
-      summary: Create permission
-      operationId: createPermission
-      security:
-        - BearerAuth: []
-      parameters:
-        - name: appId
-          in: path
-          required: true
-          schema:
-            type: string
-            format: uuid
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/CreatePermissionRequest'
-      responses:
-        '201':
-          description: Permission created successfully
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/PermissionResponse'
-
-  # ==========================================
-  # BRANCHES
-  # ==========================================
-  /branches:
-    get:
-      tags: [Branches]
-      summary: List branches
-      operationId: listBranches
-      security:
-        - BearerAuth: []
-      parameters:
-        - $ref: '#/components/parameters/Page'
-        - $ref: '#/components/parameters/PerPage'
-      responses:
-        '200':
-          description: Branches retrieved successfully
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/BranchListResponse'
-    post:
-      tags: [Branches]
-      summary: Create branch
-      operationId: createBranch
-      security:
-        - BearerAuth: []
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/CreateBranchRequest'
-      responses:
-        '201':
-          description: Branch created successfully
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/BranchResponse'
-
-  /branches/{id}:
-    get:
-      tags: [Branches]
-      summary: Get branch by ID
-      operationId: getBranch
-      security:
-        - BearerAuth: []
-      parameters:
-        - name: id
-          in: path
-          required: true
-          schema:
-            type: string
-            format: uuid
-      responses:
-        '200':
-          description: Branch retrieved successfully
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/BranchResponse'
-    put:
-      tags: [Branches]
-      summary: Update branch
-      operationId: updateBranch
-      security:
-        - BearerAuth: []
-      parameters:
-        - name: id
-          in: path
-          required: true
-          schema:
-            type: string
-            format: uuid
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/UpdateBranchRequest'
-      responses:
-        '200':
-          description: Branch updated successfully
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/BranchResponse'
-    delete:
-      tags: [Branches]
-      summary: Delete branch
-      operationId: deleteBranch
-      security:
-        - BearerAuth: []
-      parameters:
-        - name: id
-          in: path
-          required: true
-          schema:
-            type: string
-            format: uuid
-      responses:
-        '204':
-          description: Branch deleted successfully
-
-  # ==========================================
-  # TENANTS (Platform Admin)
-  # ==========================================
-  /tenants:
-    get:
-      tags: [Tenants]
-      summary: List tenants
-      description: Platform admin only. Lists all tenants.
-      operationId: listTenants
-      security:
-        - BearerAuth: []
-      parameters:
-        - $ref: '#/components/parameters/Page'
-        - $ref: '#/components/parameters/PerPage'
-      responses:
-        '200':
-          description: Tenants retrieved successfully
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/TenantListResponse'
-    post:
-      tags: [Tenants]
-      summary: Create tenant
-      description: Platform admin only. Creates a new tenant.
-      operationId: createTenant
-      security:
-        - BearerAuth: []
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/CreateTenantRequest'
-      responses:
-        '201':
-          description: Tenant created successfully
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/TenantResponse'
-
-  # ==========================================
-  # AUDIT
-  # ==========================================
-  /audit/logs:
-    get:
-      tags: [Audit]
-      summary: Query audit logs
-      description: Queries audit logs from OpenSearch. Requires `audit:read` permission.
-      operationId: queryAuditLogs
-      security:
-        - BearerAuth: []
-      parameters:
-        - $ref: '#/components/parameters/Page'
-        - $ref: '#/components/parameters/PerPage'
-        - name: event_type
-          in: query
-          schema:
-            type: string
-        - name: actor_id
-          in: query
-          schema:
-            type: string
-            format: uuid
-        - name: resource_type
-          in: query
-          schema:
-            type: string
-        - name: from
-          in: query
-          schema:
-            type: string
-            format: date-time
-        - name: to
-          in: query
-          schema:
-            type: string
-            format: date-time
-      responses:
-        '200':
-          description: Audit logs retrieved successfully
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/AuditLogListResponse'
-
-  # ==========================================
-  # HEALTH
-  # ==========================================
-  /health:
-    get:
-      tags: [Health]
-      summary: Basic health check
-      description: Returns basic health status. Used for liveness probes.
-      operationId: healthCheck
-      security: []
-      responses:
-        '200':
-          description: Service is healthy
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/HealthResponse'
-
-  /health/ready:
-    get:
-      tags: [Health]
-      summary: Readiness check
-      description: Checks all dependencies. Used for readiness probes.
-      operationId: readinessCheck
-      security: []
-      responses:
-        '200':
-          description: Service is ready
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ReadinessResponse'
-        '503':
-          description: Service is not ready
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ReadinessResponse'
+                $ref: '#/components/schemas/ErrorResponse'
 
 components:
   securitySchemes:
@@ -1237,7 +2091,25 @@ components:
       schema:
         type: string
         example: acme-corp
-    
+
+    LoginSessionId:
+      name: id
+      in: path
+      required: true
+      description: Login session UUID
+      schema:
+        type: string
+        format: uuid
+
+    RegistrationSessionId:
+      name: id
+      in: path
+      required: true
+      description: Registration session UUID
+      schema:
+        type: string
+        format: uuid
+
     UserId:
       name: id
       in: path
@@ -1245,7 +2117,16 @@ components:
       schema:
         type: string
         format: uuid
-    
+
+    ParticipantId:
+      name: id
+      in: path
+      required: true
+      description: Participant UUID
+      schema:
+        type: string
+        format: uuid
+
     Page:
       name: page
       in: query
@@ -1254,7 +2135,7 @@ components:
         type: integer
         minimum: 1
         default: 1
-    
+
     PerPage:
       name: per_page
       in: query
@@ -1264,7 +2145,7 @@ components:
         minimum: 1
         maximum: 100
         default: 20
-    
+
     SortBy:
       name: sort_by
       in: query
@@ -1272,7 +2153,7 @@ components:
       schema:
         type: string
         default: created_at
-    
+
     SortOrder:
       name: sort_order
       in: query
@@ -1295,7 +2176,7 @@ components:
         timestamp:
           type: string
           format: date-time
-    
+
     Pagination:
       type: object
       properties:
@@ -1307,7 +2188,7 @@ components:
           type: integer
         total_pages:
           type: integer
-    
+
     SuccessResponse:
       type: object
       properties:
@@ -1321,7 +2202,7 @@ components:
           nullable: true
         meta:
           $ref: '#/components/schemas/Meta'
-    
+
     ErrorResponse:
       type: object
       properties:
@@ -1346,7 +2227,7 @@ components:
                     type: string
         meta:
           $ref: '#/components/schemas/Meta'
-    
+
     UserStatus:
       type: string
       enum:
@@ -1360,21 +2241,17 @@ components:
     # ==========================================
     # AUTHENTICATION
     # ==========================================
-    LoginRequest:
+    # --- Login OTP Flow ---
+    InitiateLoginRequest:
       type: object
       properties:
         email:
           type: string
           format: email
-        password:
-          type: string
-          minLength: 1
-          maxLength: 128
       required:
         - email
-        - password
-    
-    LoginPartialResponse:
+
+    InitiateLoginResponse:
       type: object
       properties:
         success:
@@ -1384,18 +2261,43 @@ components:
         data:
           type: object
           properties:
-            partial_token:
+            status:
               type: string
-            requires_pin:
-              type: boolean
-              example: true
-            expires_in:
+              example: OTP_REQUIRED
+            login_session_id:
+              type: string
+              format: uuid
+            email:
+              type: string
+              description: Masked email (e.g., u***@example.com)
+            session_expires_at:
+              type: string
+              format: date-time
+            otp_expires_at:
+              type: string
+              format: date-time
+            attempts_allowed:
               type: integer
-              example: 300
-        meta:
-          $ref: '#/components/schemas/Meta'
-    
-    LoginSuccessResponse:
+              example: 5
+            resends_allowed:
+              type: integer
+              example: 3
+
+    VerifyLoginOTPRequest:
+      type: object
+      properties:
+        email:
+          type: string
+          format: email
+        otp_code:
+          type: string
+          pattern: '^\d{6}$'
+          description: 6-digit numeric OTP code
+      required:
+        - email
+        - otp_code
+
+    VerifyLoginOTPResponse:
       type: object
       properties:
         success:
@@ -1414,35 +2316,47 @@ components:
               example: Bearer
             expires_in:
               type: integer
-              example: 1800
-            requires_pin_setup:
-              type: boolean
+              example: 900
             user:
-              $ref: '#/components/schemas/UserBasic'
-        meta:
-          $ref: '#/components/schemas/Meta'
-    
-    VerifyPinRequest:
+              $ref: '#/components/schemas/LoginUser'
+
+    ResendLoginOTPRequest:
       type: object
       properties:
-        partial_token:
+        email:
           type: string
-        pin:
-          type: string
-          pattern: '^\d{6}$'
+          format: email
       required:
-        - partial_token
-        - pin
-    
-    RefreshTokenRequest:
+        - email
+
+    ResendLoginOTPResponse:
       type: object
       properties:
-        refresh_token:
+        success:
+          type: boolean
+        message:
           type: string
-      required:
-        - refresh_token
-    
-    TokenResponse:
+        data:
+          type: object
+          properties:
+            status:
+              type: string
+              example: OTP_RESENT
+            login_session_id:
+              type: string
+              format: uuid
+            email:
+              type: string
+            otp_expires_at:
+              type: string
+              format: date-time
+            resends_remaining:
+              type: integer
+            cooldown_seconds:
+              type: integer
+              example: 60
+
+    LoginStatusResponse:
       type: object
       properties:
         success:
@@ -1450,33 +2364,205 @@ components:
         data:
           type: object
           properties:
-            access_token:
+            status:
               type: string
-            refresh_token:
+            login_session_id:
               type: string
-            token_type:
+              format: uuid
+            email:
               type: string
-            expires_in:
+            attempts_remaining:
               type: integer
-        meta:
-          $ref: '#/components/schemas/Meta'
-    
-    LogoutRequest:
+            resends_remaining:
+              type: integer
+            expires_at:
+              type: string
+              format: date-time
+            cooldown_remaining:
+              type: integer
+
+    LoginUser:
       type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        email:
+          type: string
+        full_name:
+          type: string
+        tenants:
+          type: array
+          items:
+            $ref: '#/components/schemas/LoginTenant'
+
+    LoginTenant:
+      type: object
+      properties:
+        tenant_id:
+          type: string
+          format: uuid
+        products:
+          type: array
+          items:
+            type: object
+            properties:
+              product_id:
+                type: string
+                format: uuid
+              product_code:
+                type: string
+              roles:
+                type: array
+                items:
+                  type: string
+              permissions:
+                type: array
+                items:
+                  type: string
+
+    # === REFRESH TOKEN ROTATION ===
+    RefreshTokenRequest:
+      type: object
+      description: Request to refresh access and refresh tokens
       properties:
         refresh_token:
           type: string
-    
-    RegisterRequest:
+          description: Current valid refresh token (HS256 JWT)
+      required:
+        - refresh_token
+
+    RefreshTokenResponse:
+      type: object
+      description: New token pair with user context
+      properties:
+        success:
+          type: boolean
+          example: true
+        message:
+          type: string
+          example: "Token refreshed successfully"
+        data:
+          type: object
+          properties:
+            access_token:
+              type: string
+              description: New RS256 JWT access token
+            refresh_token:
+              type: string
+              description: New HS256 refresh token (replaces the old one)
+            expires_in:
+              type: integer
+              description: Access token lifetime in seconds
+              example: 900
+            token_type:
+              type: string
+              example: "Bearer"
+            user:
+              $ref: '#/components/schemas/LoginUser'
+
+    # === LOGOUT ===
+    LogoutRequest:
+      type: object
+      description: |
+        Request to logout current session. The refresh token is provided in the
+        request body, while the access token JTI is automatically extracted from
+        the Authorization header by the server.
+      properties:
+        refresh_token:
+          type: string
+          description: Refresh token to revoke (required)
+      required:
+        - refresh_token
+
+    # ==========================================
+    # REGISTRATION
+    # ==========================================
+    InitiateRegistrationRequest:
       type: object
       properties:
         email:
           type: string
           format: email
+      required:
+        - email
+
+    InitiateRegistrationResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        message:
+          type: string
+        data:
+          type: object
+          properties:
+            registration_id:
+              type: string
+              format: uuid
+            email:
+              type: string
+              description: Masked email (e.g., u***@example.com)
+            session_expires_at:
+              type: string
+              format: date-time
+            otp_expires_at:
+              type: string
+              format: date-time
+
+    VerifyRegistrationOTPRequest:
+      type: object
+      properties:
+        email:
+          type: string
+          format: email
+        otp_code:
+          type: string
+          pattern: '^\d{6}$'
+          description: 6-digit numeric OTP code
+      required:
+        - email
+        - otp_code
+
+    RegistrationStatusResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        data:
+          type: object
+          properties:
+            registration_id:
+              type: string
+              format: uuid
+            status:
+              type: string
+            email:
+              type: string
+            steps_completed:
+              type: array
+              items:
+                type: string
+            expires_at:
+              type: string
+              format: date-time
+
+    SetPasswordRequest:
+      type: object
+      properties:
         password:
           type: string
           minLength: 8
           maxLength: 128
+        confirm_password:
+          type: string
+      required:
+        - password
+        - confirm_password
+
+    CompleteProfileRequest:
+      type: object
+      properties:
         first_name:
           type: string
           maxLength: 100
@@ -1486,12 +2572,10 @@ components:
         phone_number:
           type: string
       required:
-        - email
-        - password
         - first_name
         - last_name
-    
-    RegisterResponse:
+
+    CompleteRegistrationResponse:
       type: object
       properties:
         success:
@@ -1508,83 +2592,6 @@ components:
               type: string
             status:
               $ref: '#/components/schemas/UserStatus'
-            requires_email_verification:
-              type: boolean
-        meta:
-          $ref: '#/components/schemas/Meta'
-    
-    VerifyEmailRequest:
-      type: object
-      properties:
-        email:
-          type: string
-          format: email
-        otp:
-          type: string
-      required:
-        - email
-        - otp
-    
-    SetupPinRequest:
-      type: object
-      properties:
-        pin:
-          type: string
-          pattern: '^\d{6}$'
-        confirm_pin:
-          type: string
-          pattern: '^\d{6}$'
-      required:
-        - pin
-        - confirm_pin
-    
-    ChangePasswordRequest:
-      type: object
-      properties:
-        current_password:
-          type: string
-        new_password:
-          type: string
-          minLength: 8
-        confirm_password:
-          type: string
-      required:
-        - current_password
-        - new_password
-        - confirm_password
-    
-    ForgotPasswordRequest:
-      type: object
-      properties:
-        email:
-          type: string
-          format: email
-      required:
-        - email
-    
-    ResetPasswordRequest:
-      type: object
-      properties:
-        token:
-          type: string
-        new_password:
-          type: string
-          minLength: 8
-        confirm_password:
-          type: string
-      required:
-        - token
-        - new_password
-        - confirm_password
-    
-    GoogleAuthRequest:
-      type: object
-      properties:
-        code:
-          type: string
-          description: Authorization code from Google
-      required:
-        - code
 
     # ==========================================
     # USERS
@@ -1603,7 +2610,7 @@ components:
           type: string
         status:
           $ref: '#/components/schemas/UserStatus'
-    
+
     UserResponse:
       type: object
       properties:
@@ -1615,7 +2622,7 @@ components:
           $ref: '#/components/schemas/UserBasic'
         meta:
           $ref: '#/components/schemas/Meta'
-    
+
     UserProfileResponse:
       type: object
       properties:
@@ -1656,7 +2663,7 @@ components:
                     $ref: '#/components/schemas/RoleBasic'
         meta:
           $ref: '#/components/schemas/Meta'
-    
+
     UserDetailResponse:
       type: object
       properties:
@@ -1695,7 +2702,7 @@ components:
                     $ref: '#/components/schemas/RoleBasic'
         meta:
           $ref: '#/components/schemas/Meta'
-    
+
     UserListResponse:
       type: object
       properties:
@@ -1709,7 +2716,7 @@ components:
           $ref: '#/components/schemas/Pagination'
         meta:
           $ref: '#/components/schemas/Meta'
-    
+
     CreateUserRequest:
       type: object
       properties:
@@ -1729,22 +2736,12 @@ components:
           type: string
         status:
           $ref: '#/components/schemas/UserStatus'
-        branch_ids:
-          type: array
-          items:
-            type: string
-            format: uuid
-        role_ids:
-          type: array
-          items:
-            type: string
-            format: uuid
       required:
         - email
         - password
         - first_name
         - last_name
-    
+
     UpdateUserRequest:
       type: object
       properties:
@@ -1763,7 +2760,7 @@ components:
           description: For optimistic locking
       required:
         - version
-    
+
     UpdateProfileRequest:
       type: object
       properties:
@@ -1784,133 +2781,6 @@ components:
         address:
           type: string
           maxLength: 500
-    
-    UserRolesResponse:
-      type: object
-      properties:
-        success:
-          type: boolean
-        data:
-          type: array
-          items:
-            type: object
-            properties:
-              assignment_id:
-                type: string
-                format: uuid
-              role:
-                $ref: '#/components/schemas/RoleBasic'
-              application:
-                $ref: '#/components/schemas/ApplicationBasic'
-              branch:
-                $ref: '#/components/schemas/BranchBasic'
-              assigned_at:
-                type: string
-                format: date-time
-              expires_at:
-                type: string
-                format: date-time
-              status:
-                type: string
-        meta:
-          $ref: '#/components/schemas/Meta'
-    
-    AssignRoleRequest:
-      type: object
-      properties:
-        role_id:
-          type: string
-          format: uuid
-        branch_id:
-          type: string
-          format: uuid
-          description: Optional - scope role to branch
-        expires_at:
-          type: string
-          format: date-time
-          description: Optional - time-bound assignment
-      required:
-        - role_id
-
-    # ==========================================
-    # APPLICATIONS
-    # ==========================================
-    ApplicationBasic:
-      type: object
-      properties:
-        id:
-          type: string
-          format: uuid
-        code:
-          type: string
-        name:
-          type: string
-    
-    ApplicationResponse:
-      type: object
-      properties:
-        success:
-          type: boolean
-        data:
-          type: object
-          allOf:
-            - $ref: '#/components/schemas/ApplicationBasic'
-            - type: object
-              properties:
-                description:
-                  type: string
-                status:
-                  type: string
-                created_at:
-                  type: string
-                  format: date-time
-        meta:
-          $ref: '#/components/schemas/Meta'
-    
-    ApplicationListResponse:
-      type: object
-      properties:
-        success:
-          type: boolean
-        data:
-          type: array
-          items:
-            $ref: '#/components/schemas/ApplicationBasic'
-        pagination:
-          $ref: '#/components/schemas/Pagination'
-        meta:
-          $ref: '#/components/schemas/Meta'
-    
-    CreateApplicationRequest:
-      type: object
-      properties:
-        code:
-          type: string
-          maxLength: 50
-        name:
-          type: string
-          maxLength: 255
-        description:
-          type: string
-      required:
-        - code
-        - name
-    
-    UpdateApplicationRequest:
-      type: object
-      properties:
-        name:
-          type: string
-          maxLength: 255
-        description:
-          type: string
-        status:
-          type: string
-          enum: [ACTIVE, INACTIVE]
-        version:
-          type: integer
-      required:
-        - version
 
     # ==========================================
     # ROLES
@@ -1927,7 +2797,7 @@ components:
           type: string
         application:
           $ref: '#/components/schemas/ApplicationBasic'
-    
+
     RoleResponse:
       type: object
       properties:
@@ -1937,57 +2807,7 @@ components:
           $ref: '#/components/schemas/RoleBasic'
         meta:
           $ref: '#/components/schemas/Meta'
-    
-    RoleDetailResponse:
-      type: object
-      properties:
-        success:
-          type: boolean
-        data:
-          type: object
-          allOf:
-            - $ref: '#/components/schemas/RoleBasic'
-            - type: object
-              properties:
-                description:
-                  type: string
-                is_system:
-                  type: boolean
-                status:
-                  type: string
-                permissions:
-                  type: array
-                  items:
-                    $ref: '#/components/schemas/PermissionBasic'
-        meta:
-          $ref: '#/components/schemas/Meta'
-    
-    RoleListResponse:
-      type: object
-      properties:
-        success:
-          type: boolean
-        data:
-          type: array
-          items:
-            type: object
-            allOf:
-              - $ref: '#/components/schemas/RoleBasic'
-              - type: object
-                properties:
-                  is_system:
-                    type: boolean
-                  status:
-                    type: string
-                  permission_count:
-                    type: integer
-                  user_count:
-                    type: integer
-        pagination:
-          $ref: '#/components/schemas/Pagination'
-        meta:
-          $ref: '#/components/schemas/Meta'
-    
+
     CreateRoleRequest:
       type: object
       properties:
@@ -2007,26 +2827,11 @@ components:
       required:
         - code
         - name
-    
-    UpdateRoleRequest:
-      type: object
-      properties:
-        name:
-          type: string
-        description:
-          type: string
-        status:
-          type: string
-          enum: [ACTIVE, INACTIVE]
-        version:
-          type: integer
-      required:
-        - version
 
     # ==========================================
-    # PERMISSIONS
+    # APPLICATIONS (referenced by RoleBasic/UserProfileResponse)
     # ==========================================
-    PermissionBasic:
+    ApplicationBasic:
       type: object
       properties:
         id:
@@ -2036,61 +2841,9 @@ components:
           type: string
         name:
           type: string
-    
-    PermissionResponse:
-      type: object
-      properties:
-        success:
-          type: boolean
-        data:
-          type: object
-          allOf:
-            - $ref: '#/components/schemas/PermissionBasic'
-            - type: object
-              properties:
-                description:
-                  type: string
-                resource_type:
-                  type: string
-                action:
-                  type: string
-                status:
-                  type: string
-        meta:
-          $ref: '#/components/schemas/Meta'
-    
-    PermissionListResponse:
-      type: object
-      properties:
-        success:
-          type: boolean
-        data:
-          type: array
-          items:
-            $ref: '#/components/schemas/PermissionBasic'
-        pagination:
-          $ref: '#/components/schemas/Pagination'
-        meta:
-          $ref: '#/components/schemas/Meta'
-    
-    CreatePermissionRequest:
-      type: object
-      properties:
-        code:
-          type: string
-          pattern: '^[a-z_]+:[a-z_]+$'
-          description: Format resource:action
-        name:
-          type: string
-          maxLength: 255
-        description:
-          type: string
-      required:
-        - code
-        - name
 
     # ==========================================
-    # BRANCHES
+    # BRANCHES (referenced by UserProfileResponse/UserDetailResponse)
     # ==========================================
     BranchBasic:
       type: object
@@ -2104,74 +2857,9 @@ components:
           type: string
         is_primary:
           type: boolean
-    
-    BranchResponse:
-      type: object
-      properties:
-        success:
-          type: boolean
-        data:
-          type: object
-          allOf:
-            - $ref: '#/components/schemas/BranchBasic'
-            - type: object
-              properties:
-                address:
-                  type: string
-                status:
-                  type: string
-                created_at:
-                  type: string
-                  format: date-time
-        meta:
-          $ref: '#/components/schemas/Meta'
-    
-    BranchListResponse:
-      type: object
-      properties:
-        success:
-          type: boolean
-        data:
-          type: array
-          items:
-            $ref: '#/components/schemas/BranchBasic'
-        pagination:
-          $ref: '#/components/schemas/Pagination'
-        meta:
-          $ref: '#/components/schemas/Meta'
-    
-    CreateBranchRequest:
-      type: object
-      properties:
-        code:
-          type: string
-          maxLength: 50
-        name:
-          type: string
-          maxLength: 255
-        address:
-          type: string
-      required:
-        - code
-        - name
-    
-    UpdateBranchRequest:
-      type: object
-      properties:
-        name:
-          type: string
-        address:
-          type: string
-        status:
-          type: string
-          enum: [ACTIVE, INACTIVE]
-        version:
-          type: integer
-      required:
-        - version
 
     # ==========================================
-    # TENANTS
+    # TENANTS (referenced by UserProfileResponse)
     # ==========================================
     TenantBasic:
       type: object
@@ -2183,8 +2871,26 @@ components:
           type: string
         name:
           type: string
-    
-    TenantResponse:
+
+    # ==========================================
+    # MASTERDATA
+    # ==========================================
+    CategoryBasic:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        code:
+          type: string
+        name:
+          type: string
+        parent_id:
+          type: string
+          format: uuid
+          nullable: true
+
+    CategoryResponse:
       type: object
       properties:
         success:
@@ -2192,20 +2898,22 @@ components:
         data:
           type: object
           allOf:
-            - $ref: '#/components/schemas/TenantBasic'
+            - $ref: '#/components/schemas/CategoryBasic'
             - type: object
               properties:
-                status:
+                description:
                   type: string
-                settings:
-                  type: object
+                is_active:
+                  type: boolean
+                sort_order:
+                  type: integer
                 created_at:
                   type: string
                   format: date-time
         meta:
           $ref: '#/components/schemas/Meta'
-    
-    TenantListResponse:
+
+    CategoryListResponse:
       type: object
       properties:
         success:
@@ -2213,13 +2921,13 @@ components:
         data:
           type: array
           items:
-            $ref: '#/components/schemas/TenantBasic'
+            $ref: '#/components/schemas/CategoryBasic'
         pagination:
           $ref: '#/components/schemas/Pagination'
         meta:
           $ref: '#/components/schemas/Meta'
-    
-    CreateTenantRequest:
+
+    CreateCategoryRequest:
       type: object
       properties:
         code:
@@ -2228,16 +2936,566 @@ components:
         name:
           type: string
           maxLength: 255
-        settings:
-          type: object
+        description:
+          type: string
+        parent_id:
+          type: string
+          format: uuid
+        sort_order:
+          type: integer
       required:
         - code
         - name
 
+    UpdateCategoryRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          maxLength: 255
+        description:
+          type: string
+        is_active:
+          type: boolean
+        sort_order:
+          type: integer
+        version:
+          type: integer
+      required:
+        - version
+
+    ItemBasic:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        code:
+          type: string
+        name:
+          type: string
+        category_id:
+          type: string
+          format: uuid
+        parent_id:
+          type: string
+          format: uuid
+          nullable: true
+        is_default:
+          type: boolean
+
+    ItemResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        data:
+          type: object
+          allOf:
+            - $ref: '#/components/schemas/ItemBasic'
+            - type: object
+              properties:
+                description:
+                  type: string
+                is_active:
+                  type: boolean
+                sort_order:
+                  type: integer
+                metadata:
+                  type: object
+                  description: Additional item-specific data
+                created_at:
+                  type: string
+                  format: date-time
+        meta:
+          $ref: '#/components/schemas/Meta'
+
+    ItemListResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/ItemBasic'
+        pagination:
+          $ref: '#/components/schemas/Pagination'
+        meta:
+          $ref: '#/components/schemas/Meta'
+
+    ItemTreeResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        data:
+          type: array
+          description: Hierarchical list of items with nested children
+          items:
+            type: object
+            allOf:
+              - $ref: '#/components/schemas/ItemBasic'
+              - type: object
+                properties:
+                  children:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/ItemBasic'
+        meta:
+          $ref: '#/components/schemas/Meta'
+
+    CreateItemRequest:
+      type: object
+      properties:
+        code:
+          type: string
+          maxLength: 50
+        name:
+          type: string
+          maxLength: 255
+        description:
+          type: string
+        category_id:
+          type: string
+          format: uuid
+        parent_id:
+          type: string
+          format: uuid
+        is_default:
+          type: boolean
+        sort_order:
+          type: integer
+        metadata:
+          type: object
+      required:
+        - code
+        - name
+        - category_id
+
+    UpdateItemRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          maxLength: 255
+        description:
+          type: string
+        is_active:
+          type: boolean
+        is_default:
+          type: boolean
+        sort_order:
+          type: integer
+        metadata:
+          type: object
+        version:
+          type: integer
+      required:
+        - version
+
+    ValidateCodeRequest:
+      type: object
+      properties:
+        category_code:
+          type: string
+        item_code:
+          type: string
+      required:
+        - category_code
+        - item_code
+
+    ValidateCodeResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        data:
+          type: object
+          properties:
+            valid:
+              type: boolean
+            item:
+              $ref: '#/components/schemas/ItemBasic'
+
+    ValidateCodesRequest:
+      type: object
+      properties:
+        codes:
+          type: array
+          items:
+            type: object
+            properties:
+              category_code:
+                type: string
+              item_code:
+                type: string
+            required:
+              - category_code
+              - item_code
+      required:
+        - codes
+
+    ValidateCodesResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        data:
+          type: array
+          items:
+            type: object
+            properties:
+              category_code:
+                type: string
+              item_code:
+                type: string
+              valid:
+                type: boolean
+              item:
+                $ref: '#/components/schemas/ItemBasic'
+
     # ==========================================
-    # AUDIT
+    # PARTICIPANTS
     # ==========================================
-    AuditLogListResponse:
+    ParticipantBasic:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        tenant_id:
+          type: string
+          format: uuid
+        full_name:
+          type: string
+        email:
+          type: string
+        phone_number:
+          type: string
+        status:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+
+    ParticipantResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        data:
+          $ref: '#/components/schemas/ParticipantBasic'
+        meta:
+          $ref: '#/components/schemas/Meta'
+
+    ParticipantListResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/ParticipantBasic'
+        pagination:
+          $ref: '#/components/schemas/Pagination'
+        meta:
+          $ref: '#/components/schemas/Meta'
+
+    ParticipantDetailResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        data:
+          type: object
+          allOf:
+            - $ref: '#/components/schemas/ParticipantBasic'
+            - type: object
+              properties:
+                identities:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      id:
+                        type: string
+                        format: uuid
+                      type:
+                        type: string
+                      number:
+                        type: string
+                addresses:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      id:
+                        type: string
+                        format: uuid
+                      type:
+                        type: string
+                      street:
+                        type: string
+                      city:
+                        type: string
+                      province:
+                        type: string
+                bank_accounts:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      id:
+                        type: string
+                        format: uuid
+                      bank_name:
+                        type: string
+                      account_number:
+                        type: string
+                      account_name:
+                        type: string
+                family_members:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      id:
+                        type: string
+                        format: uuid
+                      relationship:
+                        type: string
+                      full_name:
+                        type: string
+                employment:
+                  type: object
+                  nullable: true
+                  properties:
+                    employer_name:
+                      type: string
+                    position:
+                      type: string
+                    employment_type:
+                      type: string
+                beneficiaries:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      id:
+                        type: string
+                        format: uuid
+                      full_name:
+                        type: string
+                      relationship:
+                        type: string
+                      portion:
+                        type: number
+                updated_at:
+                  type: string
+                  format: date-time
+        meta:
+          $ref: '#/components/schemas/Meta'
+
+    CreateParticipantRequest:
+      type: object
+      properties:
+        full_name:
+          type: string
+          maxLength: 255
+        email:
+          type: string
+          format: email
+        phone_number:
+          type: string
+        date_of_birth:
+          type: string
+          format: date
+        gender:
+          type: string
+          enum: [MALE, FEMALE]
+      required:
+        - full_name
+
+    UpdatePersonalDataRequest:
+      type: object
+      properties:
+        full_name:
+          type: string
+          maxLength: 255
+        email:
+          type: string
+          format: email
+        phone_number:
+          type: string
+        date_of_birth:
+          type: string
+          format: date
+        gender:
+          type: string
+          enum: [MALE, FEMALE]
+        version:
+          type: integer
+      required:
+        - version
+
+    SaveIdentityRequest:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Omit to create, provide to update
+        type:
+          type: string
+          description: Identity document type (e.g., KTP, PASSPORT)
+        number:
+          type: string
+        expiry_date:
+          type: string
+          format: date
+      required:
+        - type
+        - number
+
+    SaveAddressRequest:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Omit to create, provide to update
+        type:
+          type: string
+          description: Address type (e.g., DOMICILE, ORIGIN)
+        street:
+          type: string
+        city:
+          type: string
+        province:
+          type: string
+        postal_code:
+          type: string
+        country:
+          type: string
+          default: ID
+      required:
+        - type
+        - street
+        - city
+        - province
+
+    SaveBankAccountRequest:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Omit to create, provide to update
+        bank_code:
+          type: string
+        bank_name:
+          type: string
+        account_number:
+          type: string
+        account_name:
+          type: string
+      required:
+        - bank_name
+        - account_number
+        - account_name
+
+    SaveFamilyMemberRequest:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Omit to create, provide to update
+        relationship:
+          type: string
+          description: Relationship type (e.g., SPOUSE, CHILD, PARENT)
+        full_name:
+          type: string
+        date_of_birth:
+          type: string
+          format: date
+        gender:
+          type: string
+          enum: [MALE, FEMALE]
+        occupation:
+          type: string
+      required:
+        - relationship
+        - full_name
+
+    SaveEmploymentRequest:
+      type: object
+      properties:
+        employer_name:
+          type: string
+        position:
+          type: string
+        employment_type:
+          type: string
+          description: Employment type code from masterdata
+        start_date:
+          type: string
+          format: date
+        monthly_income:
+          type: number
+      required:
+        - employer_name
+        - position
+
+    SaveBeneficiaryRequest:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Omit to create, provide to update
+        full_name:
+          type: string
+        relationship:
+          type: string
+        date_of_birth:
+          type: string
+          format: date
+        portion:
+          type: number
+          minimum: 0
+          maximum: 100
+          description: Percentage portion (0-100)
+      required:
+        - full_name
+        - relationship
+        - portion
+
+    FileUploadResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        data:
+          type: object
+          properties:
+            file_id:
+              type: string
+              format: uuid
+            file_name:
+              type: string
+            file_url:
+              type: string
+            file_type:
+              type: string
+            size_bytes:
+              type: integer
+        meta:
+          $ref: '#/components/schemas/Meta'
+
+    StatusHistoryResponse:
       type: object
       properties:
         success:
@@ -2249,35 +3507,21 @@ components:
             properties:
               id:
                 type: string
-              timestamp:
+                format: uuid
+              from_status:
+                type: string
+                nullable: true
+              to_status:
+                type: string
+              reason:
+                type: string
+                nullable: true
+              changed_by:
+                type: string
+                format: uuid
+              changed_at:
                 type: string
                 format: date-time
-              event_type:
-                type: string
-              actor:
-                type: object
-                properties:
-                  id:
-                    type: string
-                  email:
-                    type: string
-                  ip_address:
-                    type: string
-              resource:
-                type: object
-                properties:
-                  type:
-                    type: string
-                  id:
-                    type: string
-              action:
-                type: string
-              status:
-                type: string
-              details:
-                type: object
-        pagination:
-          $ref: '#/components/schemas/Pagination'
         meta:
           $ref: '#/components/schemas/Meta'
 
@@ -2295,7 +3539,7 @@ components:
           format: date-time
         version:
           type: string
-    
+
     ReadinessResponse:
       type: object
       properties:
@@ -2324,28 +3568,28 @@ components:
         application/json:
           schema:
             $ref: '#/components/schemas/ErrorResponse'
-    
+
     Unauthorized:
       description: Unauthorized - authentication required or failed
       content:
         application/json:
           schema:
             $ref: '#/components/schemas/ErrorResponse'
-    
+
     Forbidden:
       description: Forbidden - insufficient permissions
       content:
         application/json:
           schema:
             $ref: '#/components/schemas/ErrorResponse'
-    
+
     NotFound:
       description: Resource not found
       content:
         application/json:
           schema:
             $ref: '#/components/schemas/ErrorResponse'
-    
+
     TooManyRequests:
       description: Rate limit exceeded
       headers:

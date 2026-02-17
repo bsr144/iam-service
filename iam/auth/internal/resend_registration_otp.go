@@ -9,16 +9,13 @@ import (
 	"iam-service/entity"
 	"iam-service/iam/auth/authdto"
 	"iam-service/pkg/errors"
-
-	"github.com/google/uuid"
 )
 
 func (uc *usecase) ResendRegistrationOTP(
 	ctx context.Context,
-	registrationID uuid.UUID,
 	req *authdto.ResendRegistrationOTPRequest,
 ) (*authdto.ResendRegistrationOTPResponse, error) {
-	session, err := uc.Redis.GetRegistrationSession(ctx, registrationID)
+	session, err := uc.InMemoryStore.GetRegistrationSession(ctx, req.RegistrationID)
 	if err != nil {
 		return nil, err
 	}
@@ -63,18 +60,18 @@ func (uc *usecase) ResendRegistrationOTP(
 	}
 
 	otpExpiry := time.Now().Add(time.Duration(RegistrationOTPExpiryMinutes) * time.Minute)
-	if err := uc.Redis.UpdateRegistrationOTP(ctx, registrationID, otpHash, otpExpiry); err != nil {
+	if err := uc.InMemoryStore.UpdateRegistrationOTP(ctx, req.RegistrationID, otpHash, otpExpiry); err != nil {
 		return nil, err
 	}
 
-	if err := uc.EmailService.SendOTP(ctx, req.Email, otp, RegistrationOTPExpiryMinutes); err != nil {
-
-	}
+	uc.sendEmailAsync(ctx, func(ctx context.Context) error {
+		return uc.EmailService.SendOTP(ctx, req.Email, otp, RegistrationOTPExpiryMinutes)
+	})
 
 	nextResendAt := time.Now().Add(time.Duration(session.ResendCooldownSeconds) * time.Second)
 
 	return &authdto.ResendRegistrationOTPResponse{
-		RegistrationID:        registrationID.String(),
+		RegistrationID:        req.RegistrationID.String(),
 		Message:               "New verification code sent to your email",
 		ExpiresAt:             otpExpiry,
 		ResendsRemaining:      session.MaxResends - session.ResendCount - 1,

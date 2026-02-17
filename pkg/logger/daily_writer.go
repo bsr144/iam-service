@@ -179,7 +179,6 @@ func (w *dailyFileWriter) cleanOldFiles() {
 
 	cutoff := time.Now().AddDate(0, 0, -w.maxAge)
 
-	// Clean files in month subdirectories
 	monthDirs, err := filepath.Glob(filepath.Join(w.dir, "[0-9][0-9][0-9][0-9]-[0-9][0-9]"))
 	if err != nil {
 		return
@@ -190,7 +189,6 @@ func (w *dailyFileWriter) cleanOldFiles() {
 		w.removeEmptyDir(monthDir)
 	}
 
-	// Clean any remaining files in the root log directory
 	w.cleanDirectory(w.dir, cutoff)
 }
 

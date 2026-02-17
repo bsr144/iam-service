@@ -23,15 +23,15 @@ func (uc *usecase) GetMe(ctx context.Context, userID uuid.UUID) (*userdto.UserDe
 		return nil, err
 	}
 
-	credentials, err := uc.UserCredentialsRepo.GetByUserID(ctx, userID)
+	authMethod, err := uc.UserAuthMethodRepo.GetByUserID(ctx, userID)
 	if err != nil && !errors.IsNotFound(err) {
 		return nil, err
 	}
 
-	security, err := uc.UserSecurityRepo.GetByUserID(ctx, userID)
+	securityState, err := uc.UserSecurityStateRepo.GetByUserID(ctx, userID)
 	if err != nil && !errors.IsNotFound(err) {
 		return nil, err
 	}
 
-	return mapUserToDetailResponse(user, profile, credentials, security), nil
+	return mapUserToDetailResponse(user, profile, authMethod, securityState), nil
 }

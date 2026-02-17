@@ -22,7 +22,7 @@ func TestGetRegistrationStatus(t *testing.T) {
 	tests := []struct {
 		name          string
 		email         string
-		setupMocks    func(*MockRegistrationSessionStore)
+		setupMocks    func(*MockInMemoryStore)
 		expectedError string
 		expectedCode  string
 		checkResponse func(*testing.T, *entity.RegistrationSession)
@@ -30,7 +30,7 @@ func TestGetRegistrationStatus(t *testing.T) {
 		{
 			name:  "success - status retrieved",
 			email: email,
-			setupMocks: func(redis *MockRegistrationSessionStore) {
+			setupMocks: func(redis *MockInMemoryStore) {
 				session := &entity.RegistrationSession{
 					ID:          registrationID,
 					Email:       email,
@@ -48,7 +48,7 @@ func TestGetRegistrationStatus(t *testing.T) {
 		{
 			name:  "success - case insensitive email match",
 			email: "TEST@EXAMPLE.COM",
-			setupMocks: func(redis *MockRegistrationSessionStore) {
+			setupMocks: func(redis *MockInMemoryStore) {
 				session := &entity.RegistrationSession{
 					ID:          registrationID,
 					Email:       email,
@@ -65,7 +65,7 @@ func TestGetRegistrationStatus(t *testing.T) {
 		{
 			name:  "error - registration not found",
 			email: email,
-			setupMocks: func(redis *MockRegistrationSessionStore) {
+			setupMocks: func(redis *MockInMemoryStore) {
 				redis.On("GetRegistrationSession", mock.Anything, registrationID).Return(nil, errors.ErrNotFound("registration not found"))
 			},
 			expectedError: "not found",
@@ -74,7 +74,7 @@ func TestGetRegistrationStatus(t *testing.T) {
 		{
 			name:  "error - email mismatch (returns not found for security)",
 			email: "wrong@example.com",
-			setupMocks: func(redis *MockRegistrationSessionStore) {
+			setupMocks: func(redis *MockInMemoryStore) {
 				session := &entity.RegistrationSession{
 					ID:        registrationID,
 					Email:     email,
@@ -91,12 +91,12 @@ func TestGetRegistrationStatus(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 
-			redis := new(MockRegistrationSessionStore)
+			redis := new(MockInMemoryStore)
 			tt.setupMocks(redis)
 
 			uc := &usecase{
 				Config: &config.Config{},
-				Redis:  redis,
+				InMemoryStore:  redis,
 			}
 
 			ctx := context.Background()

@@ -7,22 +7,19 @@ import (
 	"iam-service/iam/auth/authdto"
 	"iam-service/pkg/errors"
 
-	"github.com/google/uuid"
 	"golang.org/x/crypto/bcrypt"
 )
 
 func (uc *usecase) SetPassword(
 	ctx context.Context,
-	registrationID uuid.UUID,
-	registrationToken string,
 	req *authdto.SetPasswordRequest,
 ) (*authdto.SetPasswordResponse, error) {
-	_, err := uc.validateRegistrationCompleteToken(registrationToken, registrationID)
+	_, err := uc.validateRegistrationCompleteToken(req.RegistrationToken, req.RegistrationID)
 	if err != nil {
 		return nil, err
 	}
 
-	session, err := uc.Redis.GetRegistrationSession(ctx, registrationID)
+	session, err := uc.InMemoryStore.GetRegistrationSession(ctx, req.RegistrationID)
 	if err != nil {
 		return nil, err
 	}
@@ -49,17 +46,17 @@ func (uc *usecase) SetPassword(
 	}
 	passwordHashStr := string(passwordHash)
 
-	newToken, tokenHash, err := uc.generateRegistrationCompleteToken(registrationID, session.Email)
+	newToken, tokenHash, err := uc.generateRegistrationCompleteToken(req.RegistrationID, session.Email)
 	if err != nil {
 		return nil, errors.ErrInternal("failed to generate new registration token").WithError(err)
 	}
 
-	if err := uc.Redis.MarkRegistrationPasswordSet(ctx, registrationID, passwordHashStr, tokenHash); err != nil {
+	if err := uc.InMemoryStore.MarkRegistrationPasswordSet(ctx, req.RegistrationID, passwordHashStr, tokenHash); err != nil {
 		return nil, errors.ErrInternal("failed to update registration session").WithError(err)
 	}
 
 	response := &authdto.SetPasswordResponse{
-		RegistrationID:    registrationID.String(),
+		RegistrationID:    req.RegistrationID.String(),
 		Status:            "PASSWORD_SET",
 		Message:           "Password set successfully. Please proceed to complete your profile.",
 		RegistrationToken: newToken,

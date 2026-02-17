@@ -1,6 +1,7 @@
 package entity
 
 import (
+	"database/sql"
 	"encoding/json"
 	"net"
 	"time"
@@ -28,75 +29,47 @@ const (
 type UserStatus string
 
 const (
-	UserStatusPendingOTPVerification UserStatus = "pending_otp_verification"
-	UserStatusPendingAdminApproval   UserStatus = "pending_admin_approval"
-	UserStatusPendingUserCompletion  UserStatus = "pending_user_completion"
-	UserStatusPendingPasswordChange  UserStatus = "pending_password_change"
-	UserStatusPendingPINSetup        UserStatus = "pending_pin_setup"
-	UserStatusActive                 UserStatus = "active"
-	UserStatusSuspended              UserStatus = "suspended"
-	UserStatusDeleted                UserStatus = "deleted"
+	UserStatusPendingVerification UserStatus = "PENDING_VERIFICATION"
+	UserStatusActive              UserStatus = "ACTIVE"
+	UserStatusInactive            UserStatus = "INACTIVE"
+	UserStatusSuspended           UserStatus = "SUSPENDED"
+	UserStatusLocked              UserStatus = "LOCKED"
 )
 
 type User struct {
-	ID               uuid.UUID  `json:"id" gorm:"column:id;primaryKey;type:uuid;default:uuidv7()" db:"id"`
-	TenantID         *uuid.UUID `json:"tenant_id,omitempty" gorm:"column:tenant_id" db:"tenant_id"`
-	BranchID         *uuid.UUID `json:"branch_id,omitempty" gorm:"column:branch_id" db:"branch_id"`
-	Email            string     `json:"email" gorm:"column:email;not null" db:"email"`
-	EmailVerified    bool       `json:"email_verified" gorm:"column:email_verified;default:false" db:"email_verified"`
-	EmailVerifiedAt  *time.Time `json:"email_verified_at,omitempty" gorm:"column:email_verified_at" db:"email_verified_at"`
-	IsServiceAccount bool       `json:"is_service_account" gorm:"column:is_service_account;default:false" db:"is_service_account"`
-	IsActive         bool       `json:"is_active" gorm:"column:is_active;default:true" db:"is_active"`
-
-	RegistrationID          *uuid.UUID `json:"registration_id,omitempty" gorm:"column:registration_id" db:"registration_id"`
-	RegistrationCompletedAt *time.Time `json:"registration_completed_at,omitempty" gorm:"column:registration_completed_at" db:"registration_completed_at"`
-
-	Timestamps
+	ID                 uuid.UUID    `json:"id" gorm:"column:id;primaryKey;type:uuid;default:uuidv7()" db:"id"`
+	Email              string       `json:"email" gorm:"column:email;not null" db:"email"`
+	Status             UserStatus   `json:"status" gorm:"column:status;not null;default:PENDING_VERIFICATION" db:"status"`
+	StatusChangedAt    *time.Time   `json:"status_changed_at,omitempty" gorm:"column:status_changed_at" db:"status_changed_at"`
+	StatusChangedBy    *uuid.UUID   `json:"status_changed_by,omitempty" gorm:"column:status_changed_by" db:"status_changed_by"`
+	RegistrationSource string       `json:"registration_source" gorm:"column:registration_source" db:"registration_source"`
+	Version            int          `json:"version" gorm:"column:version;not null;default:1" db:"version"`
+	CreatedAt          time.Time    `json:"created_at" gorm:"column:created_at" db:"created_at"`
+	UpdatedAt          time.Time    `json:"updated_at" gorm:"column:updated_at" db:"updated_at"`
+	DeletedAt          sql.NullTime `json:"deleted_at,omitempty" gorm:"column:deleted_at" db:"deleted_at"`
 }
 
 func (User) TableName() string {
 	return "users"
 }
 
-type UserCredentials struct {
-	ID                uuid.UUID       `json:"id" gorm:"column:id;primaryKey;type:uuid;default:uuidv7()" db:"id"`
-	UserID            uuid.UUID       `json:"user_id" gorm:"column:user_id;uniqueIndex;not null" db:"user_id"`
-	PasswordHash      *string         `json:"-" gorm:"column:password_hash" db:"password_hash"`
-	PasswordChangedAt *time.Time      `json:"password_changed_at,omitempty" gorm:"column:password_changed_at" db:"password_changed_at"`
-	PasswordExpiresAt *time.Time      `json:"password_expires_at,omitempty" gorm:"column:password_expires_at" db:"password_expires_at"`
-	PasswordHistory   json.RawMessage `json:"-" gorm:"column:password_history;type:jsonb;default:'[]'" db:"password_history"`
-	PINHash           *string         `json:"-" gorm:"column:pin_hash" db:"pin_hash"`
-	PINSetAt          *time.Time      `json:"pin_set_at,omitempty" gorm:"column:pin_set_at" db:"pin_set_at"`
-	PINChangedAt      *time.Time      `json:"pin_changed_at,omitempty" gorm:"column:pin_changed_at" db:"pin_changed_at"`
-	PINExpiresAt      *time.Time      `json:"pin_expires_at,omitempty" gorm:"column:pin_expires_at" db:"pin_expires_at"`
-	PINHistory        json.RawMessage `json:"-" gorm:"column:pin_history;type:jsonb;default:'[]'" db:"pin_history"`
-	SSOProvider       *string         `json:"sso_provider,omitempty" gorm:"column:sso_provider" db:"sso_provider"`
-	SSOProviderID     *string         `json:"sso_provider_id,omitempty" gorm:"column:sso_provider_id" db:"sso_provider_id"`
-	MFAEnabled        bool            `json:"mfa_enabled" gorm:"column:mfa_enabled;default:false" db:"mfa_enabled"`
-	CreatedAt         time.Time       `json:"created_at" gorm:"column:created_at" db:"created_at"`
-	UpdatedAt         time.Time       `json:"updated_at" gorm:"column:updated_at" db:"updated_at"`
-}
-
-func (UserCredentials) TableName() string {
-	return "user_credentials"
+func (u *User) IsActive() bool {
+	return u.Status == UserStatusActive
 }
 
 type UserProfile struct {
-	ID                uuid.UUID      `json:"id" gorm:"column:id;primaryKey;type:uuid;default:uuidv7()" db:"id"`
-	UserID            uuid.UUID      `json:"user_id" gorm:"column:user_id;uniqueIndex;not null" db:"user_id"`
-	FirstName         string         `json:"first_name" gorm:"column:first_name;not null" db:"first_name"`
-	LastName          string         `json:"last_name" gorm:"column:last_name;not null" db:"last_name"`
-	Address           *string        `json:"address,omitempty" gorm:"column:address" db:"address"`
-	Phone             *string        `json:"phone,omitempty" gorm:"column:phone" db:"phone"`
-	Gender            *Gender        `json:"gender,omitempty" gorm:"column:gender" db:"gender"`
-	MaritalStatus     *MaritalStatus `json:"marital_status,omitempty" gorm:"column:marital_status" db:"marital_status"`
-	DateOfBirth       *string        `json:"date_of_birth,omitempty" gorm:"column:date_of_birth" db:"date_of_birth"`
-	PlaceOfBirth      *string        `json:"place_of_birth,omitempty" gorm:"column:place_of_birth" db:"place_of_birth"`
-	AvatarURL         *string        `json:"avatar_url,omitempty" gorm:"column:avatar_url" db:"avatar_url"`
-	PreferredLanguage string         `json:"preferred_language" gorm:"column:preferred_language;default:en" db:"preferred_language"`
-	Timezone          string         `json:"timezone" gorm:"column:timezone;default:Asia/Jakarta" db:"timezone"`
-	CreatedAt         time.Time      `json:"created_at" gorm:"column:created_at" db:"created_at"`
-	UpdatedAt         time.Time      `json:"updated_at" gorm:"column:updated_at" db:"updated_at"`
+	UserID            uuid.UUID       `json:"user_id" gorm:"column:user_id;primaryKey;type:uuid" db:"user_id"`
+	FirstName         string          `json:"first_name" gorm:"column:first_name;not null" db:"first_name"`
+	LastName          string          `json:"last_name" gorm:"column:last_name;not null" db:"last_name"`
+	PhoneNumber       *string         `json:"phone_number,omitempty" gorm:"column:phone_number" db:"phone_number"`
+	DateOfBirth       *time.Time      `json:"date_of_birth,omitempty" gorm:"column:date_of_birth" db:"date_of_birth"`
+	Gender            *Gender         `json:"gender,omitempty" gorm:"column:gender" db:"gender"`
+	MaritalStatus     *MaritalStatus  `json:"marital_status,omitempty" gorm:"column:marital_status" db:"marital_status"`
+	Address           *string         `json:"address,omitempty" gorm:"column:address" db:"address"`
+	IDNumber          *string         `json:"id_number,omitempty" gorm:"column:id_number" db:"id_number"`
+	ProfilePictureURL *string         `json:"profile_picture_url,omitempty" gorm:"column:profile_picture_url" db:"profile_picture_url"`
+	Metadata          json.RawMessage `json:"metadata,omitempty" gorm:"column:metadata;type:jsonb;not null;default:'{}'" db:"metadata"`
+	UpdatedAt         time.Time       `json:"updated_at" gorm:"column:updated_at" db:"updated_at"`
 }
 
 func (UserProfile) TableName() string {
@@ -107,23 +80,80 @@ func (u *UserProfile) FullName() string {
 	return u.FirstName + " " + u.LastName
 }
 
-type UserSecurity struct {
-	ID                  uuid.UUID       `json:"id" gorm:"column:id;primaryKey;type:uuid;default:uuidv7()" db:"id"`
-	UserID              uuid.UUID       `json:"user_id" gorm:"column:user_id;uniqueIndex;not null" db:"user_id"`
-	LastLoginAt         *time.Time      `json:"last_login_at,omitempty" gorm:"column:last_login_at" db:"last_login_at"`
-	LastLoginIP         net.IP          `json:"last_login_ip,omitempty" gorm:"column:last_login_ip" db:"last_login_ip"`
-	FailedLoginAttempts int             `json:"failed_login_attempts" gorm:"column:failed_login_attempts;default:0" db:"failed_login_attempts"`
-	LockedUntil         *time.Time      `json:"locked_until,omitempty" gorm:"column:locked_until" db:"locked_until"`
-	AdminRegisteredAt   *time.Time      `json:"admin_registered_at,omitempty" gorm:"column:admin_registered_at" db:"admin_registered_at"`
-	UserRegisteredAt    *time.Time      `json:"user_registered_at,omitempty" gorm:"column:user_registered_at" db:"user_registered_at"`
-	AdminRegisteredBy   *uuid.UUID      `json:"admin_registered_by,omitempty" gorm:"column:admin_registered_by" db:"admin_registered_by"`
-	InvitationTokenHash *string         `json:"-" gorm:"column:invitation_token_hash" db:"invitation_token_hash"`
-	InvitationExpiresAt *time.Time      `json:"invitation_expires_at,omitempty" gorm:"column:invitation_expires_at" db:"invitation_expires_at"`
-	Metadata            json.RawMessage `json:"metadata,omitempty" gorm:"column:metadata;type:jsonb;default:'{}'" db:"metadata"`
-	CreatedAt           time.Time       `json:"created_at" gorm:"column:created_at" db:"created_at"`
-	UpdatedAt           time.Time       `json:"updated_at" gorm:"column:updated_at" db:"updated_at"`
+type AuthMethodType string
+
+const (
+	AuthMethodPassword AuthMethodType = "PASSWORD"
+	AuthMethodPIN      AuthMethodType = "PIN"
+	AuthMethodSSO      AuthMethodType = "SSO"
+)
+
+type PasswordCredentialData struct {
+	PasswordHash    string   `json:"password_hash"`
+	PasswordHistory []string `json:"password_history,omitempty"`
 }
 
-func (UserSecurity) TableName() string {
-	return "user_security"
+type UserAuthMethod struct {
+	ID             uuid.UUID       `json:"id" gorm:"column:id;primaryKey;type:uuid;default:uuidv7()" db:"id"`
+	UserID         uuid.UUID       `json:"user_id" gorm:"column:user_id;not null" db:"user_id"`
+	MethodType     string          `json:"method_type" gorm:"column:method_type;not null" db:"method_type"`
+	CredentialData json.RawMessage `json:"credential_data" gorm:"column:credential_data;type:jsonb" db:"credential_data"`
+	IsActive       bool            `json:"is_active" gorm:"column:is_active;not null;default:true" db:"is_active"`
+	CreatedAt      time.Time       `json:"created_at" gorm:"column:created_at" db:"created_at"`
+	UpdatedAt      time.Time       `json:"updated_at" gorm:"column:updated_at" db:"updated_at"`
+}
+
+func (UserAuthMethod) TableName() string {
+	return "user_auth_methods"
+}
+
+func NewPasswordAuthMethod(userID uuid.UUID, passwordHash string) *UserAuthMethod {
+	data := PasswordCredentialData{
+		PasswordHash:    passwordHash,
+		PasswordHistory: []string{},
+	}
+	credJSON, _ := json.Marshal(data)
+	now := time.Now()
+	return &UserAuthMethod{
+		UserID:         userID,
+		MethodType:     string(AuthMethodPassword),
+		CredentialData: credJSON,
+		IsActive:       true,
+		CreatedAt:      now,
+		UpdatedAt:      now,
+	}
+}
+
+func (m *UserAuthMethod) GetPasswordData() (*PasswordCredentialData, error) {
+	var data PasswordCredentialData
+	if err := json.Unmarshal(m.CredentialData, &data); err != nil {
+		return nil, err
+	}
+	return &data, nil
+}
+
+func (m *UserAuthMethod) GetPasswordHash() string {
+	data, err := m.GetPasswordData()
+	if err != nil {
+		return ""
+	}
+	return data.PasswordHash
+}
+
+type UserSecurityState struct {
+	UserID              uuid.UUID  `json:"user_id" gorm:"column:user_id;primaryKey;type:uuid" db:"user_id"`
+	FailedLoginAttempts int        `json:"failed_login_attempts" gorm:"column:failed_login_attempts;default:0" db:"failed_login_attempts"`
+	FailedPINAttempts   int        `json:"failed_pin_attempts" gorm:"column:failed_pin_attempts;default:0" db:"failed_pin_attempts"`
+	LockedUntil         *time.Time `json:"locked_until,omitempty" gorm:"column:locked_until" db:"locked_until"`
+	LastLoginAt         *time.Time `json:"last_login_at,omitempty" gorm:"column:last_login_at" db:"last_login_at"`
+	LastLoginIP         net.IP     `json:"last_login_ip,omitempty" gorm:"column:last_login_ip" db:"last_login_ip"`
+	EmailVerified       bool       `json:"email_verified" gorm:"column:email_verified;default:false" db:"email_verified"`
+	EmailVerifiedAt     *time.Time `json:"email_verified_at,omitempty" gorm:"column:email_verified_at" db:"email_verified_at"`
+	PINVerified         bool       `json:"pin_verified" gorm:"column:pin_verified;default:false" db:"pin_verified"`
+	ForcePasswordChange bool       `json:"force_password_change" gorm:"column:force_password_change;default:false" db:"force_password_change"`
+	UpdatedAt           time.Time  `json:"updated_at" gorm:"column:updated_at" db:"updated_at"`
+}
+
+func (UserSecurityState) TableName() string {
+	return "user_security_states"
 }
