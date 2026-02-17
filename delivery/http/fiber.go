@@ -22,6 +22,7 @@ import (
 	"iam-service/masterdata"
 	apperrors "iam-service/pkg/errors"
 	"iam-service/pkg/logger"
+	"iam-service/saving/member"
 	"iam-service/saving/participant"
 	"log"
 
@@ -82,6 +83,8 @@ func NewServer(cfg *config.Config) *Server {
 
 	masterdataCategoryRepo := postgres.NewMasterdataCategoryRepository(postgresDB)
 	masterdataItemRepo := postgres.NewMasterdataItemRepository(postgresDB)
+
+	productRegConfigRepo := postgres.NewProductRegistrationConfigRepository(postgresDB)
 
 	participantRepo := postgres.NewParticipantRepository(postgresDB)
 	participantIdentityRepo := postgres.NewParticipantIdentityRepository(postgresDB)
@@ -145,6 +148,17 @@ func NewServer(cfg *config.Config) *Server {
 		masterdataItemRepo,
 		inMemoryStore,
 	)
+	memberUsecase := member.NewUsecase(
+		cfg,
+		txManager,
+		userTenantRegRepo,
+		userRoleRepo,
+		productRepo,
+		roleRepo,
+		productRegConfigRepo,
+		userProfileRepo,
+		authUserRepo,
+	)
 	participantUsecase := participant.NewUsecase(
 		cfg,
 		txManager,
@@ -164,6 +178,7 @@ func NewServer(cfg *config.Config) *Server {
 	roleController := controller.NewRoleController(cfg, roleUsecase)
 	userController := controller.NewUserController(cfg, userUsecase)
 	masterdataController := controller.NewMasterdataController(cfg, masterdataUsecase)
+	memberController := controller.NewMemberController(memberUsecase)
 	participantController := controller.NewParticipantController(participantUsecase)
 
 	server := &Server{
@@ -187,7 +202,10 @@ func NewServer(cfg *config.Config) *Server {
 	router.SetupUserRoutes(iam, cfg, userController, inMemoryStore)
 
 	jwtMiddleware := middleware.JWTAuth(cfg, inMemoryStore)
-	router.SetupParticipantRoutes(iam, participantController, jwtMiddleware)
+
+	saving := v1.Group("/saving")
+	router.SetupParticipantRoutes(saving, participantController, jwtMiddleware)
+	router.SetupMemberRoutes(saving, memberController, jwtMiddleware)
 
 	return server
 }

@@ -176,3 +176,45 @@ func GetTenantIDFromContext(c *fiber.Ctx) (uuid.UUID, error) {
 
 	return tid, nil
 }
+
+func ExtractProductContext() fiber.Handler {
+	return func(c *fiber.Ctx) error {
+		productIDStr := c.Params("productId")
+		if productIDStr == "" {
+			appErr := errors.ErrBadRequest("product ID is required")
+			return c.Status(appErr.HTTPStatus).JSON(fiber.Map{
+				"success": false,
+				"error":   appErr.Message,
+				"code":    appErr.Code,
+			})
+		}
+
+		productID, err := uuid.Parse(productIDStr)
+		if err != nil {
+			appErr := errors.ErrBadRequest("invalid product ID format")
+			return c.Status(appErr.HTTPStatus).JSON(fiber.Map{
+				"success": false,
+				"error":   appErr.Message,
+				"code":    appErr.Code,
+			})
+		}
+
+		c.Locals("product_id", productID)
+
+		return c.Next()
+	}
+}
+
+func GetProductIDFromContext(c *fiber.Ctx) (uuid.UUID, error) {
+	productID := c.Locals("product_id")
+	if productID == nil {
+		return uuid.Nil, errors.ErrBadRequest("product context not found")
+	}
+
+	pid, ok := productID.(uuid.UUID)
+	if !ok {
+		return uuid.Nil, errors.ErrInternal("invalid product ID type in context")
+	}
+
+	return pid, nil
+}
