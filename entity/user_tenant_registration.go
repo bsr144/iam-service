@@ -21,6 +21,7 @@ type UserTenantRegistration struct {
 	ID                   uuid.UUID                    `json:"id" gorm:"column:id;primaryKey;type:uuid;default:uuidv7()" db:"id"`
 	UserID               uuid.UUID                    `json:"user_id" gorm:"column:user_id;type:uuid;not null" db:"user_id"`
 	TenantID             uuid.UUID                    `json:"tenant_id" gorm:"column:tenant_id;type:uuid;not null" db:"tenant_id"`
+	ApplicationID        *uuid.UUID                   `json:"application_id,omitempty" gorm:"column:application_id;type:uuid" db:"application_id"`
 	RegistrationType     string                       `json:"registration_type" gorm:"column:registration_type;type:varchar(20);not null" db:"registration_type"`
 	IdentificationNumber *string                      `json:"identification_number,omitempty" gorm:"column:identification_number;type:varchar(100)" db:"identification_number"`
 	Status               UserTenantRegistrationStatus `json:"status" gorm:"column:status;type:varchar(20);not null;default:PENDING_APPROVAL" db:"status"`

@@ -85,14 +85,18 @@ type RolePermission struct {
 
 type UserRole struct {
 	ID            uuid.UUID  `json:"id" gorm:"column:id;primaryKey;type:uuid;default:uuidv7()" db:"id"`
-	UserID        uuid.UUID  `json:"user_id" db:"user_id"`
-	RoleID        uuid.UUID  `json:"role_id" db:"role_id"`
-	ProductID     *uuid.UUID `json:"product_id,omitempty" db:"product_id"`
-	BranchID      *uuid.UUID `json:"branch_id,omitempty" db:"branch_id"`
-	EffectiveFrom time.Time  `json:"effective_from" db:"effective_from"`
-	EffectiveTo   *time.Time `json:"effective_to,omitempty" db:"effective_to"`
-	CreatedAt     time.Time  `json:"created_at" db:"created_at"`
-	DeletedAt     *time.Time `json:"deleted_at,omitempty" db:"deleted_at"`
+	UserID        uuid.UUID  `json:"user_id" gorm:"column:user_id;type:uuid;not null" db:"user_id"`
+	RoleID        uuid.UUID  `json:"role_id" gorm:"column:role_id;type:uuid;not null" db:"role_id"`
+	ProductID     *uuid.UUID `json:"product_id,omitempty" gorm:"column:product_id;type:uuid" db:"product_id"`
+	BranchID      *uuid.UUID `json:"branch_id,omitempty" gorm:"column:branch_id;type:uuid" db:"branch_id"`
+	EffectiveFrom time.Time  `json:"effective_from" gorm:"column:assigned_at;not null" db:"assigned_at"`
+	EffectiveTo   *time.Time `json:"effective_to,omitempty" gorm:"column:expires_at" db:"expires_at"`
+	CreatedAt     time.Time  `json:"created_at" gorm:"column:created_at" db:"created_at"`
+	DeletedAt     *time.Time `json:"deleted_at,omitempty" gorm:"column:deleted_at" db:"deleted_at"`
+}
+
+func (UserRole) TableName() string {
+	return "user_role_assignments"
 }
 
 func (ur *UserRole) IsActive() bool {
