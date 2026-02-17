@@ -15,6 +15,7 @@ func ToCategoryResponse(category *masterdatadto.CategoryResponse) *response.Mast
 		Name:        category.Name,
 		Description: category.Description,
 		Status:      category.Status,
+		Metadata:    category.Metadata,
 	}
 }
 
