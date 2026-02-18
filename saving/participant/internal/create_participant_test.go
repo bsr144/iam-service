@@ -18,7 +18,7 @@ func TestUsecase_CreateParticipant(t *testing.T) {
 	tests := []struct {
 		name    string
 		req     *participantdto.CreateParticipantRequest
-		setup   func(*MockTransactionManager, *MockParticipantRepository, *MockParticipantStatusHistoryRepository, *MockParticipantIdentityRepository, *MockParticipantAddressRepository, *MockParticipantBankAccountRepository, *MockParticipantFamilyMemberRepository, *MockParticipantEmploymentRepository, *MockParticipantBeneficiaryRepository)
+		setup   func(*MockTransactionManager, *MockParticipantRepository, *MockParticipantStatusHistoryRepository, *MockParticipantIdentityRepository, *MockParticipantAddressRepository, *MockParticipantBankAccountRepository, *MockParticipantFamilyMemberRepository, *MockParticipantEmploymentRepository, *MockParticipantPensionRepository, *MockParticipantBeneficiaryRepository)
 		wantErr bool
 		errKind errors.Kind
 	}{
@@ -30,7 +30,7 @@ func TestUsecase_CreateParticipant(t *testing.T) {
 				UserID:        uuid.New(),
 				FullName:      "John Doe",
 			},
-			setup: func(txMgr *MockTransactionManager, partRepo *MockParticipantRepository, histRepo *MockParticipantStatusHistoryRepository, identRepo *MockParticipantIdentityRepository, addrRepo *MockParticipantAddressRepository, bankRepo *MockParticipantBankAccountRepository, famRepo *MockParticipantFamilyMemberRepository, empRepo *MockParticipantEmploymentRepository, benRepo *MockParticipantBeneficiaryRepository) {
+			setup: func(txMgr *MockTransactionManager, partRepo *MockParticipantRepository, histRepo *MockParticipantStatusHistoryRepository, identRepo *MockParticipantIdentityRepository, addrRepo *MockParticipantAddressRepository, bankRepo *MockParticipantBankAccountRepository, famRepo *MockParticipantFamilyMemberRepository, empRepo *MockParticipantEmploymentRepository, penRepo *MockParticipantPensionRepository, benRepo *MockParticipantBeneficiaryRepository) {
 				txMgr.On("WithTransaction", mock.Anything, mock.Anything).Return(nil)
 				partRepo.On("Create", mock.Anything, mock.MatchedBy(func(p *entity.Participant) bool {
 					return p.FullName == "John Doe" && p.Status == entity.ParticipantStatusDraft
@@ -43,6 +43,7 @@ func TestUsecase_CreateParticipant(t *testing.T) {
 				bankRepo.On("ListByParticipantID", mock.Anything, mock.Anything).Return([]*entity.ParticipantBankAccount{}, nil)
 				famRepo.On("ListByParticipantID", mock.Anything, mock.Anything).Return([]*entity.ParticipantFamilyMember{}, nil)
 				empRepo.On("GetByParticipantID", mock.Anything, mock.Anything).Return(nil, errors.ErrNotFound("not found"))
+				penRepo.On("GetByParticipantID", mock.Anything, mock.Anything).Return(nil, errors.ErrNotFound("not found"))
 				benRepo.On("ListByParticipantID", mock.Anything, mock.Anything).Return([]*entity.ParticipantBeneficiary{}, nil)
 			},
 			wantErr: false,
@@ -55,7 +56,7 @@ func TestUsecase_CreateParticipant(t *testing.T) {
 				UserID:        uuid.New(),
 				FullName:      "John Doe",
 			},
-			setup: func(txMgr *MockTransactionManager, partRepo *MockParticipantRepository, histRepo *MockParticipantStatusHistoryRepository, identRepo *MockParticipantIdentityRepository, addrRepo *MockParticipantAddressRepository, bankRepo *MockParticipantBankAccountRepository, famRepo *MockParticipantFamilyMemberRepository, empRepo *MockParticipantEmploymentRepository, benRepo *MockParticipantBeneficiaryRepository) {
+			setup: func(txMgr *MockTransactionManager, partRepo *MockParticipantRepository, histRepo *MockParticipantStatusHistoryRepository, identRepo *MockParticipantIdentityRepository, addrRepo *MockParticipantAddressRepository, bankRepo *MockParticipantBankAccountRepository, famRepo *MockParticipantFamilyMemberRepository, empRepo *MockParticipantEmploymentRepository, penRepo *MockParticipantPensionRepository, benRepo *MockParticipantBeneficiaryRepository) {
 				txMgr.On("WithTransaction", mock.Anything, mock.Anything).Return(nil)
 				partRepo.On("Create", mock.Anything, mock.Anything).Return(errors.ErrInternal("database error"))
 			},
@@ -69,7 +70,7 @@ func TestUsecase_CreateParticipant(t *testing.T) {
 				UserID:        uuid.New(),
 				FullName:      "John Doe",
 			},
-			setup: func(txMgr *MockTransactionManager, partRepo *MockParticipantRepository, histRepo *MockParticipantStatusHistoryRepository, identRepo *MockParticipantIdentityRepository, addrRepo *MockParticipantAddressRepository, bankRepo *MockParticipantBankAccountRepository, famRepo *MockParticipantFamilyMemberRepository, empRepo *MockParticipantEmploymentRepository, benRepo *MockParticipantBeneficiaryRepository) {
+			setup: func(txMgr *MockTransactionManager, partRepo *MockParticipantRepository, histRepo *MockParticipantStatusHistoryRepository, identRepo *MockParticipantIdentityRepository, addrRepo *MockParticipantAddressRepository, bankRepo *MockParticipantBankAccountRepository, famRepo *MockParticipantFamilyMemberRepository, empRepo *MockParticipantEmploymentRepository, penRepo *MockParticipantPensionRepository, benRepo *MockParticipantBeneficiaryRepository) {
 				txMgr.On("WithTransaction", mock.Anything, mock.Anything).Return(nil)
 				partRepo.On("Create", mock.Anything, mock.Anything).Return(nil)
 				histRepo.On("Create", mock.Anything, mock.Anything).Return(errors.ErrInternal("database error"))
@@ -87,13 +88,14 @@ func TestUsecase_CreateParticipant(t *testing.T) {
 			bankRepo := new(MockParticipantBankAccountRepository)
 			famRepo := new(MockParticipantFamilyMemberRepository)
 			empRepo := new(MockParticipantEmploymentRepository)
+			penRepo := new(MockParticipantPensionRepository)
 			benRepo := new(MockParticipantBeneficiaryRepository)
 			histRepo := new(MockParticipantStatusHistoryRepository)
 			fileStorage := new(MockFileStorageAdapter)
 
-			tt.setup(txMgr, partRepo, histRepo, identRepo, addrRepo, bankRepo, famRepo, empRepo, benRepo)
+			tt.setup(txMgr, partRepo, histRepo, identRepo, addrRepo, bankRepo, famRepo, empRepo, penRepo, benRepo)
 
-			uc := newTestUsecase(txMgr, partRepo, identRepo, addrRepo, bankRepo, famRepo, empRepo, benRepo, histRepo, fileStorage)
+			uc := newTestUsecase(txMgr, partRepo, identRepo, addrRepo, bankRepo, famRepo, empRepo, penRepo, benRepo, histRepo, fileStorage)
 
 			resp, err := uc.CreateParticipant(context.Background(), tt.req)
 

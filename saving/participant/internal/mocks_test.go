@@ -243,6 +243,41 @@ func (m *MockParticipantEmploymentRepository) SoftDelete(ctx context.Context, id
 	return args.Error(0)
 }
 
+type MockParticipantPensionRepository struct {
+	mock.Mock
+}
+
+func (m *MockParticipantPensionRepository) Create(ctx context.Context, pension *entity.ParticipantPension) error {
+	args := m.Called(ctx, pension)
+	return args.Error(0)
+}
+
+func (m *MockParticipantPensionRepository) GetByID(ctx context.Context, id uuid.UUID) (*entity.ParticipantPension, error) {
+	args := m.Called(ctx, id)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).(*entity.ParticipantPension), args.Error(1)
+}
+
+func (m *MockParticipantPensionRepository) GetByParticipantID(ctx context.Context, participantID uuid.UUID) (*entity.ParticipantPension, error) {
+	args := m.Called(ctx, participantID)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).(*entity.ParticipantPension), args.Error(1)
+}
+
+func (m *MockParticipantPensionRepository) Update(ctx context.Context, pension *entity.ParticipantPension) error {
+	args := m.Called(ctx, pension)
+	return args.Error(0)
+}
+
+func (m *MockParticipantPensionRepository) SoftDelete(ctx context.Context, id uuid.UUID) error {
+	args := m.Called(ctx, id)
+	return args.Error(0)
+}
+
 type MockParticipantBeneficiaryRepository struct {
 	mock.Mock
 }

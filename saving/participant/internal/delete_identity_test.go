@@ -6,6 +6,7 @@ import (
 
 	"iam-service/entity"
 	"iam-service/pkg/errors"
+	"iam-service/saving/participant/participantdto"
 
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
@@ -23,19 +24,20 @@ func TestUsecase_DeleteIdentity(t *testing.T) {
 	otherTenantID := uuid.New()
 
 	tests := []struct {
-		name        string
-		identityID  string
-		participantID string
-		tenantID    string
-		setup       func(*MockTransactionManager, *MockParticipantRepository, *MockParticipantIdentityRepository)
-		wantErr     bool
-		errKind     errors.Kind
+		name    string
+		req     *participantdto.DeleteChildEntityRequest
+		setup   func(*MockTransactionManager, *MockParticipantRepository, *MockParticipantIdentityRepository)
+		wantErr bool
+		errKind errors.Kind
 	}{
 		{
-			name:        "success - deletes identity from DRAFT participant",
-			identityID:  identityID.String(),
-			participantID: participantID.String(),
-			tenantID:    tenantID.String(),
+			name: "success - deletes identity from DRAFT participant",
+			req: &participantdto.DeleteChildEntityRequest{
+				ChildID:       identityID,
+				ParticipantID: participantID,
+				TenantID:      tenantID,
+				ApplicationID: applicationID,
+			},
 			setup: func(txMgr *MockTransactionManager, partRepo *MockParticipantRepository, identRepo *MockParticipantIdentityRepository) {
 				txMgr.On("WithTransaction", mock.Anything, mock.Anything).Return(nil)
 				participant := createMockParticipant(entity.ParticipantStatusDraft, tenantID, applicationID, userID)
@@ -50,10 +52,13 @@ func TestUsecase_DeleteIdentity(t *testing.T) {
 			wantErr: false,
 		},
 		{
-			name:        "success - deletes identity from REJECTED participant",
-			identityID:  identityID.String(),
-			participantID: participantID.String(),
-			tenantID:    tenantID.String(),
+			name: "success - deletes identity from REJECTED participant",
+			req: &participantdto.DeleteChildEntityRequest{
+				ChildID:       identityID,
+				ParticipantID: participantID,
+				TenantID:      tenantID,
+				ApplicationID: applicationID,
+			},
 			setup: func(txMgr *MockTransactionManager, partRepo *MockParticipantRepository, identRepo *MockParticipantIdentityRepository) {
 				txMgr.On("WithTransaction", mock.Anything, mock.Anything).Return(nil)
 				participant := createMockParticipant(entity.ParticipantStatusRejected, tenantID, applicationID, userID)
@@ -68,37 +73,13 @@ func TestUsecase_DeleteIdentity(t *testing.T) {
 			wantErr: false,
 		},
 		{
-			name:        "error - invalid identity UUID",
-			identityID:  "invalid-uuid",
-			participantID: participantID.String(),
-			tenantID:    tenantID.String(),
-			setup:       func(txMgr *MockTransactionManager, partRepo *MockParticipantRepository, identRepo *MockParticipantIdentityRepository) {},
-			wantErr:     true,
-			errKind:     errors.KindBadRequest,
-		},
-		{
-			name:        "error - invalid participant UUID",
-			identityID:  identityID.String(),
-			participantID: "invalid-uuid",
-			tenantID:    tenantID.String(),
-			setup:       func(txMgr *MockTransactionManager, partRepo *MockParticipantRepository, identRepo *MockParticipantIdentityRepository) {},
-			wantErr:     true,
-			errKind:     errors.KindBadRequest,
-		},
-		{
-			name:        "error - invalid tenant UUID",
-			identityID:  identityID.String(),
-			participantID: participantID.String(),
-			tenantID:    "invalid-uuid",
-			setup:       func(txMgr *MockTransactionManager, partRepo *MockParticipantRepository, identRepo *MockParticipantIdentityRepository) {},
-			wantErr:     true,
-			errKind:     errors.KindBadRequest,
-		},
-		{
-			name:        "error - participant not found",
-			identityID:  identityID.String(),
-			participantID: participantID.String(),
-			tenantID:    tenantID.String(),
+			name: "error - participant not found",
+			req: &participantdto.DeleteChildEntityRequest{
+				ChildID:       identityID,
+				ParticipantID: participantID,
+				TenantID:      tenantID,
+				ApplicationID: applicationID,
+			},
 			setup: func(txMgr *MockTransactionManager, partRepo *MockParticipantRepository, identRepo *MockParticipantIdentityRepository) {
 				txMgr.On("WithTransaction", mock.Anything, mock.Anything).Return(nil)
 				partRepo.On("GetByID", mock.Anything, participantID).Return(nil, errors.ErrNotFound("participant not found"))
@@ -107,10 +88,13 @@ func TestUsecase_DeleteIdentity(t *testing.T) {
 			errKind: errors.KindNotFound,
 		},
 		{
-			name:        "error - BOLA: wrong tenant",
-			identityID:  identityID.String(),
-			participantID: participantID.String(),
-			tenantID:    otherTenantID.String(),
+			name: "error - BOLA: wrong tenant",
+			req: &participantdto.DeleteChildEntityRequest{
+				ChildID:       identityID,
+				ParticipantID: participantID,
+				TenantID:      otherTenantID,
+				ApplicationID: applicationID,
+			},
 			setup: func(txMgr *MockTransactionManager, partRepo *MockParticipantRepository, identRepo *MockParticipantIdentityRepository) {
 				txMgr.On("WithTransaction", mock.Anything, mock.Anything).Return(nil)
 				participant := createMockParticipant(entity.ParticipantStatusDraft, tenantID, applicationID, userID)
@@ -121,10 +105,13 @@ func TestUsecase_DeleteIdentity(t *testing.T) {
 			errKind: errors.KindForbidden,
 		},
 		{
-			name:        "error - cannot delete from PENDING_APPROVAL participant",
-			identityID:  identityID.String(),
-			participantID: participantID.String(),
-			tenantID:    tenantID.String(),
+			name: "error - cannot delete from PENDING_APPROVAL participant",
+			req: &participantdto.DeleteChildEntityRequest{
+				ChildID:       identityID,
+				ParticipantID: participantID,
+				TenantID:      tenantID,
+				ApplicationID: applicationID,
+			},
 			setup: func(txMgr *MockTransactionManager, partRepo *MockParticipantRepository, identRepo *MockParticipantIdentityRepository) {
 				txMgr.On("WithTransaction", mock.Anything, mock.Anything).Return(nil)
 				participant := createMockParticipant(entity.ParticipantStatusPendingApproval, tenantID, applicationID, userID)
@@ -135,10 +122,13 @@ func TestUsecase_DeleteIdentity(t *testing.T) {
 			errKind: errors.KindBadRequest,
 		},
 		{
-			name:        "error - cannot delete from APPROVED participant",
-			identityID:  identityID.String(),
-			participantID: participantID.String(),
-			tenantID:    tenantID.String(),
+			name: "error - cannot delete from APPROVED participant",
+			req: &participantdto.DeleteChildEntityRequest{
+				ChildID:       identityID,
+				ParticipantID: participantID,
+				TenantID:      tenantID,
+				ApplicationID: applicationID,
+			},
 			setup: func(txMgr *MockTransactionManager, partRepo *MockParticipantRepository, identRepo *MockParticipantIdentityRepository) {
 				txMgr.On("WithTransaction", mock.Anything, mock.Anything).Return(nil)
 				participant := createMockParticipant(entity.ParticipantStatusApproved, tenantID, applicationID, userID)
@@ -149,10 +139,13 @@ func TestUsecase_DeleteIdentity(t *testing.T) {
 			errKind: errors.KindBadRequest,
 		},
 		{
-			name:        "error - identity not found",
-			identityID:  identityID.String(),
-			participantID: participantID.String(),
-			tenantID:    tenantID.String(),
+			name: "error - identity not found",
+			req: &participantdto.DeleteChildEntityRequest{
+				ChildID:       identityID,
+				ParticipantID: participantID,
+				TenantID:      tenantID,
+				ApplicationID: applicationID,
+			},
 			setup: func(txMgr *MockTransactionManager, partRepo *MockParticipantRepository, identRepo *MockParticipantIdentityRepository) {
 				txMgr.On("WithTransaction", mock.Anything, mock.Anything).Return(nil)
 				participant := createMockParticipant(entity.ParticipantStatusDraft, tenantID, applicationID, userID)
@@ -164,10 +157,13 @@ func TestUsecase_DeleteIdentity(t *testing.T) {
 			errKind: errors.KindNotFound,
 		},
 		{
-			name:        "error - BOLA: identity belongs to different participant",
-			identityID:  identityID.String(),
-			participantID: participantID.String(),
-			tenantID:    tenantID.String(),
+			name: "error - BOLA: identity belongs to different participant",
+			req: &participantdto.DeleteChildEntityRequest{
+				ChildID:       identityID,
+				ParticipantID: participantID,
+				TenantID:      tenantID,
+				ApplicationID: applicationID,
+			},
 			setup: func(txMgr *MockTransactionManager, partRepo *MockParticipantRepository, identRepo *MockParticipantIdentityRepository) {
 				txMgr.On("WithTransaction", mock.Anything, mock.Anything).Return(nil)
 				participant := createMockParticipant(entity.ParticipantStatusDraft, tenantID, applicationID, userID)
@@ -192,15 +188,16 @@ func TestUsecase_DeleteIdentity(t *testing.T) {
 			bankRepo := new(MockParticipantBankAccountRepository)
 			famRepo := new(MockParticipantFamilyMemberRepository)
 			empRepo := new(MockParticipantEmploymentRepository)
+			penRepo := new(MockParticipantPensionRepository)
 			benRepo := new(MockParticipantBeneficiaryRepository)
 			histRepo := new(MockParticipantStatusHistoryRepository)
 			fileStorage := new(MockFileStorageAdapter)
 
 			tt.setup(txMgr, partRepo, identRepo)
 
-			uc := newTestUsecase(txMgr, partRepo, identRepo, addrRepo, bankRepo, famRepo, empRepo, benRepo, histRepo, fileStorage)
+			uc := newTestUsecase(txMgr, partRepo, identRepo, addrRepo, bankRepo, famRepo, empRepo, penRepo, benRepo, histRepo, fileStorage)
 
-			err := uc.DeleteIdentity(context.Background(), tt.identityID, tt.participantID, tt.tenantID)
+			err := uc.DeleteIdentity(context.Background(), tt.req)
 
 			if tt.wantErr {
 				assert.Error(t, err)

@@ -17,6 +17,7 @@ func newTestUsecase(
 	bankAccountRepo *MockParticipantBankAccountRepository,
 	familyMemberRepo *MockParticipantFamilyMemberRepository,
 	employmentRepo *MockParticipantEmploymentRepository,
+	pensionRepo *MockParticipantPensionRepository,
 	beneficiaryRepo *MockParticipantBeneficiaryRepository,
 	statusHistoryRepo *MockParticipantStatusHistoryRepository,
 	fileStorage *MockFileStorageAdapter,
@@ -30,6 +31,7 @@ func newTestUsecase(
 		bankAccountRepo:   bankAccountRepo,
 		familyMemberRepo:  familyMemberRepo,
 		employmentRepo:    employmentRepo,
+		pensionRepo:       pensionRepo,
 		beneficiaryRepo:   beneficiaryRepo,
 		statusHistoryRepo: statusHistoryRepo,
 		fileStorage:       fileStorage,
@@ -125,6 +127,20 @@ func createMockEmployment(participantID uuid.UUID) *entity.ParticipantEmployment
 	}
 }
 
+func createMockPension(participantID uuid.UUID) *entity.ParticipantPension {
+	now := time.Now()
+	return &entity.ParticipantPension{
+		ID:                uuid.New(),
+		ParticipantID:     participantID,
+		ParticipantNumber: strPtr("PEN-EXISTING"),
+		PensionCategory:   strPtr("PARTICIPANT_CATEGORY_001"),
+		PensionStatus:     strPtr("PARTICIPANT_STATUS_001"),
+		Version:           1,
+		CreatedAt:         now,
+		UpdatedAt:         now,
+	}
+}
+
 func createMockBeneficiary(participantID, familyMemberID uuid.UUID) *entity.ParticipantBeneficiary {
 	now := time.Now()
 	return &entity.ParticipantBeneficiary{
@@ -138,20 +154,6 @@ func createMockBeneficiary(participantID, familyMemberID uuid.UUID) *entity.Part
 	}
 }
 
-func createMockStatusHistory(participantID uuid.UUID, fromStatus *string, toStatus string) *entity.ParticipantStatusHistory {
-	now := time.Now()
-	return &entity.ParticipantStatusHistory{
-		ID:            uuid.New(),
-		ParticipantID: participantID,
-		FromStatus:    fromStatus,
-		ToStatus:      toStatus,
-		ChangedBy:     uuid.New(),
-		ChangedAt:     now,
-		CreatedAt:     now,
-		UpdatedAt:     now,
-	}
-}
-
 func strPtr(s string) *string {
 	return &s
 }
@@ -160,6 +162,3 @@ func timePtr(t time.Time) *time.Time {
 	return &t
 }
 
-func uuidPtr(u uuid.UUID) *uuid.UUID {
-	return &u
-}

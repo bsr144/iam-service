@@ -36,6 +36,7 @@ func TestUsecase_SaveIdentity(t *testing.T) {
 			req: &participantdto.SaveIdentityRequest{
 				ParticipantID:  participantID,
 				TenantID:       tenantID,
+				ApplicationID:  applicationID,
 				IdentityType:   "KTP",
 				IdentityNumber: "1234567890123456",
 			},
@@ -59,6 +60,7 @@ func TestUsecase_SaveIdentity(t *testing.T) {
 				ID:             &identityID,
 				ParticipantID:  participantID,
 				TenantID:       tenantID,
+				ApplicationID:  applicationID,
 				IdentityType:   "PASSPORT",
 				IdentityNumber: "A1234567",
 			},
@@ -85,6 +87,7 @@ func TestUsecase_SaveIdentity(t *testing.T) {
 			req: &participantdto.SaveIdentityRequest{
 				ParticipantID:  participantID,
 				TenantID:       tenantID,
+				ApplicationID:  applicationID,
 				IdentityType:   "KTP",
 				IdentityNumber: "1234567890123456",
 			},
@@ -103,6 +106,7 @@ func TestUsecase_SaveIdentity(t *testing.T) {
 			req: &participantdto.SaveIdentityRequest{
 				ParticipantID:  participantID,
 				TenantID:       tenantID,
+				ApplicationID:  applicationID,
 				IdentityType:   "KTP",
 				IdentityNumber: "1234567890123456",
 			},
@@ -118,6 +122,7 @@ func TestUsecase_SaveIdentity(t *testing.T) {
 			req: &participantdto.SaveIdentityRequest{
 				ParticipantID:  participantID,
 				TenantID:       otherTenantID,
+				ApplicationID:  applicationID,
 				IdentityType:   "KTP",
 				IdentityNumber: "1234567890123456",
 			},
@@ -135,6 +140,7 @@ func TestUsecase_SaveIdentity(t *testing.T) {
 			req: &participantdto.SaveIdentityRequest{
 				ParticipantID:  participantID,
 				TenantID:       tenantID,
+				ApplicationID:  applicationID,
 				IdentityType:   "KTP",
 				IdentityNumber: "1234567890123456",
 			},
@@ -152,6 +158,7 @@ func TestUsecase_SaveIdentity(t *testing.T) {
 			req: &participantdto.SaveIdentityRequest{
 				ParticipantID:  participantID,
 				TenantID:       tenantID,
+				ApplicationID:  applicationID,
 				IdentityType:   "KTP",
 				IdentityNumber: "1234567890123456",
 			},
@@ -170,6 +177,7 @@ func TestUsecase_SaveIdentity(t *testing.T) {
 				ID:             &identityID,
 				ParticipantID:  participantID,
 				TenantID:       tenantID,
+				ApplicationID:  applicationID,
 				IdentityType:   "PASSPORT",
 				IdentityNumber: "A1234567",
 			},
@@ -190,6 +198,7 @@ func TestUsecase_SaveIdentity(t *testing.T) {
 				ID:             &identityID,
 				ParticipantID:  participantID,
 				TenantID:       tenantID,
+				ApplicationID:  applicationID,
 				IdentityType:   "PASSPORT",
 				IdentityNumber: "A1234567",
 			},
@@ -218,13 +227,14 @@ func TestUsecase_SaveIdentity(t *testing.T) {
 			bankRepo := new(MockParticipantBankAccountRepository)
 			famRepo := new(MockParticipantFamilyMemberRepository)
 			empRepo := new(MockParticipantEmploymentRepository)
+			penRepo := new(MockParticipantPensionRepository)
 			benRepo := new(MockParticipantBeneficiaryRepository)
 			histRepo := new(MockParticipantStatusHistoryRepository)
 			fileStorage := new(MockFileStorageAdapter)
 
 			tt.setup(txMgr, partRepo, identRepo)
 
-			uc := newTestUsecase(txMgr, partRepo, identRepo, addrRepo, bankRepo, famRepo, empRepo, benRepo, histRepo, fileStorage)
+			uc := newTestUsecase(txMgr, partRepo, identRepo, addrRepo, bankRepo, famRepo, empRepo, penRepo, benRepo, histRepo, fileStorage)
 
 			resp, err := uc.SaveIdentity(context.Background(), tt.req)
 
