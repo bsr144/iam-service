@@ -50,7 +50,7 @@ func (r *participantEmploymentRepository) Update(ctx context.Context, employment
 	oldVersion := employment.Version
 	employment.Version = oldVersion + 1
 
-	result := r.getDB(ctx).Where("version = ?", oldVersion).Save(employment)
+	result := r.getDB(ctx).Where("version = ? AND deleted_at IS NULL", oldVersion).Save(employment)
 	if result.Error != nil {
 		employment.Version = oldVersion
 		return translateError(result.Error, "participant employment")

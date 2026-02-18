@@ -11,11 +11,15 @@ import (
 	"iam-service/pkg/errors"
 
 	"github.com/google/uuid"
+	"golang.org/x/sync/errgroup"
 )
 
-func validateParticipantOwnership(participant *entity.Participant, tenantID uuid.UUID) error {
+func validateParticipantOwnership(participant *entity.Participant, tenantID, applicationID uuid.UUID) error {
 	if participant.TenantID != tenantID {
 		return errors.ErrForbidden("participant does not belong to this tenant")
+	}
+	if participant.ApplicationID != applicationID {
+		return errors.ErrForbidden("participant does not belong to this product")
 	}
 	return nil
 }
@@ -56,10 +60,10 @@ func sanitizeFilename(filename string) string {
 	return safe
 }
 
-func generateObjectKey(tenantID, participantID uuid.UUID, fieldName, filename string) string {
+func generateObjectKey(tenantID, applicationID, participantID uuid.UUID, fieldName, filename string) string {
 	safeField := sanitizeFieldName(fieldName)
 	safeFile := sanitizeFilename(filename)
-	return fmt.Sprintf("participants/%s/%s/%s/%s", tenantID.String(), participantID.String(), safeField, safeFile)
+	return fmt.Sprintf("participants/%s/%s/%s/%s/%s", tenantID.String(), applicationID.String(), participantID.String(), safeField, safeFile)
 }
 
 func mapIdentityToResponse(identity *entity.ParticipantIdentity) participantdto.IdentityResponse {
@@ -152,6 +156,21 @@ func mapEmploymentToResponse(employment *entity.ParticipantEmployment) participa
 	}
 }
 
+func mapPensionToResponse(pension *entity.ParticipantPension) participantdto.PensionResponse {
+	return participantdto.PensionResponse{
+		ID:                      pension.ID,
+		ParticipantNumber:       pension.ParticipantNumber,
+		PensionCategory:         pension.PensionCategory,
+		PensionStatus:           pension.PensionStatus,
+		EffectiveDate:           pension.EffectiveDate,
+		EndDate:                 pension.EndDate,
+		ProjectedRetirementDate: pension.ProjectedRetirementDate,
+		Version:                 pension.Version,
+		CreatedAt:               pension.CreatedAt,
+		UpdatedAt:               pension.UpdatedAt,
+	}
+}
+
 func mapBeneficiaryToResponse(beneficiary *entity.ParticipantBeneficiary) participantdto.BeneficiaryResponse {
 	return participantdto.BeneficiaryResponse{
 		ID:                      beneficiary.ID,
@@ -178,7 +197,7 @@ func mapStatusHistoryToResponse(history *entity.ParticipantStatusHistory) partic
 	}
 }
 
-func (uc *usecase) buildFullParticipantResponse(ctx context.Context, participant *entity.Participant) (*participantdto.ParticipantResponse, error) {
+func (uc *usecase) buildFullParticipantResponse(ctx context.Context, participant *entity.Participant, concurrent bool) (*participantdto.ParticipantResponse, error) {
 	resp := &participantdto.ParticipantResponse{
 		ID:              participant.ID,
 		TenantID:        participant.TenantID,
@@ -208,54 +227,186 @@ func (uc *usecase) buildFullParticipantResponse(ctx context.Context, participant
 		UpdatedAt:       participant.UpdatedAt,
 	}
 
-	identities, err := uc.identityRepo.ListByParticipantID(ctx, participant.ID)
-	if err != nil {
-		return nil, fmt.Errorf("load identities: %w", err)
+	var (
+		identities    []*entity.ParticipantIdentity
+		addresses     []*entity.ParticipantAddress
+		bankAccounts  []*entity.ParticipantBankAccount
+		familyMembers []*entity.ParticipantFamilyMember
+		employment    *entity.ParticipantEmployment
+		pension       *entity.ParticipantPension
+		beneficiaries []*entity.ParticipantBeneficiary
+	)
+
+	if concurrent {
+		if err := uc.loadChildEntitiesConcurrent(ctx, participant.ID, &identities, &addresses, &bankAccounts, &familyMembers, &employment, &pension, &beneficiaries); err != nil {
+			return nil, err
+		}
+	} else {
+		if err := uc.loadChildEntitiesSequential(ctx, participant.ID, &identities, &addresses, &bankAccounts, &familyMembers, &employment, &pension, &beneficiaries); err != nil {
+			return nil, err
+		}
 	}
+
+	resp.Identities = make([]participantdto.IdentityResponse, 0, len(identities))
 	for _, identity := range identities {
 		resp.Identities = append(resp.Identities, mapIdentityToResponse(identity))
 	}
 
-	addresses, err := uc.addressRepo.ListByParticipantID(ctx, participant.ID)
-	if err != nil {
-		return nil, fmt.Errorf("load addresses: %w", err)
-	}
+	resp.Addresses = make([]participantdto.AddressResponse, 0, len(addresses))
 	for _, address := range addresses {
 		resp.Addresses = append(resp.Addresses, mapAddressToResponse(address))
 	}
 
-	bankAccounts, err := uc.bankAccountRepo.ListByParticipantID(ctx, participant.ID)
-	if err != nil {
-		return nil, fmt.Errorf("load bank accounts: %w", err)
-	}
+	resp.BankAccounts = make([]participantdto.BankAccountResponse, 0, len(bankAccounts))
 	for _, account := range bankAccounts {
 		resp.BankAccounts = append(resp.BankAccounts, mapBankAccountToResponse(account))
 	}
 
-	familyMembers, err := uc.familyMemberRepo.ListByParticipantID(ctx, participant.ID)
-	if err != nil {
-		return nil, fmt.Errorf("load family members: %w", err)
-	}
+	resp.FamilyMembers = make([]participantdto.FamilyMemberResponse, 0, len(familyMembers))
 	for _, member := range familyMembers {
 		resp.FamilyMembers = append(resp.FamilyMembers, mapFamilyMemberToResponse(member))
 	}
 
-	employment, err := uc.employmentRepo.GetByParticipantID(ctx, participant.ID)
-	if err != nil && !errors.IsNotFound(err) {
-		return nil, fmt.Errorf("load employment: %w", err)
-	}
 	if employment != nil {
 		empResp := mapEmploymentToResponse(employment)
 		resp.Employment = &empResp
 	}
 
-	beneficiaries, err := uc.beneficiaryRepo.ListByParticipantID(ctx, participant.ID)
-	if err != nil {
-		return nil, fmt.Errorf("load beneficiaries: %w", err)
+	if pension != nil {
+		penResp := mapPensionToResponse(pension)
+		resp.Pension = &penResp
 	}
+
+	resp.Beneficiaries = make([]participantdto.BeneficiaryResponse, 0, len(beneficiaries))
 	for _, beneficiary := range beneficiaries {
 		resp.Beneficiaries = append(resp.Beneficiaries, mapBeneficiaryToResponse(beneficiary))
 	}
 
 	return resp, nil
+}
+
+func (uc *usecase) loadChildEntitiesSequential(ctx context.Context, participantID uuid.UUID,
+	identities *[]*entity.ParticipantIdentity,
+	addresses *[]*entity.ParticipantAddress,
+	bankAccounts *[]*entity.ParticipantBankAccount,
+	familyMembers *[]*entity.ParticipantFamilyMember,
+	employment **entity.ParticipantEmployment,
+	pension **entity.ParticipantPension,
+	beneficiaries *[]*entity.ParticipantBeneficiary,
+) error {
+	var err error
+
+	*identities, err = uc.identityRepo.ListByParticipantID(ctx, participantID)
+	if err != nil {
+		return fmt.Errorf("load identities: %w", err)
+	}
+
+	*addresses, err = uc.addressRepo.ListByParticipantID(ctx, participantID)
+	if err != nil {
+		return fmt.Errorf("load addresses: %w", err)
+	}
+
+	*bankAccounts, err = uc.bankAccountRepo.ListByParticipantID(ctx, participantID)
+	if err != nil {
+		return fmt.Errorf("load bank accounts: %w", err)
+	}
+
+	*familyMembers, err = uc.familyMemberRepo.ListByParticipantID(ctx, participantID)
+	if err != nil {
+		return fmt.Errorf("load family members: %w", err)
+	}
+
+	*employment, err = uc.employmentRepo.GetByParticipantID(ctx, participantID)
+	if err != nil && !errors.IsNotFound(err) {
+		return fmt.Errorf("load employment: %w", err)
+	}
+
+	*pension, err = uc.pensionRepo.GetByParticipantID(ctx, participantID)
+	if err != nil && !errors.IsNotFound(err) {
+		return fmt.Errorf("load pension: %w", err)
+	}
+
+	*beneficiaries, err = uc.beneficiaryRepo.ListByParticipantID(ctx, participantID)
+	if err != nil {
+		return fmt.Errorf("load beneficiaries: %w", err)
+	}
+
+	return nil
+}
+
+func (uc *usecase) loadChildEntitiesConcurrent(ctx context.Context, participantID uuid.UUID,
+	identities *[]*entity.ParticipantIdentity,
+	addresses *[]*entity.ParticipantAddress,
+	bankAccounts *[]*entity.ParticipantBankAccount,
+	familyMembers *[]*entity.ParticipantFamilyMember,
+	employment **entity.ParticipantEmployment,
+	pension **entity.ParticipantPension,
+	beneficiaries *[]*entity.ParticipantBeneficiary,
+) error {
+	g, gctx := errgroup.WithContext(ctx)
+
+	g.Go(func() error {
+		var err error
+		*identities, err = uc.identityRepo.ListByParticipantID(gctx, participantID)
+		if err != nil {
+			return fmt.Errorf("load identities: %w", err)
+		}
+		return nil
+	})
+
+	g.Go(func() error {
+		var err error
+		*addresses, err = uc.addressRepo.ListByParticipantID(gctx, participantID)
+		if err != nil {
+			return fmt.Errorf("load addresses: %w", err)
+		}
+		return nil
+	})
+
+	g.Go(func() error {
+		var err error
+		*bankAccounts, err = uc.bankAccountRepo.ListByParticipantID(gctx, participantID)
+		if err != nil {
+			return fmt.Errorf("load bank accounts: %w", err)
+		}
+		return nil
+	})
+
+	g.Go(func() error {
+		var err error
+		*familyMembers, err = uc.familyMemberRepo.ListByParticipantID(gctx, participantID)
+		if err != nil {
+			return fmt.Errorf("load family members: %w", err)
+		}
+		return nil
+	})
+
+	g.Go(func() error {
+		var err error
+		*employment, err = uc.employmentRepo.GetByParticipantID(gctx, participantID)
+		if err != nil && !errors.IsNotFound(err) {
+			return fmt.Errorf("load employment: %w", err)
+		}
+		return nil
+	})
+
+	g.Go(func() error {
+		var err error
+		*pension, err = uc.pensionRepo.GetByParticipantID(gctx, participantID)
+		if err != nil && !errors.IsNotFound(err) {
+			return fmt.Errorf("load pension: %w", err)
+		}
+		return nil
+	})
+
+	g.Go(func() error {
+		var err error
+		*beneficiaries, err = uc.beneficiaryRepo.ListByParticipantID(gctx, participantID)
+		if err != nil {
+			return fmt.Errorf("load beneficiaries: %w", err)
+		}
+		return nil
+	})
+
+	return g.Wait()
 }

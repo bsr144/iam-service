@@ -5,33 +5,17 @@ import (
 	"fmt"
 
 	"iam-service/pkg/errors"
-
-	"github.com/google/uuid"
+	"iam-service/saving/participant/participantdto"
 )
 
-func (uc *usecase) DeleteBeneficiary(ctx context.Context, beneficiaryID, participantID, tenantID string) error {
-	bID, err := uuid.Parse(beneficiaryID)
-	if err != nil {
-		return errors.ErrBadRequest("invalid beneficiary ID")
-	}
-
-	pID, err := uuid.Parse(participantID)
-	if err != nil {
-		return errors.ErrBadRequest("invalid participant ID")
-	}
-
-	tID, err := uuid.Parse(tenantID)
-	if err != nil {
-		return errors.ErrBadRequest("invalid tenant ID")
-	}
-
+func (uc *usecase) DeleteBeneficiary(ctx context.Context, req *participantdto.DeleteChildEntityRequest) error {
 	return uc.txManager.WithTransaction(ctx, func(txCtx context.Context) error {
-		participant, err := uc.participantRepo.GetByID(txCtx, pID)
+		participant, err := uc.participantRepo.GetByID(txCtx, req.ParticipantID)
 		if err != nil {
 			return fmt.Errorf("get participant: %w", err)
 		}
 
-		if err := validateParticipantOwnership(participant, tID); err != nil {
+		if err := validateParticipantOwnership(participant, req.TenantID, req.ApplicationID); err != nil {
 			return err
 		}
 
@@ -39,15 +23,15 @@ func (uc *usecase) DeleteBeneficiary(ctx context.Context, beneficiaryID, partici
 			return err
 		}
 
-		beneficiary, err := uc.beneficiaryRepo.GetByID(txCtx, bID)
+		beneficiary, err := uc.beneficiaryRepo.GetByID(txCtx, req.ChildID)
 		if err != nil {
 			return fmt.Errorf("get beneficiary: %w", err)
 		}
-		if beneficiary.ParticipantID != pID {
+		if beneficiary.ParticipantID != req.ParticipantID {
 			return errors.ErrForbidden("beneficiary does not belong to this participant")
 		}
 
-		if err := uc.beneficiaryRepo.SoftDelete(txCtx, bID); err != nil {
+		if err := uc.beneficiaryRepo.SoftDelete(txCtx, req.ChildID); err != nil {
 			return fmt.Errorf("soft delete beneficiary: %w", err)
 		}
 

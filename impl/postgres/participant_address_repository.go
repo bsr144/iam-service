@@ -53,7 +53,7 @@ func (r *participantAddressRepository) Update(ctx context.Context, address *enti
 	oldVersion := address.Version
 	address.Version = oldVersion + 1
 
-	result := r.getDB(ctx).Where("version = ?", oldVersion).Save(address)
+	result := r.getDB(ctx).Where("version = ? AND deleted_at IS NULL", oldVersion).Save(address)
 	if result.Error != nil {
 		address.Version = oldVersion
 		return translateError(result.Error, "participant address")

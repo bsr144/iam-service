@@ -5,28 +5,17 @@ import (
 	"fmt"
 
 	"iam-service/pkg/errors"
-
-	"github.com/google/uuid"
+	"iam-service/saving/participant/participantdto"
 )
 
-func (uc *usecase) DeleteParticipant(ctx context.Context, participantID, tenantID, userID string) error {
-	pID, err := uuid.Parse(participantID)
-	if err != nil {
-		return errors.ErrBadRequest("invalid participant ID")
-	}
-
-	tID, err := uuid.Parse(tenantID)
-	if err != nil {
-		return errors.ErrBadRequest("invalid tenant ID")
-	}
-
+func (uc *usecase) DeleteParticipant(ctx context.Context, req *participantdto.DeleteParticipantRequest) error {
 	return uc.txManager.WithTransaction(ctx, func(txCtx context.Context) error {
-		participant, err := uc.participantRepo.GetByID(txCtx, pID)
+		participant, err := uc.participantRepo.GetByID(txCtx, req.ParticipantID)
 		if err != nil {
 			return fmt.Errorf("get participant: %w", err)
 		}
 
-		if err := validateParticipantOwnership(participant, tID); err != nil {
+		if err := validateParticipantOwnership(participant, req.TenantID, req.ApplicationID); err != nil {
 			return err
 		}
 
@@ -34,7 +23,7 @@ func (uc *usecase) DeleteParticipant(ctx context.Context, participantID, tenantI
 			return errors.ErrBadRequest("only DRAFT participants can be deleted")
 		}
 
-		if err := uc.participantRepo.SoftDelete(txCtx, pID); err != nil {
+		if err := uc.participantRepo.SoftDelete(txCtx, req.ParticipantID); err != nil {
 			return fmt.Errorf("soft delete participant: %w", err)
 		}
 

@@ -53,7 +53,7 @@ func (r *participantBankAccountRepository) Update(ctx context.Context, account *
 	oldVersion := account.Version
 	account.Version = oldVersion + 1
 
-	result := r.getDB(ctx).Where("version = ?", oldVersion).Save(account)
+	result := r.getDB(ctx).Where("version = ? AND deleted_at IS NULL", oldVersion).Save(account)
 	if result.Error != nil {
 		account.Version = oldVersion
 		return translateError(result.Error, "participant bank account")

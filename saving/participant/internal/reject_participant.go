@@ -8,8 +8,6 @@ import (
 	"iam-service/entity"
 	"iam-service/saving/participant/participantdto"
 	"iam-service/pkg/errors"
-
-	"github.com/google/uuid"
 )
 
 func (uc *usecase) RejectParticipant(ctx context.Context, req *participantdto.RejectParticipantRequest) (*participantdto.ParticipantResponse, error) {
@@ -21,7 +19,7 @@ func (uc *usecase) RejectParticipant(ctx context.Context, req *participantdto.Re
 			return fmt.Errorf("get participant: %w", err)
 		}
 
-		if err := validateParticipantOwnership(participant, req.TenantID); err != nil {
+		if err := validateParticipantOwnership(participant, req.TenantID, req.ApplicationID); err != nil {
 			return err
 		}
 
@@ -42,7 +40,6 @@ func (uc *usecase) RejectParticipant(ctx context.Context, req *participantdto.Re
 		}
 
 		history := &entity.ParticipantStatusHistory{
-			ID:            uuid.New(),
 			ParticipantID: participant.ID,
 			FromStatus:    &fromStatus,
 			ToStatus:      string(entity.ParticipantStatusRejected),
@@ -57,7 +54,7 @@ func (uc *usecase) RejectParticipant(ctx context.Context, req *participantdto.Re
 			return fmt.Errorf("create status history: %w", err)
 		}
 
-		resp, err := uc.buildFullParticipantResponse(txCtx, participant)
+		resp, err := uc.buildFullParticipantResponse(txCtx, participant, false)
 		if err != nil {
 			return fmt.Errorf("build response: %w", err)
 		}

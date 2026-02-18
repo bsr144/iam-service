@@ -20,11 +20,14 @@ var allowedParticipantSortColumns = map[string]bool{
 	"status":     true,
 }
 
+var ilikeReplacer = strings.NewReplacer(
+	"\\", "\\\\",
+	"%", "\\%",
+	"_", "\\_",
+)
+
 func escapeILIKE(s string) string {
-	s = strings.ReplaceAll(s, "\\", "\\\\")
-	s = strings.ReplaceAll(s, "%", "\\%")
-	s = strings.ReplaceAll(s, "_", "\\_")
-	return s
+	return ilikeReplacer.Replace(s)
 }
 
 type participantRepository struct {
@@ -57,7 +60,7 @@ func (r *participantRepository) Update(ctx context.Context, participant *entity.
 	oldVersion := participant.Version
 	participant.Version = oldVersion + 1
 
-	result := r.getDB(ctx).Where("version = ?", oldVersion).Save(participant)
+	result := r.getDB(ctx).Where("version = ? AND deleted_at IS NULL", oldVersion).Save(participant)
 	if result.Error != nil {
 		participant.Version = oldVersion
 		return translateError(result.Error, "participant")
@@ -84,11 +87,7 @@ func (r *participantRepository) List(ctx context.Context, filter *contract.Parti
 	var total int64
 
 	query := r.getDB(ctx).Model(&entity.Participant{}).
-		Where("tenant_id = ? AND deleted_at IS NULL", filter.TenantID)
-
-	if filter.ApplicationID != nil {
-		query = query.Where("application_id = ?", *filter.ApplicationID)
-	}
+		Where("tenant_id = ? AND application_id = ? AND deleted_at IS NULL", filter.TenantID, filter.ApplicationID)
 
 	if filter.Status != nil {
 		query = query.Where("status = ?", *filter.Status)

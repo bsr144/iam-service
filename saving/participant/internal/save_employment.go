@@ -8,8 +8,6 @@ import (
 	"iam-service/entity"
 	"iam-service/saving/participant/participantdto"
 	"iam-service/pkg/errors"
-
-	"github.com/google/uuid"
 )
 
 func (uc *usecase) SaveEmployment(ctx context.Context, req *participantdto.SaveEmploymentRequest) (*participantdto.EmploymentResponse, error) {
@@ -21,7 +19,7 @@ func (uc *usecase) SaveEmployment(ctx context.Context, req *participantdto.SaveE
 			return fmt.Errorf("get participant: %w", err)
 		}
 
-		if err := validateParticipantOwnership(participant, req.TenantID); err != nil {
+		if err := validateParticipantOwnership(participant, req.TenantID, req.ApplicationID); err != nil {
 			return err
 		}
 
@@ -71,7 +69,6 @@ func (uc *usecase) SaveEmployment(ctx context.Context, req *participantdto.SaveE
 		} else {
 			now := time.Now()
 			employment = &entity.ParticipantEmployment{
-				ID:                 uuid.New(),
 				ParticipantID:      req.ParticipantID,
 				PersonnelNumber:    req.PersonnelNumber,
 				DateOfHire:         req.DateOfHire,

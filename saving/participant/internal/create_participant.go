@@ -7,8 +7,6 @@ import (
 
 	"iam-service/entity"
 	"iam-service/saving/participant/participantdto"
-
-	"github.com/google/uuid"
 )
 
 func (uc *usecase) CreateParticipant(ctx context.Context, req *participantdto.CreateParticipantRequest) (*participantdto.ParticipantResponse, error) {
@@ -18,7 +16,6 @@ func (uc *usecase) CreateParticipant(ctx context.Context, req *participantdto.Cr
 		now := time.Now()
 
 		participant := &entity.Participant{
-			ID:            uuid.New(),
 			TenantID:      req.TenantID,
 			ApplicationID: req.ApplicationID,
 			UserID:        &req.UserID,
@@ -35,7 +32,6 @@ func (uc *usecase) CreateParticipant(ctx context.Context, req *participantdto.Cr
 		}
 
 		history := &entity.ParticipantStatusHistory{
-			ID:            uuid.New(),
 			ParticipantID: participant.ID,
 			FromStatus:    nil,
 			ToStatus:      string(entity.ParticipantStatusDraft),
@@ -49,7 +45,7 @@ func (uc *usecase) CreateParticipant(ctx context.Context, req *participantdto.Cr
 			return fmt.Errorf("create status history: %w", err)
 		}
 
-		resp, err := uc.buildFullParticipantResponse(txCtx, participant)
+		resp, err := uc.buildFullParticipantResponse(txCtx, participant, false)
 		if err != nil {
 			return fmt.Errorf("build response: %w", err)
 		}

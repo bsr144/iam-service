@@ -16,7 +16,7 @@ func (uc *usecase) UpdatePersonalData(ctx context.Context, req *participantdto.U
 			return fmt.Errorf("get participant: %w", err)
 		}
 
-		if err := validateParticipantOwnership(participant, req.TenantID); err != nil {
+		if err := validateParticipantOwnership(participant, req.TenantID, req.ApplicationID); err != nil {
 			return err
 		}
 
@@ -39,7 +39,7 @@ func (uc *usecase) UpdatePersonalData(ctx context.Context, req *participantdto.U
 			return fmt.Errorf("update participant: %w", err)
 		}
 
-		resp, err := uc.buildFullParticipantResponse(txCtx, participant)
+		resp, err := uc.buildFullParticipantResponse(txCtx, participant, false)
 		if err != nil {
 			return fmt.Errorf("build response: %w", err)
 		}

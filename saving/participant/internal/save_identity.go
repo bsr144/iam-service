@@ -8,8 +8,6 @@ import (
 	"iam-service/entity"
 	"iam-service/saving/participant/participantdto"
 	"iam-service/pkg/errors"
-
-	"github.com/google/uuid"
 )
 
 func (uc *usecase) SaveIdentity(ctx context.Context, req *participantdto.SaveIdentityRequest) (*participantdto.IdentityResponse, error) {
@@ -21,7 +19,7 @@ func (uc *usecase) SaveIdentity(ctx context.Context, req *participantdto.SaveIde
 			return fmt.Errorf("get participant: %w", err)
 		}
 
-		if err := validateParticipantOwnership(participant, req.TenantID); err != nil {
+		if err := validateParticipantOwnership(participant, req.TenantID, req.ApplicationID); err != nil {
 			return err
 		}
 
@@ -54,7 +52,6 @@ func (uc *usecase) SaveIdentity(ctx context.Context, req *participantdto.SaveIde
 		} else {
 			now := time.Now()
 			identity = &entity.ParticipantIdentity{
-				ID:                uuid.New(),
 				ParticipantID:     req.ParticipantID,
 				IdentityType:      req.IdentityType,
 				IdentityNumber:    req.IdentityNumber,

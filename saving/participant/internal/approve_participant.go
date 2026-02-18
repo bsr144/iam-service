@@ -6,10 +6,8 @@ import (
 	"time"
 
 	"iam-service/entity"
-	"iam-service/saving/participant/participantdto"
 	"iam-service/pkg/errors"
-
-	"github.com/google/uuid"
+	"iam-service/saving/participant/participantdto"
 )
 
 func (uc *usecase) ApproveParticipant(ctx context.Context, req *participantdto.ApproveParticipantRequest) (*participantdto.ParticipantResponse, error) {
@@ -21,7 +19,7 @@ func (uc *usecase) ApproveParticipant(ctx context.Context, req *participantdto.A
 			return fmt.Errorf("get participant: %w", err)
 		}
 
-		if err := validateParticipantOwnership(participant, req.TenantID); err != nil {
+		if err := validateParticipantOwnership(participant, req.TenantID, req.ApplicationID); err != nil {
 			return err
 		}
 
@@ -41,7 +39,6 @@ func (uc *usecase) ApproveParticipant(ctx context.Context, req *participantdto.A
 		}
 
 		history := &entity.ParticipantStatusHistory{
-			ID:            uuid.New(),
 			ParticipantID: participant.ID,
 			FromStatus:    &fromStatus,
 			ToStatus:      string(entity.ParticipantStatusApproved),
@@ -55,7 +52,7 @@ func (uc *usecase) ApproveParticipant(ctx context.Context, req *participantdto.A
 			return fmt.Errorf("create status history: %w", err)
 		}
 
-		resp, err := uc.buildFullParticipantResponse(txCtx, participant)
+		resp, err := uc.buildFullParticipantResponse(txCtx, participant, true)
 		if err != nil {
 			return fmt.Errorf("build response: %w", err)
 		}

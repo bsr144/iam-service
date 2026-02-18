@@ -53,7 +53,7 @@ func (r *participantFamilyMemberRepository) Update(ctx context.Context, member *
 	oldVersion := member.Version
 	member.Version = oldVersion + 1
 
-	result := r.getDB(ctx).Where("version = ?", oldVersion).Save(member)
+	result := r.getDB(ctx).Where("version = ? AND deleted_at IS NULL", oldVersion).Save(member)
 	if result.Error != nil {
 		member.Version = oldVersion
 		return translateError(result.Error, "participant family member")

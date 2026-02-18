@@ -5,33 +5,17 @@ import (
 	"fmt"
 
 	"iam-service/pkg/errors"
-
-	"github.com/google/uuid"
+	"iam-service/saving/participant/participantdto"
 )
 
-func (uc *usecase) DeleteFamilyMember(ctx context.Context, memberID, participantID, tenantID string) error {
-	mID, err := uuid.Parse(memberID)
-	if err != nil {
-		return errors.ErrBadRequest("invalid family member ID")
-	}
-
-	pID, err := uuid.Parse(participantID)
-	if err != nil {
-		return errors.ErrBadRequest("invalid participant ID")
-	}
-
-	tID, err := uuid.Parse(tenantID)
-	if err != nil {
-		return errors.ErrBadRequest("invalid tenant ID")
-	}
-
+func (uc *usecase) DeleteFamilyMember(ctx context.Context, req *participantdto.DeleteChildEntityRequest) error {
 	return uc.txManager.WithTransaction(ctx, func(txCtx context.Context) error {
-		participant, err := uc.participantRepo.GetByID(txCtx, pID)
+		participant, err := uc.participantRepo.GetByID(txCtx, req.ParticipantID)
 		if err != nil {
 			return fmt.Errorf("get participant: %w", err)
 		}
 
-		if err := validateParticipantOwnership(participant, tID); err != nil {
+		if err := validateParticipantOwnership(participant, req.TenantID, req.ApplicationID); err != nil {
 			return err
 		}
 
@@ -39,26 +23,26 @@ func (uc *usecase) DeleteFamilyMember(ctx context.Context, memberID, participant
 			return err
 		}
 
-		member, err := uc.familyMemberRepo.GetByID(txCtx, mID)
+		member, err := uc.familyMemberRepo.GetByID(txCtx, req.ChildID)
 		if err != nil {
 			return fmt.Errorf("get family member: %w", err)
 		}
-		if member.ParticipantID != pID {
+		if member.ParticipantID != req.ParticipantID {
 			return errors.ErrForbidden("family member does not belong to this participant")
 		}
 
-		beneficiaries, err := uc.beneficiaryRepo.ListByParticipantID(txCtx, pID)
+		beneficiaries, err := uc.beneficiaryRepo.ListByParticipantID(txCtx, req.ParticipantID)
 		if err != nil {
 			return fmt.Errorf("list beneficiaries: %w", err)
 		}
 
 		for _, b := range beneficiaries {
-			if b.FamilyMemberID == mID {
+			if b.FamilyMemberID == req.ChildID {
 				return errors.ErrBadRequest("cannot delete family member that is referenced as a beneficiary")
 			}
 		}
 
-		if err := uc.familyMemberRepo.SoftDelete(txCtx, mID); err != nil {
+		if err := uc.familyMemberRepo.SoftDelete(txCtx, req.ChildID); err != nil {
 			return fmt.Errorf("soft delete family member: %w", err)
 		}
 

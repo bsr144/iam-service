@@ -53,7 +53,7 @@ func (r *participantIdentityRepository) Update(ctx context.Context, identity *en
 	oldVersion := identity.Version
 	identity.Version = oldVersion + 1
 
-	result := r.getDB(ctx).Where("version = ?", oldVersion).Save(identity)
+	result := r.getDB(ctx).Where("version = ? AND deleted_at IS NULL", oldVersion).Save(identity)
 	if result.Error != nil {
 		identity.Version = oldVersion
 		return translateError(result.Error, "participant identity")

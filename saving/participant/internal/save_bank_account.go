@@ -8,8 +8,6 @@ import (
 	"iam-service/entity"
 	"iam-service/saving/participant/participantdto"
 	"iam-service/pkg/errors"
-
-	"github.com/google/uuid"
 )
 
 func (uc *usecase) SaveBankAccount(ctx context.Context, req *participantdto.SaveBankAccountRequest) (*participantdto.BankAccountResponse, error) {
@@ -21,7 +19,7 @@ func (uc *usecase) SaveBankAccount(ctx context.Context, req *participantdto.Save
 			return fmt.Errorf("get participant: %w", err)
 		}
 
-		if err := validateParticipantOwnership(participant, req.TenantID); err != nil {
+		if err := validateParticipantOwnership(participant, req.TenantID, req.ApplicationID); err != nil {
 			return err
 		}
 
@@ -62,7 +60,6 @@ func (uc *usecase) SaveBankAccount(ctx context.Context, req *participantdto.Save
 		} else {
 			now := time.Now()
 			account = &entity.ParticipantBankAccount{
-				ID:                uuid.New(),
 				ParticipantID:     req.ParticipantID,
 				BankCode:          req.BankCode,
 				AccountNumber:     req.AccountNumber,
