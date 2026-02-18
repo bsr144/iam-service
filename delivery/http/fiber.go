@@ -92,6 +92,7 @@ func NewServer(cfg *config.Config) *Server {
 	participantBankAccountRepo := postgres.NewParticipantBankAccountRepository(postgresDB)
 	participantFamilyMemberRepo := postgres.NewParticipantFamilyMemberRepository(postgresDB)
 	participantEmploymentRepo := postgres.NewParticipantEmploymentRepository(postgresDB)
+	participantPensionRepo := postgres.NewParticipantPensionRepository(postgresDB)
 	participantBeneficiaryRepo := postgres.NewParticipantBeneficiaryRepository(postgresDB)
 	participantStatusHistoryRepo := postgres.NewParticipantStatusHistoryRepository(postgresDB)
 
@@ -168,6 +169,7 @@ func NewServer(cfg *config.Config) *Server {
 		participantBankAccountRepo,
 		participantFamilyMemberRepo,
 		participantEmploymentRepo,
+		participantPensionRepo,
 		participantBeneficiaryRepo,
 		participantStatusHistoryRepo,
 		fileStorage,

@@ -5,6 +5,46 @@ import (
 	"iam-service/saving/participant/participantdto"
 )
 
+func MapEmploymentResponse(dto *participantdto.EmploymentResponse) response.EmploymentResponse {
+	return response.EmploymentResponse{
+		ID:                 dto.ID,
+		PersonnelNumber:    dto.PersonnelNumber,
+		DateOfHire:         dto.DateOfHire,
+		CorporateGroupName: dto.CorporateGroupName,
+		LegalEntityCode:    dto.LegalEntityCode,
+		LegalEntityName:    dto.LegalEntityName,
+		BusinessUnitCode:   dto.BusinessUnitCode,
+		BusinessUnitName:   dto.BusinessUnitName,
+		TenantName:         dto.TenantName,
+		EmploymentStatus:   dto.EmploymentStatus,
+		PositionName:       dto.PositionName,
+		JobLevel:           dto.JobLevel,
+		LocationCode:       dto.LocationCode,
+		LocationName:       dto.LocationName,
+		SubLocationName:    dto.SubLocationName,
+		RetirementDate:     dto.RetirementDate,
+		RetirementTypeCode: dto.RetirementTypeCode,
+		Version:            dto.Version,
+		CreatedAt:          dto.CreatedAt,
+		UpdatedAt:          dto.UpdatedAt,
+	}
+}
+
+func MapPensionResponse(dto *participantdto.PensionResponse) response.PensionResponse {
+	return response.PensionResponse{
+		ID:                      dto.ID,
+		ParticipantNumber:       dto.ParticipantNumber,
+		PensionCategory:         dto.PensionCategory,
+		PensionStatus:           dto.PensionStatus,
+		EffectiveDate:           dto.EffectiveDate,
+		EndDate:                 dto.EndDate,
+		ProjectedRetirementDate: dto.ProjectedRetirementDate,
+		Version:                 dto.Version,
+		CreatedAt:               dto.CreatedAt,
+		UpdatedAt:               dto.UpdatedAt,
+	}
+}
+
 func MapParticipantResponse(dto *participantdto.ParticipantResponse) response.ParticipantResponse {
 	identities := make([]response.IdentityResponse, 0, len(dto.Identities))
 	for _, id := range dto.Identities {
@@ -101,6 +141,22 @@ func MapParticipantResponse(dto *participantdto.ParticipantResponse) response.Pa
 		}
 	}
 
+	var pension *response.PensionResponse
+	if dto.Pension != nil {
+		pension = &response.PensionResponse{
+			ID:                      dto.Pension.ID,
+			ParticipantNumber:       dto.Pension.ParticipantNumber,
+			PensionCategory:         dto.Pension.PensionCategory,
+			PensionStatus:           dto.Pension.PensionStatus,
+			EffectiveDate:           dto.Pension.EffectiveDate,
+			EndDate:                 dto.Pension.EndDate,
+			ProjectedRetirementDate: dto.Pension.ProjectedRetirementDate,
+			Version:                 dto.Pension.Version,
+			CreatedAt:               dto.Pension.CreatedAt,
+			UpdatedAt:               dto.Pension.UpdatedAt,
+		}
+	}
+
 	beneficiaries := make([]response.BeneficiaryResponse, 0, len(dto.Beneficiaries))
 	for _, ben := range dto.Beneficiaries {
 		beneficiaries = append(beneficiaries, response.BeneficiaryResponse{
@@ -148,6 +204,7 @@ func MapParticipantResponse(dto *participantdto.ParticipantResponse) response.Pa
 		BankAccounts:    bankAccounts,
 		FamilyMembers:   familyMembers,
 		Employment:      employment,
+		Pension:         pension,
 		Beneficiaries:   beneficiaries,
 	}
 }
