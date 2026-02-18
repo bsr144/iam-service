@@ -4,7 +4,6 @@ import (
 	"context"
 
 	"iam-service/entity"
-	"iam-service/iam/auth/contract"
 
 	"github.com/google/uuid"
 	"gorm.io/gorm"
@@ -14,7 +13,7 @@ type tenantRepository struct {
 	baseRepository
 }
 
-func NewTenantRepository(db *gorm.DB) contract.TenantRepository {
+func NewTenantRepository(db *gorm.DB) *tenantRepository {
 	return &tenantRepository{
 		baseRepository: baseRepository{db: db},
 	}
@@ -22,16 +21,16 @@ func NewTenantRepository(db *gorm.DB) contract.TenantRepository {
 
 func (r *tenantRepository) GetByID(ctx context.Context, id uuid.UUID) (*entity.Tenant, error) {
 	var tenant entity.Tenant
-	err := r.getDB(ctx).Where("id = ?", id).First(&tenant).Error
+	err := r.getDB(ctx).Where("id = ? AND deleted_at IS NULL", id).First(&tenant).Error
 	if err != nil {
 		return nil, translateError(err, "tenant")
 	}
 	return &tenant, nil
 }
 
-func (r *tenantRepository) GetBySlug(ctx context.Context, slug string) (*entity.Tenant, error) {
+func (r *tenantRepository) GetByCode(ctx context.Context, code string) (*entity.Tenant, error) {
 	var tenant entity.Tenant
-	err := r.getDB(ctx).Where("slug = ?", slug).First(&tenant).Error
+	err := r.getDB(ctx).Where("code = ? AND deleted_at IS NULL", code).First(&tenant).Error
 	if err != nil {
 		return nil, translateError(err, "tenant")
 	}
@@ -41,7 +40,7 @@ func (r *tenantRepository) GetBySlug(ctx context.Context, slug string) (*entity.
 func (r *tenantRepository) Exists(ctx context.Context, id uuid.UUID) (bool, error) {
 	var count int64
 	err := r.getDB(ctx).Model(&entity.Tenant{}).
-		Where("id = ?", id).
+		Where("id = ? AND deleted_at IS NULL", id).
 		Count(&count).Error
 	if err != nil {
 		return false, translateError(err, "tenant")

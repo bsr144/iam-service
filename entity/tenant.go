@@ -1,6 +1,7 @@
 package entity
 
 import (
+	"encoding/json"
 	"time"
 
 	"github.com/google/uuid"
@@ -15,12 +16,13 @@ const (
 )
 
 type Tenant struct {
-	ID           uuid.UUID    `json:"id" gorm:"column:id;primaryKey" db:"id"`
-	Name         string       `json:"name" gorm:"column:name" db:"name"`
-	Slug         string       `json:"slug" gorm:"column:slug;uniqueIndex" db:"slug"`
-	DatabaseName string       `json:"database_name" gorm:"column:database_name;uniqueIndex" db:"database_name"`
-	TenantType   *string      `json:"tenant_type,omitempty" gorm:"column:tenant_type" db:"tenant_type"`
-	Status       TenantStatus `json:"status" gorm:"column:status;default:active" db:"status"`
+	ID         uuid.UUID       `json:"id" gorm:"column:id;primaryKey;type:uuid;default:uuidv7()" db:"id"`
+	Code       string          `json:"code" gorm:"column:code;uniqueIndex" db:"code"`
+	Name       string          `json:"name" gorm:"column:name" db:"name"`
+	Settings   json.RawMessage `json:"settings" gorm:"column:settings;type:jsonb;not null;default:'{}'" db:"settings"`
+	TenantType *string         `json:"tenant_type,omitempty" gorm:"column:tenant_type" db:"tenant_type"`
+	Status     TenantStatus    `json:"status" gorm:"column:status;default:ACTIVE" db:"status"`
+	Version    int             `json:"version" gorm:"column:version;default:1" db:"version"`
 	Timestamps
 }
 
