@@ -109,7 +109,16 @@ func IsPlatformAdmin(c *fiber.Ctx) (bool, error) {
 	if err != nil {
 		return false, err
 	}
-	return claims.IsPlatformAdmin(), nil
+	if claims.IsPlatformAdmin() {
+		return true, nil
+	}
+
+	multiClaims, err := GetMultiTenantClaims(c)
+	if err == nil && multiClaims.IsPlatformAdmin() {
+		return true, nil
+	}
+
+	return false, nil
 }
 
 func GetTenantIDFromHeader(c *fiber.Ctx) (uuid.UUID, error) {
@@ -149,12 +158,14 @@ func ExtractTenantContext() fiber.Handler {
 		}
 
 		if !multiClaims.HasTenant(tenantID) {
-			appErr := errors.ErrForbidden("access denied to this tenant")
-			return c.Status(appErr.HTTPStatus).JSON(fiber.Map{
-				"success": false,
-				"error":   appErr.Message,
-				"code":    appErr.Code,
-			})
+			if isPlatformAdmin, err := IsPlatformAdmin(c); err != nil || !isPlatformAdmin {
+				appErr := errors.ErrForbidden("access denied to this tenant")
+				return c.Status(appErr.HTTPStatus).JSON(fiber.Map{
+					"success": false,
+					"error":   appErr.Message,
+					"code":    appErr.Code,
+				})
+			}
 		}
 
 		c.Locals("tenant_id", tenantID)
@@ -197,6 +208,37 @@ func ExtractProductContext() fiber.Handler {
 				"error":   appErr.Message,
 				"code":    appErr.Code,
 			})
+		}
+
+		multiClaims, _ := GetMultiTenantClaims(c)
+		if multiClaims != nil && !multiClaims.IsPlatformAdmin() {
+			tenantID, err := GetTenantIDFromContext(c)
+			if err == nil {
+				tc := multiClaims.GetTenantClaim(tenantID)
+				if tc == nil {
+					appErr := errors.ErrForbidden("access denied to this tenant")
+					return c.Status(appErr.HTTPStatus).JSON(fiber.Map{
+						"success": false,
+						"error":   appErr.Message,
+						"code":    appErr.Code,
+					})
+				}
+				hasProduct := false
+				for _, p := range tc.Products {
+					if p.ProductID == productID {
+						hasProduct = true
+						break
+					}
+				}
+				if !hasProduct {
+					appErr := errors.ErrForbidden("access denied to this product")
+					return c.Status(appErr.HTTPStatus).JSON(fiber.Map{
+						"success": false,
+						"error":   appErr.Message,
+						"code":    appErr.Code,
+					})
+				}
+			}
 		}
 
 		c.Locals("product_id", productID)

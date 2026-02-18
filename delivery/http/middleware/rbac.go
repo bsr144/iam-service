@@ -116,6 +116,9 @@ func RequireTenantRole(roleCodes ...string) fiber.Handler {
 		}
 
 		if !hasRole {
+			if multiClaims.IsPlatformAdmin() {
+				return c.Next()
+			}
 			appErr := errors.ErrAccessForbidden("insufficient permissions for this tenant")
 			return c.Status(appErr.HTTPStatus).JSON(fiber.Map{
 				"success": false,
@@ -170,7 +173,58 @@ func RequireProductRole(roleCodes ...string) fiber.Handler {
 			}
 		}
 
-		if isPlatformAdmin, _ := IsPlatformAdmin(c); isPlatformAdmin {
+		if multiClaims.IsPlatformAdmin() {
+			return c.Next()
+		}
+
+		appErr := errors.ErrAccessForbidden("insufficient permissions for this product")
+		return c.Status(appErr.HTTPStatus).JSON(fiber.Map{
+			"success": false,
+			"error":   appErr.Message,
+			"code":    appErr.Code,
+		})
+	}
+}
+
+func RequireProductPermission(permissionCodes ...string) fiber.Handler {
+	return func(c *fiber.Ctx) error {
+		multiClaims, err := GetMultiTenantClaims(c)
+		if err != nil {
+			appErr := errors.ErrUnauthorized("authentication required")
+			return c.Status(appErr.HTTPStatus).JSON(fiber.Map{
+				"success": false,
+				"error":   appErr.Message,
+				"code":    appErr.Code,
+			})
+		}
+
+		tenantID, err := GetTenantIDFromContext(c)
+		if err != nil {
+			appErr := errors.ErrBadRequest("tenant context is required")
+			return c.Status(appErr.HTTPStatus).JSON(fiber.Map{
+				"success": false,
+				"error":   appErr.Message,
+				"code":    appErr.Code,
+			})
+		}
+
+		productID, err := GetProductIDFromContext(c)
+		if err != nil {
+			appErr := errors.ErrBadRequest("product context is required")
+			return c.Status(appErr.HTTPStatus).JSON(fiber.Map{
+				"success": false,
+				"error":   appErr.Message,
+				"code":    appErr.Code,
+			})
+		}
+
+		for _, permissionCode := range permissionCodes {
+			if multiClaims.HasPermissionInProduct(tenantID, productID, permissionCode) {
+				return c.Next()
+			}
+		}
+
+		if multiClaims.IsPlatformAdmin() {
 			return c.Next()
 		}
 
@@ -238,6 +292,9 @@ func RequireTenantPermission(permissionCode string) fiber.Handler {
 		}
 
 		if !hasPermission {
+			if multiClaims.IsPlatformAdmin() {
+				return c.Next()
+			}
 			appErr := errors.ErrAccessForbidden("insufficient permissions for this operation")
 			return c.Status(appErr.HTTPStatus).JSON(fiber.Map{
 				"success": false,

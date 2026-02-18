@@ -63,6 +63,7 @@ func JWTAuth(cfg *config.Config, blacklistStore ...contract.TokenBlacklistStore)
 			legacyClaims := &jwtpkg.JWTClaims{
 				UserID:           multiClaims.UserID,
 				Email:            multiClaims.Email,
+				Roles:            multiClaims.Roles,
 				SessionID:        multiClaims.SessionID,
 				RegisteredClaims: multiClaims.RegisteredClaims,
 			}
