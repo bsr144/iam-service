@@ -38,6 +38,7 @@ type ParticipantResponse struct {
 	BankAccounts    []BankAccountResponse           `json:"bank_accounts,omitempty"`
 	FamilyMembers   []FamilyMemberResponse          `json:"family_members,omitempty"`
 	Employment      *EmploymentResponse             `json:"employment,omitempty"`
+	Pension         *PensionResponse                `json:"pension,omitempty"`
 	Beneficiaries   []BeneficiaryResponse           `json:"beneficiaries,omitempty"`
 }
 
@@ -132,6 +133,19 @@ type EmploymentResponse struct {
 	Version            int        `json:"version"`
 	CreatedAt          time.Time  `json:"created_at"`
 	UpdatedAt          time.Time  `json:"updated_at"`
+}
+
+type PensionResponse struct {
+	ID                      uuid.UUID  `json:"id"`
+	ParticipantNumber       *string    `json:"participant_number,omitempty"`
+	PensionCategory         *string    `json:"pension_category,omitempty"`
+	PensionStatus           *string    `json:"pension_status,omitempty"`
+	EffectiveDate           *time.Time `json:"effective_date,omitempty"`
+	EndDate                 *time.Time `json:"end_date,omitempty"`
+	ProjectedRetirementDate *time.Time `json:"projected_retirement_date,omitempty"`
+	Version                 int        `json:"version"`
+	CreatedAt               time.Time  `json:"created_at"`
+	UpdatedAt               time.Time  `json:"updated_at"`
 }
 
 type BeneficiaryResponse struct {

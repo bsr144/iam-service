@@ -14,6 +14,7 @@ type usecase struct {
 	bankAccountRepo   contract.ParticipantBankAccountRepository
 	familyMemberRepo  contract.ParticipantFamilyMemberRepository
 	employmentRepo    contract.ParticipantEmploymentRepository
+	pensionRepo       contract.ParticipantPensionRepository
 	beneficiaryRepo   contract.ParticipantBeneficiaryRepository
 	statusHistoryRepo contract.ParticipantStatusHistoryRepository
 	fileStorage       contract.FileStorageAdapter
@@ -28,6 +29,7 @@ func NewUsecase(
 	bankAccountRepo contract.ParticipantBankAccountRepository,
 	familyMemberRepo contract.ParticipantFamilyMemberRepository,
 	employmentRepo contract.ParticipantEmploymentRepository,
+	pensionRepo contract.ParticipantPensionRepository,
 	beneficiaryRepo contract.ParticipantBeneficiaryRepository,
 	statusHistoryRepo contract.ParticipantStatusHistoryRepository,
 	fileStorage contract.FileStorageAdapter,
@@ -41,6 +43,7 @@ func NewUsecase(
 		bankAccountRepo:   bankAccountRepo,
 		familyMemberRepo:  familyMemberRepo,
 		employmentRepo:    employmentRepo,
+		pensionRepo:       pensionRepo,
 		beneficiaryRepo:   beneficiaryRepo,
 		statusHistoryRepo: statusHistoryRepo,
 		fileStorage:       fileStorage,

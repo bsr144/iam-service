@@ -10,7 +10,7 @@ import (
 
 type ParticipantFilter struct {
 	TenantID      uuid.UUID
-	ApplicationID *uuid.UUID
+	ApplicationID uuid.UUID
 	Status        *string
 	Search        string
 	Page          int
@@ -65,6 +65,14 @@ type ParticipantEmploymentRepository interface {
 	GetByID(ctx context.Context, id uuid.UUID) (*entity.ParticipantEmployment, error)
 	GetByParticipantID(ctx context.Context, participantID uuid.UUID) (*entity.ParticipantEmployment, error)
 	Update(ctx context.Context, employment *entity.ParticipantEmployment) error
+	SoftDelete(ctx context.Context, id uuid.UUID) error
+}
+
+type ParticipantPensionRepository interface {
+	Create(ctx context.Context, pension *entity.ParticipantPension) error
+	GetByID(ctx context.Context, id uuid.UUID) (*entity.ParticipantPension, error)
+	GetByParticipantID(ctx context.Context, participantID uuid.UUID) (*entity.ParticipantPension, error)
+	Update(ctx context.Context, pension *entity.ParticipantPension) error
 	SoftDelete(ctx context.Context, id uuid.UUID) error
 }
 
