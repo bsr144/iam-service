@@ -54,7 +54,7 @@ func (uc *usecase) VerifyLoginOTP(
 		return nil, errors.ErrInternal("failed to mark session verified").WithError(err)
 	}
 
-	tenantClaims, userTenants, err := uc.buildMultiTenantClaims(ctx, session.UserID)
+	tenantClaims, userTenants, platformRoles, err := uc.buildMultiTenantClaims(ctx, session.UserID)
 	if err != nil {
 		return nil, errors.ErrInternal("failed to build tenant claims").WithError(err)
 	}
@@ -70,6 +70,7 @@ func (uc *usecase) VerifyLoginOTP(
 	accessToken, err := jwtpkg.GenerateMultiTenantAccessToken(
 		session.UserID,
 		session.Email,
+		platformRoles,
 		tenantClaims,
 		sessionID,
 		tokenConfig,
@@ -146,10 +147,10 @@ func (uc *usecase) VerifyLoginOTP(
 	}, nil
 }
 
-func (uc *usecase) buildMultiTenantClaims(ctx context.Context, userID uuid.UUID) ([]jwtpkg.TenantClaim, []authdto.TenantResponse, error) {
+func (uc *usecase) buildMultiTenantClaims(ctx context.Context, userID uuid.UUID) ([]jwtpkg.TenantClaim, []authdto.TenantResponse, []string, error) {
 	registrations, err := uc.UserTenantRegRepo.ListActiveByUserID(ctx, userID)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, nil, err
 	}
 
 	var jwtClaims []jwtpkg.TenantClaim
@@ -158,7 +159,7 @@ func (uc *usecase) buildMultiTenantClaims(ctx context.Context, userID uuid.UUID)
 	for _, reg := range registrations {
 		products, err := uc.ProductsByTenantRepo.ListActiveByTenantID(ctx, reg.TenantID)
 		if err != nil {
-			return nil, nil, err
+			return nil, nil, nil, err
 		}
 
 		var jwtProducts []jwtpkg.ProductClaim
@@ -167,7 +168,7 @@ func (uc *usecase) buildMultiTenantClaims(ctx context.Context, userID uuid.UUID)
 		for _, product := range products {
 			userRoles, err := uc.UserRoleRepo.ListActiveByUserID(ctx, userID, &product.ID)
 			if err != nil {
-				return nil, nil, err
+				return nil, nil, nil, err
 			}
 
 			var roleIDs []uuid.UUID
@@ -179,7 +180,7 @@ func (uc *usecase) buildMultiTenantClaims(ctx context.Context, userID uuid.UUID)
 			if len(roleIDs) > 0 {
 				roles, err := uc.RoleRepo.GetByIDs(ctx, roleIDs)
 				if err != nil {
-					return nil, nil, err
+					return nil, nil, nil, err
 				}
 				for _, r := range roles {
 					roleNames = append(roleNames, r.Code)
@@ -190,7 +191,7 @@ func (uc *usecase) buildMultiTenantClaims(ctx context.Context, userID uuid.UUID)
 			if len(roleIDs) > 0 {
 				permissions, err = uc.PermissionRepo.GetCodesByRoleIDs(ctx, roleIDs)
 				if err != nil {
-					return nil, nil, err
+					return nil, nil, nil, err
 				}
 			}
 
@@ -220,7 +221,30 @@ func (uc *usecase) buildMultiTenantClaims(ctx context.Context, userID uuid.UUID)
 		})
 	}
 
-	return jwtClaims, dtoTenants, nil
+	platformRoles, err := uc.UserRoleRepo.ListActiveByUserID(ctx, userID, nil)
+	if err != nil {
+		return nil, nil, nil, err
+	}
+
+	var platformRoleIDs []uuid.UUID
+	for _, ur := range platformRoles {
+		if ur.ProductID == nil {
+			platformRoleIDs = append(platformRoleIDs, ur.RoleID)
+		}
+	}
+
+	var platformRoleNames []string
+	if len(platformRoleIDs) > 0 {
+		roles, err := uc.RoleRepo.GetByIDs(ctx, platformRoleIDs)
+		if err != nil {
+			return nil, nil, nil, err
+		}
+		for _, r := range roles {
+			platformRoleNames = append(platformRoleNames, r.Code)
+		}
+	}
+
+	return jwtClaims, dtoTenants, platformRoleNames, nil
 }
 
 func (uc *usecase) buildTokenConfig() (*jwtpkg.TokenConfig, error) {

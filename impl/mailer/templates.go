@@ -58,8 +58,16 @@ func renderTemplate(name string, data interface{}) (string, error) {
 	return buf.String(), nil
 }
 
-func renderOTPEmail(otp string, expiryMinutes int) (string, error) {
+func renderRegistrationOTPEmail(otp string, expiryMinutes int) (string, error) {
 	return renderTemplate("otp.html", OTPTemplateData{
+		OTP:           otp,
+		ExpiryMinutes: expiryMinutes,
+		Year:          time.Now().Year(),
+	})
+}
+
+func renderLoginOTPEmail(otp string, expiryMinutes int) (string, error) {
+	return renderTemplate("login_otp.html", OTPTemplateData{
 		OTP:           otp,
 		ExpiryMinutes: expiryMinutes,
 		Year:          time.Now().Year(),

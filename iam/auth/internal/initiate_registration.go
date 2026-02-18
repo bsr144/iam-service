@@ -96,7 +96,7 @@ func (uc *usecase) InitiateRegistration(
 	}
 
 	uc.sendEmailAsync(ctx, func(ctx context.Context) error {
-		return uc.EmailService.SendOTP(ctx, req.Email, otp, RegistrationOTPExpiryMinutes)
+		return uc.EmailService.SendRegistrationOTP(ctx, req.Email, otp, RegistrationOTPExpiryMinutes)
 	})
 
 	return &authdto.InitiateRegistrationResponse{

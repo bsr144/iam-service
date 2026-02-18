@@ -77,7 +77,7 @@ func (uc *usecase) InitiateLogin(
 	}
 
 	uc.sendEmailAsync(ctx, func(ctx context.Context) error {
-		return uc.EmailService.SendOTP(ctx, email, otp, LoginOTPExpiryMinutes)
+		return uc.EmailService.SendLoginOTP(ctx, email, otp, LoginOTPExpiryMinutes)
 	})
 
 	return authdto.NewOTPRequiredResponse(

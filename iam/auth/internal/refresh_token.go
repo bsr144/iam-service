@@ -67,7 +67,7 @@ func (uc *usecase) RefreshToken(
 		return nil, errors.New("USER_INACTIVE", "Invalid or expired refresh token", http.StatusForbidden)
 	}
 
-	tenantClaims, userTenants, err := uc.buildMultiTenantClaims(ctx, userID)
+	tenantClaims, userTenants, platformRoles, err := uc.buildMultiTenantClaims(ctx, userID)
 	if err != nil {
 		return nil, errors.ErrInternal("failed to build tenant claims").WithError(err)
 	}
@@ -80,6 +80,7 @@ func (uc *usecase) RefreshToken(
 	accessToken, err := jwtpkg.GenerateMultiTenantAccessToken(
 		userID,
 		user.Email,
+		platformRoles,
 		tenantClaims,
 		sessionID,
 		tokenConfig,

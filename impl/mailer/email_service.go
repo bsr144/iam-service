@@ -35,19 +35,30 @@ func NewEmailService(cfg *config.EmailConfig) *EmailService {
 	return svc
 }
 
-func (s *EmailService) SendOTP(ctx context.Context, email, otp string, expiryMinutes int) error {
-	subject := "Kode Verifikasi OTP - Dana Pensiun"
+func (s *EmailService) SendRegistrationOTP(ctx context.Context, email, otp string, expiryMinutes int) error {
+	subject := "Kode Verifikasi Registrasi - Frendz"
 
-	htmlBody, err := renderOTPEmail(otp, expiryMinutes)
+	htmlBody, err := renderRegistrationOTPEmail(otp, expiryMinutes)
 	if err != nil {
-		return fmt.Errorf("failed to render OTP email: %w", err)
+		return fmt.Errorf("failed to render registration OTP email: %w", err)
+	}
+
+	return s.send(ctx, email, subject, htmlBody)
+}
+
+func (s *EmailService) SendLoginOTP(ctx context.Context, email, otp string, expiryMinutes int) error {
+	subject := "Kode Verifikasi Login - Frendz"
+
+	htmlBody, err := renderLoginOTPEmail(otp, expiryMinutes)
+	if err != nil {
+		return fmt.Errorf("failed to render login OTP email: %w", err)
 	}
 
 	return s.send(ctx, email, subject, htmlBody)
 }
 
 func (s *EmailService) SendWelcome(ctx context.Context, email, firstName string) error {
-	subject := "Selamat Datang di Dana Pensiun"
+	subject := "Selamat Datang di Frendz"
 
 	htmlBody, err := renderWelcomeEmail(firstName)
 	if err != nil {
@@ -58,7 +69,7 @@ func (s *EmailService) SendWelcome(ctx context.Context, email, firstName string)
 }
 
 func (s *EmailService) SendPasswordReset(ctx context.Context, email, token string, expiryMinutes int) error {
-	subject := "Reset Password - Dana Pensiun"
+	subject := "Reset Password - Frendz"
 
 	htmlBody, err := renderPasswordResetEmail(token, expiryMinutes)
 	if err != nil {
@@ -69,7 +80,7 @@ func (s *EmailService) SendPasswordReset(ctx context.Context, email, token strin
 }
 
 func (s *EmailService) SendPINReset(ctx context.Context, email, otp string, expiryMinutes int) error {
-	subject := "Reset PIN - Dana Pensiun"
+	subject := "Reset PIN - Frendz"
 
 	htmlBody, err := renderPINResetEmail(otp, expiryMinutes)
 	if err != nil {
@@ -80,7 +91,7 @@ func (s *EmailService) SendPINReset(ctx context.Context, email, otp string, expi
 }
 
 func (s *EmailService) SendAdminInvitation(ctx context.Context, email, token string, expiryMinutes int) error {
-	subject := "Undangan Administrator - Dana Pensiun"
+	subject := "Undangan Administrator - Frendz"
 
 	htmlBody, err := renderAdminInvitationEmail(token, expiryMinutes)
 	if err != nil {

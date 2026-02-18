@@ -41,8 +41,8 @@ func (m *MockTenantRepository) GetByID(ctx context.Context, id uuid.UUID) (*enti
 	return args.Get(0).(*entity.Tenant), args.Error(1)
 }
 
-func (m *MockTenantRepository) GetBySlug(ctx context.Context, slug string) (*entity.Tenant, error) {
-	args := m.Called(ctx, slug)
+func (m *MockTenantRepository) GetByCode(ctx context.Context, code string) (*entity.Tenant, error) {
+	args := m.Called(ctx, code)
 	if args.Get(0) == nil {
 		return nil, args.Error(1)
 	}
@@ -107,7 +107,12 @@ type MockEmailService struct {
 	mock.Mock
 }
 
-func (m *MockEmailService) SendOTP(ctx context.Context, email, otp string, expiryMinutes int) error {
+func (m *MockEmailService) SendRegistrationOTP(ctx context.Context, email, otp string, expiryMinutes int) error {
+	args := m.Called(ctx, email, otp, expiryMinutes)
+	return args.Error(0)
+}
+
+func (m *MockEmailService) SendLoginOTP(ctx context.Context, email, otp string, expiryMinutes int) error {
 	args := m.Called(ctx, email, otp, expiryMinutes)
 	return args.Error(0)
 }

@@ -109,9 +109,19 @@ type TenantClaim struct {
 type MultiTenantClaims struct {
 	UserID    uuid.UUID     `json:"user_id"`
 	Email     string        `json:"email"`
+	Roles     []string      `json:"roles,omitempty"`
 	Tenants   []TenantClaim `json:"tenants,omitempty"`
 	SessionID uuid.UUID     `json:"session_id"`
 	jwt.RegisteredClaims
+}
+
+func (c *MultiTenantClaims) IsPlatformAdmin() bool {
+	for _, role := range c.Roles {
+		if role == "PLATFORM_ADMIN" {
+			return true
+		}
+	}
+	return false
 }
 
 func (c *MultiTenantClaims) IsExpired() bool {

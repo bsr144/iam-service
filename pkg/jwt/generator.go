@@ -81,6 +81,7 @@ func GenerateAccessToken(
 func GenerateMultiTenantAccessToken(
 	userID uuid.UUID,
 	email string,
+	roles []string,
 	tenants []TenantClaim,
 	sessionID uuid.UUID,
 	config *TokenConfig,
@@ -91,6 +92,7 @@ func GenerateMultiTenantAccessToken(
 	claims := &MultiTenantClaims{
 		UserID:    userID,
 		Email:     email,
+		Roles:     roles,
 		Tenants:   tenants,
 		SessionID: sessionID,
 		RegisteredClaims: jwt.RegisteredClaims{

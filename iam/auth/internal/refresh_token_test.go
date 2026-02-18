@@ -86,6 +86,7 @@ func TestRefreshToken(t *testing.T) {
 				}, nil)
 
 				mockTenantReg.On("ListActiveByUserID", mock.Anything, userID).Return([]entity.UserTenantRegistration{}, nil)
+				mockUserRole.On("ListActiveByUserID", mock.Anything, userID, (*uuid.UUID)(nil)).Return([]entity.UserRole{}, nil)
 
 				session := &entity.UserSession{
 					ID:     sessionRecordID,
@@ -222,6 +223,7 @@ func TestRefreshToken(t *testing.T) {
 				}, nil)
 
 				mockTenantReg.On("ListActiveByUserID", mock.Anything, userID).Return([]entity.UserTenantRegistration{}, nil)
+				mockUserRole.On("ListActiveByUserID", mock.Anything, userID, (*uuid.UUID)(nil)).Return([]entity.UserRole{}, nil)
 
 				session := &entity.UserSession{
 					ID:     sessionRecordID,
@@ -331,6 +333,7 @@ func TestRefreshToken(t *testing.T) {
 					Status: entity.UserStatusActive,
 				}, nil)
 				mockTenantReg.On("ListActiveByUserID", mock.Anything, userID).Return([]entity.UserTenantRegistration{}, nil)
+				mockUserRole.On("ListActiveByUserID", mock.Anything, userID, (*uuid.UUID)(nil)).Return([]entity.UserRole{}, nil)
 
 				mockSession.On("GetByRefreshTokenID", mock.Anything, refreshTokenID).Return(nil, errors.ErrNotFound("no session"))
 
@@ -378,6 +381,7 @@ func TestRefreshToken(t *testing.T) {
 					Status: entity.UserStatusActive,
 				}, nil)
 				mockTenantReg.On("ListActiveByUserID", mock.Anything, userID).Return([]entity.UserTenantRegistration{}, nil)
+				mockUserRole.On("ListActiveByUserID", mock.Anything, userID, (*uuid.UUID)(nil)).Return([]entity.UserRole{}, nil)
 
 				mockSession.On("GetByRefreshTokenID", mock.Anything, refreshTokenID).Return(nil, errors.ErrNotFound("no session"))
 

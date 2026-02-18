@@ -53,7 +53,7 @@ type EmailVerificationRepository interface {
 }
 type TenantRepository interface {
 	GetByID(ctx context.Context, id uuid.UUID) (*entity.Tenant, error)
-	GetBySlug(ctx context.Context, slug string) (*entity.Tenant, error)
+	GetByCode(ctx context.Context, code string) (*entity.Tenant, error)
 	Exists(ctx context.Context, id uuid.UUID) (bool, error)
 }
 

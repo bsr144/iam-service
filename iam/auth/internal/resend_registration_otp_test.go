@@ -43,7 +43,7 @@ func TestResendRegistrationOTP(t *testing.T) {
 				}
 				redis.On("GetRegistrationSession", mock.Anything, registrationID).Return(session, nil)
 				redis.On("UpdateRegistrationOTP", mock.Anything, registrationID, mock.AnythingOfType("string"), mock.AnythingOfType("time.Time")).Return(nil)
-				emailSvc.On("SendOTP", mock.Anything, email, mock.AnythingOfType("string"), RegistrationOTPExpiryMinutes).Return(nil)
+				emailSvc.On("SendRegistrationOTP", mock.Anything, email, mock.AnythingOfType("string"), RegistrationOTPExpiryMinutes).Return(nil)
 			},
 		},
 		{

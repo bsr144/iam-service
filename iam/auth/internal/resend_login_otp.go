@@ -50,7 +50,7 @@ func (uc *usecase) ResendLoginOTP(
 	}
 
 	uc.sendEmailAsync(ctx, func(ctx context.Context) error {
-		return uc.EmailService.SendOTP(ctx, session.Email, otp, LoginOTPExpiryMinutes)
+		return uc.EmailService.SendLoginOTP(ctx, session.Email, otp, LoginOTPExpiryMinutes)
 	})
 
 	updatedSession, err := uc.InMemoryStore.GetLoginSession(ctx, req.LoginSessionID)

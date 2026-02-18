@@ -126,6 +126,7 @@ func TestGenerateMultiTenantAccessToken_JTI(t *testing.T) {
 	token, err := GenerateMultiTenantAccessToken(
 		userID,
 		email,
+		[]string{"PLATFORM_ADMIN"},
 		tenants,
 		sessionID,
 		config,

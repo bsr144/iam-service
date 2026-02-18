@@ -36,7 +36,7 @@ func TestInitiateRegistration(t *testing.T) {
 				redis.On("IsRegistrationEmailLocked", mock.Anything, email).Return(false, nil)
 				redis.On("LockRegistrationEmail", mock.Anything, email, mock.Anything).Return(true, nil)
 				redis.On("CreateRegistrationSession", mock.Anything, mock.AnythingOfType("*entity.RegistrationSession"), mock.Anything).Return(nil)
-				emailSvc.On("SendOTP", mock.Anything, email, mock.AnythingOfType("string"), RegistrationOTPExpiryMinutes).Return(nil)
+				emailSvc.On("SendRegistrationOTP", mock.Anything, email, mock.AnythingOfType("string"), RegistrationOTPExpiryMinutes).Return(nil)
 			},
 		},
 		{
