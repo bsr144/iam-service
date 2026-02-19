@@ -3,18 +3,23 @@ package entity
 import (
 	"database/sql"
 	"encoding/json"
+	"fmt"
 	"net"
 	"time"
 
 	"github.com/google/uuid"
 )
 
+// Gender represents a user's gender as a masterdata item code.
+// Values are stored as masterdata codes (e.g. "GENDER_001") rather than
+// free-text strings, enabling validation against the masterdata_items table
+// via the MasterdataValidator adapter pattern (no direct FK).
 type Gender string
 
 const (
-	GenderMale   Gender = "male"
-	GenderFemale Gender = "female"
-	GenderOther  Gender = "other"
+	GenderMale   Gender = "GENDER_001" // Male
+	GenderFemale Gender = "GENDER_002" // Female
+	GenderOther  Gender = "GENDER_003" // Other
 )
 
 type MaritalStatus string
@@ -107,12 +112,19 @@ func (UserAuthMethod) TableName() string {
 	return "user_auth_methods"
 }
 
+// NewPasswordAuthMethod creates a new UserAuthMethod with PASSWORD type for the
+// given user. It marshals the credential data to JSON internally; a marshal
+// failure panics because it indicates a programming error (the input struct is
+// always serializable).
 func NewPasswordAuthMethod(userID uuid.UUID, passwordHash string) *UserAuthMethod {
 	data := PasswordCredentialData{
 		PasswordHash:    passwordHash,
 		PasswordHistory: []string{},
 	}
-	credJSON, _ := json.Marshal(data)
+	credJSON, err := json.Marshal(data)
+	if err != nil {
+		panic(fmt.Sprintf("NewPasswordAuthMethod: failed to marshal credential data: %v", err))
+	}
 	now := time.Now()
 	return &UserAuthMethod{
 		UserID:         userID,
