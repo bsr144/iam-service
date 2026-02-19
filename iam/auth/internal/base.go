@@ -6,25 +6,29 @@ import (
 	"iam-service/pkg/logger"
 )
 
+// usecase holds all dependencies for the auth domain use cases.
+// MasterdataValidator provides cross-domain validation of masterdata codes
+// (e.g. gender) via the adapter pattern defined in iam/auth/contract/masterdata_validator.go.
 type usecase struct {
-	TxManager            contract.TransactionManager
-	Config               *config.Config
-	UserRepo             contract.UserRepository
-	UserProfileRepo      contract.UserProfileRepository
-	UserAuthMethodRepo   contract.UserAuthMethodRepository
+	TxManager             contract.TransactionManager
+	Config                *config.Config
+	UserRepo              contract.UserRepository
+	UserProfileRepo       contract.UserProfileRepository
+	UserAuthMethodRepo    contract.UserAuthMethodRepository
 	UserSecurityStateRepo contract.UserSecurityStateRepository
-	TenantRepo           contract.TenantRepository
-	RoleRepo             contract.RoleRepository
-	RefreshTokenRepo     contract.RefreshTokenRepository
-	UserRoleRepo         contract.UserRoleRepository
-	ProductRepo          contract.ProductRepository
-	PermissionRepo       contract.PermissionRepository
-	EmailService         contract.EmailService
-	InMemoryStore        contract.InMemoryStore
-	UserSessionRepo      contract.UserSessionRepository
-	UserTenantRegRepo    contract.UserTenantRegistrationRepository
-	ProductsByTenantRepo contract.ProductsByTenantRepository
-	AuditLogger          logger.AuditLogger
+	TenantRepo            contract.TenantRepository
+	RoleRepo              contract.RoleRepository
+	RefreshTokenRepo      contract.RefreshTokenRepository
+	UserRoleRepo          contract.UserRoleRepository
+	ProductRepo           contract.ProductRepository
+	PermissionRepo        contract.PermissionRepository
+	EmailService          contract.EmailService
+	InMemoryStore         contract.InMemoryStore
+	UserSessionRepo       contract.UserSessionRepository
+	UserTenantRegRepo     contract.UserTenantRegistrationRepository
+	ProductsByTenantRepo  contract.ProductsByTenantRepository
+	AuditLogger           logger.AuditLogger
+	MasterdataValidator   contract.MasterdataValidator
 }
 
 func NewUsecase(
@@ -46,25 +50,27 @@ func NewUsecase(
 	userTenantRegRepo contract.UserTenantRegistrationRepository,
 	productsByTenantRepo contract.ProductsByTenantRepository,
 	auditLogger logger.AuditLogger,
+	masterdataValidator contract.MasterdataValidator,
 ) *usecase {
 	return &usecase{
-		TxManager:            txManager,
-		Config:               cfg,
-		UserRepo:             userRepo,
-		UserProfileRepo:      userProfileRepo,
-		UserAuthMethodRepo:   userAuthMethodRepo,
+		TxManager:             txManager,
+		Config:                cfg,
+		UserRepo:              userRepo,
+		UserProfileRepo:       userProfileRepo,
+		UserAuthMethodRepo:    userAuthMethodRepo,
 		UserSecurityStateRepo: userSecurityStateRepo,
-		TenantRepo:           tenantRepo,
-		RoleRepo:             roleRepository,
-		RefreshTokenRepo:     refreshTokenRepo,
-		UserRoleRepo:         userRoleRepo,
-		ProductRepo:          productRepo,
-		PermissionRepo:       permissionRepo,
-		EmailService:         emailService,
-		InMemoryStore:        inMemoryStore,
-		UserSessionRepo:      userSessionRepo,
-		UserTenantRegRepo:    userTenantRegRepo,
-		ProductsByTenantRepo: productsByTenantRepo,
-		AuditLogger:          auditLogger,
+		TenantRepo:            tenantRepo,
+		RoleRepo:              roleRepository,
+		RefreshTokenRepo:      refreshTokenRepo,
+		UserRoleRepo:          userRoleRepo,
+		ProductRepo:           productRepo,
+		PermissionRepo:        permissionRepo,
+		EmailService:          emailService,
+		InMemoryStore:         inMemoryStore,
+		UserSessionRepo:       userSessionRepo,
+		UserTenantRegRepo:     userTenantRegRepo,
+		ProductsByTenantRepo:  productsByTenantRepo,
+		AuditLogger:           auditLogger,
+		MasterdataValidator:   masterdataValidator,
 	}
 }
