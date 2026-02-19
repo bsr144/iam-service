@@ -25,8 +25,10 @@ import (
 	"iam-service/saving/member"
 	"iam-service/saving/participant"
 	"log"
+	"time"
 
 	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v2/middleware/limiter"
 	"go.uber.org/zap"
 )
 
@@ -104,9 +106,14 @@ func NewServer(cfg *config.Config) *Server {
 
 	emailService := mailer.NewEmailService(&cfg.Email)
 
-	masterdataValidator := &masterdataValidatorAdapter{repo: masterdataItemRepo}
-
 	healthUsecase := health.NewUsecase()
+
+	masterdataUsecase := masterdata.NewUsecase(
+		cfg,
+		masterdataCategoryRepo,
+		masterdataItemRepo,
+		inMemoryStore,
+	)
 	authUsecase := auth.NewUsecase(
 		txManager,
 		cfg,
@@ -126,7 +133,7 @@ func NewServer(cfg *config.Config) *Server {
 		userTenantRegRepo,
 		productsByTenantRepo,
 		auditLogger,
-		masterdataValidator,
+		masterdataUsecase,
 	)
 	roleUsecase := role.NewUsecase(
 		txManager,
@@ -146,12 +153,7 @@ func NewServer(cfg *config.Config) *Server {
 		roleRepo,
 		userRoleRepo,
 	)
-	masterdataUsecase := masterdata.NewUsecase(
-		cfg,
-		masterdataCategoryRepo,
-		masterdataItemRepo,
-		inMemoryStore,
-	)
+
 	memberUsecase := member.NewUsecase(
 		cfg,
 		txManager,
@@ -196,6 +198,20 @@ func NewServer(cfg *config.Config) *Server {
 	mw.Setup(app)
 
 	api := app.Group("/api")
+	api.Use(limiter.New(limiter.Config{
+		Max:               10,
+		Expiration:        1 * time.Minute,
+		LimiterMiddleware: limiter.SlidingWindow{},
+		KeyGenerator: func(c *fiber.Ctx) string {
+			return c.IP()
+		},
+		LimitReached: func(c *fiber.Ctx) error {
+			return c.Status(fiber.StatusTooManyRequests).JSON(fiber.Map{
+				"success": false,
+				"error":   "too many requests, please try again later",
+			})
+		},
+	}))
 	v1 := api.Group("/v1")
 
 	router.SetupHealthRoutes(v1, healthController)
@@ -228,7 +244,6 @@ func (s *Server) Start() error {
 func (s *Server) Shutdown(ctx context.Context) error {
 	return s.app.ShutdownWithContext(ctx)
 }
-
 
 func createErrorHandler(cfg *config.Config, zapLogger *zap.Logger) fiber.ErrorHandler {
 	return func(c *fiber.Ctx, err error) error {
