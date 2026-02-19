@@ -1,11 +1,13 @@
 package entity
 
 import (
+	"encoding/json"
 	"time"
 
 	"github.com/google/uuid"
 )
 
+// ScopeLevel is used in usecase-layer validation (not a DB column on any table).
 type ScopeLevel string
 
 const (
@@ -15,84 +17,89 @@ const (
 	ScopeLevelSelf   ScopeLevel = "self"
 )
 
+// Product maps to the `applications` DB table (migration 000010).
+// "Product" and "Application" are used interchangeably throughout the codebase.
 type Product struct {
-	ID            uuid.UUID  `json:"id" db:"id"`
-	TenantID      uuid.UUID  `json:"tenant_id" db:"tenant_id"`
+	ID          uuid.UUID       `json:"id" db:"id"`
+	TenantID    uuid.UUID       `json:"tenant_id" db:"tenant_id"`
+	Code        string          `json:"code" db:"code"`
+	Name        string          `json:"name" db:"name"`
+	Description *string         `json:"description,omitempty" db:"description"`
+	Settings    json.RawMessage `json:"settings" db:"settings"`
+	Status      string          `json:"status" db:"status"`
+	CreatedBy   *uuid.UUID      `json:"created_by,omitempty" db:"created_by"`
+	Version     int             `json:"version" db:"version"`
+	Timestamps
+}
+
+func (Product) TableName() string {
+	return "applications"
+}
+
+func (p *Product) IsActive() bool {
+	return p.Status == "ACTIVE"
+}
+
+// Permission maps to the `permissions` DB table (migration 000012).
+type Permission struct {
+	ID            uuid.UUID `json:"id" db:"id"`
+	ApplicationID uuid.UUID `json:"application_id" db:"application_id"`
+	Code          string    `json:"code" db:"code"`
+	Name          string    `json:"name" db:"name"`
+	Description   *string   `json:"description,omitempty" db:"description"`
+	ResourceType  *string   `json:"resource_type,omitempty" db:"resource_type"`
+	Action        *string   `json:"action,omitempty" db:"action"`
+	Status        string    `json:"status" db:"status"`
+	CreatedBy     *uuid.UUID `json:"created_by,omitempty" db:"created_by"`
+	Version       int        `json:"version" db:"version"`
+	Timestamps
+}
+
+func (p *Permission) IsActive() bool {
+	return p.Status == "ACTIVE"
+}
+
+// Role maps to the `roles` DB table (migration 000011).
+type Role struct {
+	ID            uuid.UUID  `json:"id" gorm:"column:id;primaryKey;type:uuid;default:uuidv7()" db:"id"`
+	ApplicationID uuid.UUID  `json:"application_id" gorm:"column:application_id;not null" db:"application_id"`
 	Code          string     `json:"code" db:"code"`
 	Name          string     `json:"name" db:"name"`
 	Description   *string    `json:"description,omitempty" db:"description"`
-	ProductType   string     `json:"product_type" db:"product_type"`
-	IsActive      bool       `json:"is_active" db:"is_active"`
-	LicensedUntil *time.Time `json:"licensed_until,omitempty" db:"licensed_until"`
+	IsSystem      bool       `json:"is_system" db:"is_system"`
+	Status        string     `json:"status" db:"status"`
+	CreatedBy     *uuid.UUID `json:"created_by,omitempty" db:"created_by"`
+	Version       int        `json:"version" db:"version"`
 	Timestamps
 }
 
-func (p *Product) IsLicensed() bool {
-	if !p.IsActive {
-		return false
-	}
-	if p.LicensedUntil == nil {
-		return true
-	}
-	return time.Now().Before(*p.LicensedUntil)
+func (r *Role) IsActive() bool {
+	return r.Status == "ACTIVE"
 }
 
-type Permission struct {
-	ID          uuid.UUID  `json:"id" db:"id"`
-	Code        string     `json:"code" db:"code"`
-	Name        string     `json:"name" db:"name"`
-	Description *string    `json:"description,omitempty" db:"description"`
-	Module      string     `json:"module" db:"module"`
-	Resource    string     `json:"resource" db:"resource"`
-	Action      string     `json:"action" db:"action"`
-	ScopeLevel  ScopeLevel `json:"scope_level" db:"scope_level"`
-	IsSystem    bool       `json:"is_system" db:"is_system"`
-	Timestamps
-}
-
-type Role struct {
-	ID           uuid.UUID  `json:"id" gorm:"column:id;primaryKey;type:uuid;default:uuidv7()" db:"id"`
-	TenantID     *uuid.UUID `json:"tenant_id,omitempty" db:"tenant_id"`
-	ProductID    *uuid.UUID `json:"product_id,omitempty" db:"product_id"`
-	Code         string     `json:"code" db:"code"`
-	Name         string     `json:"name" db:"name"`
-	Description  *string    `json:"description,omitempty" db:"description"`
-	ParentRoleID *uuid.UUID `json:"parent_role_id,omitempty" db:"parent_role_id"`
-	ScopeLevel   ScopeLevel `json:"scope_level" db:"scope_level"`
-	IsSystem     bool       `json:"is_system" db:"is_system"`
-	IsActive     bool       `json:"is_active" db:"is_active"`
-	Timestamps
-}
-
-func (r *Role) IsSystemRole() bool {
-	return r.TenantID == nil
-}
-
-func (r *Role) IsTenantWide() bool {
-	return r.TenantID != nil && r.ProductID == nil
-}
-
-func (r *Role) IsProductSpecific() bool {
-	return r.ProductID != nil
-}
-
+// RolePermission maps to the `role_permissions` DB table (migration 000013).
 type RolePermission struct {
-	ID               uuid.UUID `json:"id" gorm:"column:id;primaryKey;type:uuid;default:uuidv7()" db:"id"`
-	RoleID           uuid.UUID `json:"role_id" gorm:"column:role_id;not null" db:"role_id"`
-	PermissionID     uuid.UUID `json:"permission_id" gorm:"column:permission_id;not null" db:"permission_id"`
-	CreatedAt        time.Time `json:"created_at" gorm:"column:created_at" db:"created_at"`
+	ID           uuid.UUID  `json:"id" gorm:"column:id;primaryKey;type:uuid;default:uuidv7()" db:"id"`
+	RoleID       uuid.UUID  `json:"role_id" gorm:"column:role_id;not null" db:"role_id"`
+	PermissionID uuid.UUID  `json:"permission_id" gorm:"column:permission_id;not null" db:"permission_id"`
+	CreatedBy    *uuid.UUID `json:"created_by,omitempty" gorm:"column:created_by" db:"created_by"`
+	CreatedAt    time.Time  `json:"created_at" gorm:"column:created_at" db:"created_at"`
 }
 
+// UserRole maps to the `user_role_assignments` DB table (migrations 000014, 000056).
 type UserRole struct {
-	ID            uuid.UUID  `json:"id" gorm:"column:id;primaryKey;type:uuid;default:uuidv7()" db:"id"`
-	UserID        uuid.UUID  `json:"user_id" gorm:"column:user_id;type:uuid;not null" db:"user_id"`
-	RoleID        uuid.UUID  `json:"role_id" gorm:"column:role_id;type:uuid;not null" db:"role_id"`
-	ProductID     *uuid.UUID `json:"product_id,omitempty" gorm:"column:product_id;type:uuid" db:"product_id"`
-	BranchID      *uuid.UUID `json:"branch_id,omitempty" gorm:"column:branch_id;type:uuid" db:"branch_id"`
-	EffectiveFrom time.Time  `json:"effective_from" gorm:"column:assigned_at;not null" db:"assigned_at"`
-	EffectiveTo   *time.Time `json:"effective_to,omitempty" gorm:"column:expires_at" db:"expires_at"`
-	CreatedAt     time.Time  `json:"created_at" gorm:"column:created_at" db:"created_at"`
-	DeletedAt     *time.Time `json:"deleted_at,omitempty" gorm:"column:deleted_at" db:"deleted_at"`
+	ID         uuid.UUID  `json:"id" gorm:"column:id;primaryKey;type:uuid;default:uuidv7()" db:"id"`
+	UserID     uuid.UUID  `json:"user_id" gorm:"column:user_id;type:uuid;not null" db:"user_id"`
+	RoleID     uuid.UUID  `json:"role_id" gorm:"column:role_id;type:uuid;not null" db:"role_id"`
+	ProductID  *uuid.UUID `json:"product_id,omitempty" gorm:"column:product_id;type:uuid" db:"product_id"`
+	BranchID   *uuid.UUID `json:"branch_id,omitempty" gorm:"column:branch_id;type:uuid" db:"branch_id"`
+	AssignedAt time.Time  `json:"assigned_at" gorm:"column:assigned_at;not null" db:"assigned_at"`
+	AssignedBy *uuid.UUID `json:"assigned_by,omitempty" gorm:"column:assigned_by" db:"assigned_by"`
+	ExpiresAt  *time.Time `json:"expires_at,omitempty" gorm:"column:expires_at" db:"expires_at"`
+	Status     string     `json:"status" gorm:"column:status" db:"status"`
+	CreatedAt  time.Time  `json:"created_at" gorm:"column:created_at" db:"created_at"`
+	UpdatedAt  time.Time  `json:"updated_at" gorm:"column:updated_at" db:"updated_at"`
+	DeletedAt  *time.Time `json:"deleted_at,omitempty" gorm:"column:deleted_at" db:"deleted_at"`
 }
 
 func (UserRole) TableName() string {
@@ -100,14 +107,13 @@ func (UserRole) TableName() string {
 }
 
 func (ur *UserRole) IsActive() bool {
-	now := time.Now()
 	if ur.DeletedAt != nil {
 		return false
 	}
-	if now.Before(ur.EffectiveFrom) {
+	if ur.Status != "ACTIVE" {
 		return false
 	}
-	if ur.EffectiveTo != nil && now.After(*ur.EffectiveTo) {
+	if ur.ExpiresAt != nil && time.Now().After(*ur.ExpiresAt) {
 		return false
 	}
 	return true
