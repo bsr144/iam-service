@@ -51,16 +51,6 @@ type SetPasswordRequest struct {
 	ConfirmationPassword string    `json:"confirmation_password" validate:"required,eqfield=Password"`
 }
 
-// CompleteProfileRegistrationRequest is the final step of the 4-step registration
-// flow (initiate -> verify-otp -> set-password -> complete-profile). It collects
-// the user's profile information after the password has been set.
-//
-// Fields:
-//   - FullName: split into first_name / last_name at the last space.
-//   - Gender: a masterdata item code matching the pattern GENDER_NNN
-//     (e.g. GENDER_001). Validated in two phases: regex format check, then
-//     masterdata lookup via MasterdataValidator.
-//   - DateOfBirth: YYYY-MM-DD format. User must be at least 18 years old.
 type CompleteProfileRegistrationRequest struct {
 	RegistrationID    uuid.UUID `json:"-"`
 	RegistrationToken string    `json:"-"`

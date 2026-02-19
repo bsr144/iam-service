@@ -46,8 +46,7 @@ func TestNewPasswordAuthMethod(t *testing.T) {
 
 		var data PasswordCredentialData
 		require.NoError(t, json.Unmarshal(method.CredentialData, &data))
-		// The omitempty tag causes an empty slice to be omitted from JSON and
-		// come back as nil after unmarshal — both nil and empty satisfy "no history".
+
 		assert.Empty(t, data.PasswordHistory, "PasswordHistory should contain no entries")
 	})
 

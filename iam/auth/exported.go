@@ -30,11 +30,6 @@ type Usecase interface {
 	GetLoginStatus(ctx context.Context, req *authdto.GetLoginStatusRequest) (*authdto.LoginStatusResponse, error)
 }
 
-// NewUsecase creates a new auth Usecase with all required dependencies.
-// The masterdataValidator parameter provides cross-domain validation of
-// masterdata item codes (e.g. gender) without importing the masterdata
-// domain directly. See contract.MasterdataValidator and the adapter in
-// delivery/http/masterdata_validator_adapter.go.
 func NewUsecase(
 	txManager contract.TransactionManager,
 	cfg *config.Config,
@@ -54,7 +49,7 @@ func NewUsecase(
 	userTenantRegRepo contract.UserTenantRegistrationRepository,
 	productsByTenantRepo contract.ProductsByTenantRepository,
 	auditLogger logger.AuditLogger,
-	masterdataValidator contract.MasterdataValidator,
+	masterdataUsecase contract.MasterdataUsecase,
 ) Usecase {
 	return internal.NewUsecase(
 		txManager,
@@ -75,6 +70,6 @@ func NewUsecase(
 		userTenantRegRepo,
 		productsByTenantRepo,
 		auditLogger,
-		masterdataValidator,
+		masterdataUsecase,
 	)
 }

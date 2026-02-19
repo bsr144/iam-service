@@ -10,10 +10,6 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
-// SetPassword is step 3 of the 4-step registration flow (after verify-otp).
-// It validates and hashes the password, stores the hash in the Redis session,
-// and returns a new registration token for the next step (complete-profile).
-// The NextStep.RequiredFields are: full_name, gender, date_of_birth.
 func (uc *usecase) SetPassword(
 	ctx context.Context,
 	req *authdto.SetPasswordRequest,

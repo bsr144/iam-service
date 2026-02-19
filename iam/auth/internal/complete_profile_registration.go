@@ -11,19 +11,12 @@ import (
 
 	"iam-service/entity"
 	"iam-service/iam/auth/authdto"
+	"iam-service/masterdata/masterdatadto"
 	"iam-service/pkg/errors"
 )
 
-// genderCodePattern validates the format of a gender masterdata code before
-// making the more expensive masterdata lookup.
 var genderCodePattern = regexp.MustCompile(`^GENDER_\d{3}$`)
 
-// CompleteProfileRegistration is the final step of the 4-step registration flow.
-// It accepts full_name, gender (as a GENDER_NNN masterdata code), and date_of_birth.
-// Gender is validated in two phases: a fast regex format check followed by a
-// masterdata lookup via MasterdataValidator. The user must be at least 18 years old.
-// On success, a User, UserProfile, UserAuthMethod, and UserSecurityState are created
-// atomically within a single database transaction, and auth tokens are returned.
 func (uc *usecase) CompleteProfileRegistration(
 	ctx context.Context,
 	req *authdto.CompleteProfileRegistrationRequest,
@@ -161,9 +154,6 @@ func (uc *usecase) CompleteProfileRegistration(
 	return response, nil
 }
 
-// validateProfileFields validates the simplified profile fields with two-phase gender validation:
-// Phase A — regex format check (fast, no I/O)
-// Phase B — masterdata lookup via MasterdataValidator
 func (uc *usecase) validateProfileFields(ctx context.Context, req *authdto.CompleteProfileRegistrationRequest) error {
 	if strings.TrimSpace(req.FullName) == "" {
 		return errors.ErrValidation("full_name is required")
@@ -173,25 +163,24 @@ func (uc *usecase) validateProfileFields(ctx context.Context, req *authdto.Compl
 		return errors.ErrValidation("date_of_birth is required")
 	}
 
-	// Phase A: format check — fast, no external call
 	if !genderCodePattern.MatchString(req.Gender) {
 		return errors.ErrValidation("gender must be in format GENDER_NNN (e.g. GENDER_001)")
 	}
 
-	// Phase B: masterdata lookup — validates against active items
-	valid, err := uc.MasterdataValidator.ValidateItemCode(ctx, "GENDER", req.Gender, nil)
+	resp, err := uc.MasterdataUsecase.ValidateItemCode(ctx, &masterdatadto.ValidateCodeRequest{
+		CategoryCode: "GENDER",
+		ItemCode:     req.Gender,
+	})
 	if err != nil {
 		return errors.ErrInternal("failed to validate gender").WithError(err)
 	}
-	if !valid {
+	if !resp.Valid {
 		return errors.ErrValidation("gender is not a valid value")
 	}
 
 	return nil
 }
 
-// splitFullName splits a full name into first and last name at the last space.
-// If there is no space, the entire string is returned as firstName with an empty lastName.
 func splitFullName(fullName string) (firstName, lastName string) {
 	trimmed := strings.TrimSpace(fullName)
 	lastSpaceIndex := strings.LastIndex(trimmed, " ")
@@ -203,15 +192,10 @@ func splitFullName(fullName string) (firstName, lastName string) {
 	return strings.TrimSpace(trimmed[:lastSpaceIndex]), strings.TrimSpace(trimmed[lastSpaceIndex+1:])
 }
 
-// calculateAge returns the user's age in whole years as of the current time.
-// It delegates to calculateAgeAt for deterministic testability.
 func calculateAge(birthDate time.Time) int {
 	return calculateAgeAt(birthDate, time.Now())
 }
 
-// calculateAgeAt returns the user's age in whole years as of the given reference
-// time. It handles the birthday boundary correctly: if the user's birthday has
-// not yet occurred in the reference year, the age is decremented by one.
 func calculateAgeAt(birthDate, now time.Time) int {
 	age := now.Year() - birthDate.Year()
 	birthdayThisYear := time.Date(now.Year(), birthDate.Month(), birthDate.Day(), 0, 0, 0, 0, now.Location())

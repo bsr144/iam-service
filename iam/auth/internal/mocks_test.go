@@ -6,18 +6,22 @@ import (
 
 	"iam-service/entity"
 	usercontract "iam-service/iam/user/contract"
+	"iam-service/masterdata/masterdatadto"
 
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/mock"
 )
 
-type MockMasterdataValidator struct {
+type MockMasterdataUsecase struct {
 	mock.Mock
 }
 
-func (m *MockMasterdataValidator) ValidateItemCode(ctx context.Context, categoryCode, itemCode string, tenantID *uuid.UUID) (bool, error) {
-	args := m.Called(ctx, categoryCode, itemCode, tenantID)
-	return args.Bool(0), args.Error(1)
+func (m *MockMasterdataUsecase) ValidateItemCode(ctx context.Context, req *masterdatadto.ValidateCodeRequest) (*masterdatadto.ValidateCodeResponse, error) {
+	args := m.Called(ctx, req)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).(*masterdatadto.ValidateCodeResponse), args.Error(1)
 }
 
 type MockTransactionManager struct {

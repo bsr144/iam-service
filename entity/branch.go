@@ -7,16 +7,15 @@ import (
 	"github.com/google/uuid"
 )
 
-// Branch maps to the `branches` DB table (migration 000003).
 type Branch struct {
-	ID        uuid.UUID       `json:"id" db:"id"`
-	TenantID  uuid.UUID       `json:"tenant_id" db:"tenant_id"`
-	Code      string          `json:"code" db:"code"`
-	Name      string          `json:"name" db:"name"`
-	Address   *string         `json:"address,omitempty" db:"address"`
-	Metadata  json.RawMessage `json:"metadata" db:"metadata"`
-	Status    string          `json:"status" db:"status"`
-	Version   int             `json:"version" db:"version"`
+	ID       uuid.UUID       `json:"id" db:"id"`
+	TenantID uuid.UUID       `json:"tenant_id" db:"tenant_id"`
+	Code     string          `json:"code" db:"code"`
+	Name     string          `json:"name" db:"name"`
+	Address  *string         `json:"address,omitempty" db:"address"`
+	Metadata json.RawMessage `json:"metadata" db:"metadata"`
+	Status   string          `json:"status" db:"status"`
+	Version  int             `json:"version" db:"version"`
 	Timestamps
 }
 
@@ -28,7 +27,6 @@ func (b *Branch) IsActive() bool {
 	return b.Status == "ACTIVE"
 }
 
-// BranchContact has no corresponding DB migration — phantom struct.
 type BranchContact struct {
 	ID         uuid.UUID `json:"id" db:"id"`
 	BranchID   uuid.UUID `json:"branch_id" db:"branch_id"`

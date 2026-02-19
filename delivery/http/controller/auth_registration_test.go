@@ -191,7 +191,7 @@ func TestSetPasswordController(t *testing.T) {
 				assert.Equal(t, registrationID.String(), data["registration_id"])
 				nextStep := data["next_step"].(map[string]any)
 				assert.Equal(t, "set-profile", nextStep["action"])
-				// Verify the required fields match the actual profile completion contract.
+
 				requiredFields := nextStep["required_fields"].([]any)
 				assert.Equal(t, []any{"full_name", "gender", "date_of_birth"}, requiredFields)
 			},
@@ -386,10 +386,7 @@ func TestCompleteProfileRegistrationController(t *testing.T) {
 				"date_of_birth": "not-a-date",
 				"gender":        "GENDER_001",
 			},
-			// Usecase must NOT be called — validation should fail at the controller layer
-			// before the usecase mock is invoked. If the datetime tag is missing, the
-			// mock will be called and AssertExpectations will fail because no expectation
-			// was set.
+
 			setupMock:      func(m *MockAuthUsecase) {},
 			expectedStatus: fiber.StatusBadRequest,
 			checkResponse: func(t *testing.T, resp map[string]any) {

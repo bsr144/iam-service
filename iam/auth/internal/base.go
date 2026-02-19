@@ -6,9 +6,6 @@ import (
 	"iam-service/pkg/logger"
 )
 
-// usecase holds all dependencies for the auth domain use cases.
-// MasterdataValidator provides cross-domain validation of masterdata codes
-// (e.g. gender) via the adapter pattern defined in iam/auth/contract/masterdata_validator.go.
 type usecase struct {
 	TxManager             contract.TransactionManager
 	Config                *config.Config
@@ -27,8 +24,8 @@ type usecase struct {
 	UserSessionRepo       contract.UserSessionRepository
 	UserTenantRegRepo     contract.UserTenantRegistrationRepository
 	ProductsByTenantRepo  contract.ProductsByTenantRepository
-	AuditLogger           logger.AuditLogger
-	MasterdataValidator   contract.MasterdataValidator
+	AuditLogger      logger.AuditLogger
+	MasterdataUsecase contract.MasterdataUsecase
 }
 
 func NewUsecase(
@@ -50,7 +47,7 @@ func NewUsecase(
 	userTenantRegRepo contract.UserTenantRegistrationRepository,
 	productsByTenantRepo contract.ProductsByTenantRepository,
 	auditLogger logger.AuditLogger,
-	masterdataValidator contract.MasterdataValidator,
+	masterdataUsecase contract.MasterdataUsecase,
 ) *usecase {
 	return &usecase{
 		TxManager:             txManager,
@@ -70,7 +67,7 @@ func NewUsecase(
 		UserSessionRepo:       userSessionRepo,
 		UserTenantRegRepo:     userTenantRegRepo,
 		ProductsByTenantRepo:  productsByTenantRepo,
-		AuditLogger:           auditLogger,
-		MasterdataValidator:   masterdataValidator,
+		AuditLogger:      auditLogger,
+		MasterdataUsecase: masterdataUsecase,
 	}
 }

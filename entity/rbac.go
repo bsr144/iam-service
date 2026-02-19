@@ -7,7 +7,6 @@ import (
 	"github.com/google/uuid"
 )
 
-// ScopeLevel is used in usecase-layer validation (not a DB column on any table).
 type ScopeLevel string
 
 const (
@@ -17,8 +16,6 @@ const (
 	ScopeLevelSelf   ScopeLevel = "self"
 )
 
-// Product maps to the `applications` DB table (migration 000010).
-// "Product" and "Application" are used interchangeably throughout the codebase.
 type Product struct {
 	ID          uuid.UUID       `json:"id" db:"id"`
 	TenantID    uuid.UUID       `json:"tenant_id" db:"tenant_id"`
@@ -40,16 +37,15 @@ func (p *Product) IsActive() bool {
 	return p.Status == "ACTIVE"
 }
 
-// Permission maps to the `permissions` DB table (migration 000012).
 type Permission struct {
-	ID            uuid.UUID `json:"id" db:"id"`
-	ApplicationID uuid.UUID `json:"application_id" db:"application_id"`
-	Code          string    `json:"code" db:"code"`
-	Name          string    `json:"name" db:"name"`
-	Description   *string   `json:"description,omitempty" db:"description"`
-	ResourceType  *string   `json:"resource_type,omitempty" db:"resource_type"`
-	Action        *string   `json:"action,omitempty" db:"action"`
-	Status        string    `json:"status" db:"status"`
+	ID            uuid.UUID  `json:"id" db:"id"`
+	ApplicationID uuid.UUID  `json:"application_id" db:"application_id"`
+	Code          string     `json:"code" db:"code"`
+	Name          string     `json:"name" db:"name"`
+	Description   *string    `json:"description,omitempty" db:"description"`
+	ResourceType  *string    `json:"resource_type,omitempty" db:"resource_type"`
+	Action        *string    `json:"action,omitempty" db:"action"`
+	Status        string     `json:"status" db:"status"`
 	CreatedBy     *uuid.UUID `json:"created_by,omitempty" db:"created_by"`
 	Version       int        `json:"version" db:"version"`
 	Timestamps
@@ -59,7 +55,6 @@ func (p *Permission) IsActive() bool {
 	return p.Status == "ACTIVE"
 }
 
-// Role maps to the `roles` DB table (migration 000011).
 type Role struct {
 	ID            uuid.UUID  `json:"id" gorm:"column:id;primaryKey;type:uuid;default:uuidv7()" db:"id"`
 	ApplicationID uuid.UUID  `json:"application_id" gorm:"column:application_id;not null" db:"application_id"`
@@ -77,7 +72,6 @@ func (r *Role) IsActive() bool {
 	return r.Status == "ACTIVE"
 }
 
-// RolePermission maps to the `role_permissions` DB table (migration 000013).
 type RolePermission struct {
 	ID           uuid.UUID  `json:"id" gorm:"column:id;primaryKey;type:uuid;default:uuidv7()" db:"id"`
 	RoleID       uuid.UUID  `json:"role_id" gorm:"column:role_id;not null" db:"role_id"`
@@ -86,7 +80,6 @@ type RolePermission struct {
 	CreatedAt    time.Time  `json:"created_at" gorm:"column:created_at" db:"created_at"`
 }
 
-// UserRole maps to the `user_role_assignments` DB table (migrations 000014, 000056).
 type UserRole struct {
 	ID         uuid.UUID  `json:"id" gorm:"column:id;primaryKey;type:uuid;default:uuidv7()" db:"id"`
 	UserID     uuid.UUID  `json:"user_id" gorm:"column:user_id;type:uuid;not null" db:"user_id"`
