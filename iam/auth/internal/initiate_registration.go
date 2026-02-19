@@ -15,6 +15,15 @@ func (uc *usecase) InitiateRegistration(
 	ctx context.Context,
 	req *authdto.InitiateRegistrationRequest,
 ) (*authdto.InitiateRegistrationResponse, error) {
+	rateLimitTTL := time.Duration(RegistrationRateLimitWindow) * time.Minute
+	count, err := uc.InMemoryStore.IncrementRegistrationRateLimit(ctx, req.Email, rateLimitTTL)
+	if err != nil {
+		return nil, err
+	}
+	if count > int64(RegistrationRateLimitPerHour) {
+		return nil, errors.ErrTooManyRequests("Too many registration attempts. Please try again later.")
+	}
+
 	emailExists, err := uc.UserRepo.EmailExists(ctx, req.Email)
 	if err != nil {
 		return nil, errors.ErrInternal("failed to check email").WithError(err)
@@ -34,15 +43,6 @@ func (uc *usecase) InitiateRegistration(
 				MaxResends:            RegistrationOTPMaxResends,
 			},
 		}, nil
-	}
-
-	rateLimitTTL := time.Duration(RegistrationRateLimitWindow) * time.Minute
-	count, err := uc.InMemoryStore.IncrementRegistrationRateLimit(ctx, req.Email, rateLimitTTL)
-	if err != nil {
-		return nil, err
-	}
-	if count > int64(RegistrationRateLimitPerHour) {
-		return nil, errors.ErrTooManyRequests("Too many registration attempts. Please try again later.")
 	}
 
 	emailLocked, err := uc.InMemoryStore.IsRegistrationEmailLocked(ctx, req.Email)

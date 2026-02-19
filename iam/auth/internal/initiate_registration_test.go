@@ -43,6 +43,7 @@ func TestInitiateRegistration(t *testing.T) {
 			name: "success - email already exists (returns fake success to prevent enumeration)",
 			req:  &authdto.InitiateRegistrationRequest{Email: email, IPAddress: ipAddress, UserAgent: userAgent},
 			setupMocks: func(userRepo *MockUserRepository, redis *MockInMemoryStore, emailSvc *MockEmailService) {
+				redis.On("IncrementRegistrationRateLimit", mock.Anything, email, mock.Anything).Return(int64(1), nil)
 				userRepo.On("EmailExists", mock.Anything, email).Return(true, nil)
 			},
 		},
@@ -50,7 +51,6 @@ func TestInitiateRegistration(t *testing.T) {
 			name: "error - rate limit exceeded",
 			req:  &authdto.InitiateRegistrationRequest{Email: email, IPAddress: ipAddress, UserAgent: userAgent},
 			setupMocks: func(userRepo *MockUserRepository, redis *MockInMemoryStore, emailSvc *MockEmailService) {
-				userRepo.On("EmailExists", mock.Anything, email).Return(false, nil)
 				redis.On("IncrementRegistrationRateLimit", mock.Anything, email, mock.Anything).Return(int64(RegistrationRateLimitPerHour+1), nil)
 			},
 			expectedError: "Too many registration attempts",
