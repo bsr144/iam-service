@@ -46,10 +46,10 @@ func (uc *usecase) ApproveMember(ctx context.Context, req *memberdto.ApproveRequ
 		}
 
 		userRole := &entity.UserRole{
-			UserID:        reg.UserID,
-			RoleID:        role.ID,
-			ProductID:     &req.ApplicationID,
-			EffectiveFrom: now,
+			UserID:     reg.UserID,
+			RoleID:     role.ID,
+			ProductID:  &req.ApplicationID,
+			AssignedAt: now,
 		}
 
 		return uc.userRole.Create(txCtx, userRole)

@@ -49,10 +49,10 @@ func (uc *usecase) ChangeRole(ctx context.Context, req *memberdto.ChangeRoleRequ
 		}
 
 		userRole := &entity.UserRole{
-			UserID:        reg.UserID,
-			RoleID:        newRole.ID,
-			ProductID:     &req.ApplicationID,
-			EffectiveFrom: time.Now(),
+			UserID:     reg.UserID,
+			RoleID:     newRole.ID,
+			ProductID:  &req.ApplicationID,
+			AssignedAt: time.Now(),
 		}
 
 		return uc.userRole.Create(txCtx, userRole)

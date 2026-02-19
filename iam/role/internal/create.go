@@ -37,13 +37,12 @@ func (uc *usecase) Create(ctx context.Context, req *roledto.CreateRequest) (*rol
 
 	now := time.Now()
 	role := &entity.Role{
-		TenantID:    &req.TenantID,
-		Code:        req.Code,
-		Name:        req.Name,
-		Description: req.Description,
-		ScopeLevel:  scopeLevel,
-		IsSystem:    false,
-		IsActive:    true,
+		ApplicationID: req.TenantID,
+		Code:          req.Code,
+		Name:          req.Name,
+		Description:   req.Description,
+		IsSystem:      false,
+		Status:        "ACTIVE",
 	}
 
 	err = uc.TxManager.WithTransaction(ctx, func(txCtx context.Context) error {
@@ -78,9 +77,9 @@ func (uc *usecase) Create(ctx context.Context, req *roledto.CreateRequest) (*rol
 		Code:        role.Code,
 		Name:        role.Name,
 		Description: role.Description,
-		ScopeLevel:  string(role.ScopeLevel),
+		ScopeLevel:  req.ScopeLevel,
 		IsSystem:    role.IsSystem,
-		IsActive:    role.IsActive,
+		IsActive:    role.IsActive(),
 		CreatedAt:   role.CreatedAt,
 	}
 

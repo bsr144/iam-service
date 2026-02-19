@@ -83,10 +83,10 @@ func (uc *usecase) Create(ctx context.Context, req *userdto.CreateRequest) (*use
 		}
 
 		userRole := &entity.UserRole{
-			UserID:        user.ID,
-			RoleID:        role.ID,
-			EffectiveFrom: now,
-			CreatedAt:     now,
+			UserID:     user.ID,
+			RoleID:     role.ID,
+			AssignedAt: now,
+			CreatedAt:  now,
 		}
 		if err := uc.UserRoleRepo.Create(txCtx, userRole); err != nil {
 			return err
