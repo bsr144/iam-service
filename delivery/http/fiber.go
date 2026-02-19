@@ -104,6 +104,8 @@ func NewServer(cfg *config.Config) *Server {
 
 	emailService := mailer.NewEmailService(&cfg.Email)
 
+	masterdataValidator := &masterdataValidatorAdapter{repo: masterdataItemRepo}
+
 	healthUsecase := health.NewUsecase()
 	authUsecase := auth.NewUsecase(
 		txManager,
@@ -124,6 +126,7 @@ func NewServer(cfg *config.Config) *Server {
 		userTenantRegRepo,
 		productsByTenantRepo,
 		auditLogger,
+		masterdataValidator,
 	)
 	roleUsecase := role.NewUsecase(
 		txManager,
@@ -225,6 +228,7 @@ func (s *Server) Start() error {
 func (s *Server) Shutdown(ctx context.Context) error {
 	return s.app.ShutdownWithContext(ctx)
 }
+
 
 func createErrorHandler(cfg *config.Config, zapLogger *zap.Logger) fiber.ErrorHandler {
 	return func(c *fiber.Ctx, err error) error {
