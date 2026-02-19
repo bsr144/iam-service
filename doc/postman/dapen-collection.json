@@ -339,7 +339,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n    \"full_name\": \"Budi Santoso\",\n    \"phone_number\": \"+6281234567890\",\n    \"date_of_birth\": \"1990-01-15\",\n    \"gender\": \"male\",\n    \"marital_status\": \"single\",\n    \"address\": \"Jl. Sudirman No. 1, Jakarta Pusat\"\n}",
+              "raw": "{\n    \"full_name\": \"Budi Santoso\",\n    \"gender\": \"GENDER_001\",\n    \"date_of_birth\": \"1990-05-15\"\n}",
               "options": { "raw": { "language": "json" } }
             },
             "url": {
@@ -347,7 +347,7 @@
               "host": ["{{base_url}}"],
               "path": ["api", "v1", "iam", "registrations", "{{registration_id}}", "complete-profile"]
             },
-            "description": "Completes profile and finalizes registration. Returns access + refresh tokens."
+            "description": "Completes profile and finalizes registration. Returns access + refresh tokens.\n\nNote: `gender` must be a valid GENDER_NNN masterdata code (e.g. GENDER_001 for Male, GENDER_002 for Female). Retrieve valid codes from the masterdata endpoint before submitting."
           },
           "response": [
             {

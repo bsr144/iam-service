@@ -321,6 +321,17 @@ paths:
         Submits profile data for the registration. Requires the registration token
         in the `Authorization: Bearer <registration_token>` header.
         Returns access + refresh tokens on success.
+
+        The `gender` field must be a valid masterdata code in the format `GENDER_NNN`:
+        - `GENDER_001` — Male
+        - `GENDER_002` — Female
+        - `GENDER_003` — Other
+
+        A 422 is returned if:
+        - Any required field is missing or fails format validation
+        - The `gender` code does not match the `^GENDER_\d{3}$` pattern
+        - The `gender` code is not found in active masterdata items
+        - The registrant is under 18 years old
       operationId: completeRegistrationProfile
       security:
         - BearerAuth: []
@@ -334,10 +345,8 @@ paths:
               $ref: '#/components/schemas/CompleteProfileRegistrationRequest'
             example:
               full_name: "John Doe"
-              phone_number: "+6281234567890"
-              gender: male
-              marital_status: single
-              address: "Jl. Sudirman No. 1"
+              gender: "GENDER_001"
+              date_of_birth: "1990-01-15"
       responses:
         '201':
           description: Profile completed — access and refresh tokens returned
@@ -2943,28 +2952,28 @@ components:
 
     CompleteProfileRegistrationRequest:
       type: object
+      required:
+        - full_name
+        - gender
+        - date_of_birth
       properties:
         full_name:
           type: string
+          minLength: 1
+          maxLength: 200
           example: "John Doe"
-        phone_number:
+        gender:
           type: string
-          description: E.164 format
-          example: "+6281234567890"
+          description: |
+            Masterdata gender code in the format GENDER_NNN.
+            Valid values: GENDER_001 (Male), GENDER_002 (Female), GENDER_003 (Other).
+          pattern: '^GENDER_\d{3}$'
+          example: "GENDER_001"
         date_of_birth:
           type: string
           format: date
+          description: Date of birth in YYYY-MM-DD format. Registrant must be at least 18 years old.
           example: "1990-01-15"
-        gender:
-          type: string
-          enum: [male, female, other]
-          example: male
-        marital_status:
-          type: string
-          example: single
-        address:
-          type: string
-          example: "Jl. Sudirman No. 1, Jakarta"
 
     CompleteProfileRegistrationResponse:
       type: object
