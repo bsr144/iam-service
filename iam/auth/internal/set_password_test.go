@@ -257,6 +257,7 @@ func TestSetPassword(t *testing.T) {
 			assert.NotEmpty(t, response.RegistrationToken)
 			assert.Equal(t, "set-profile", response.NextStep.Action)
 			assert.Contains(t, response.NextStep.Endpoint, "/complete-profile")
+			assert.Equal(t, []string{"full_name", "gender", "date_of_birth"}, response.NextStep.RequiredFields)
 			redis.AssertExpectations(t)
 		})
 	}

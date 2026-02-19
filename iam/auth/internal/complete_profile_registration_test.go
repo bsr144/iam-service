@@ -4,13 +4,14 @@ import (
 	"context"
 	"crypto/sha256"
 	"encoding/hex"
+	"errors"
 	"testing"
 	"time"
 
 	"iam-service/config"
 	"iam-service/entity"
 	"iam-service/iam/auth/authdto"
-	"iam-service/pkg/errors"
+	pkgerrors "iam-service/pkg/errors"
 
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
@@ -41,20 +42,31 @@ func TestCompleteProfileRegistration(t *testing.T) {
 		return tokenString, tokenHash
 	}
 
+	// validReq now uses the simplified fields: no PhoneNumber, MaritalStatus, Address
 	validReq := &authdto.CompleteProfileRegistrationRequest{
-		FullName:      "John Michael Smith",
-		PhoneNumber:   "+6281234567890",
-		DateOfBirth:   "1990-01-15",
-		Gender:        "male",
-		MaritalStatus: "single",
-		Address:       "Jl. Sudirman No. 123, Jakarta Pusat",
+		FullName:    "John Michael Smith",
+		DateOfBirth: "1990-01-15",
+		Gender:      "GENDER_001",
 	}
+
+	type setupMockFn func(
+		txManager *MockTransactionManager,
+		redis *MockInMemoryStore,
+		userRepo *MockUserRepository,
+		profileRepo *MockUserProfileRepository,
+		authMethodRepo *MockUserAuthMethodRepository,
+		securityStateRepo *MockUserSecurityStateRepository,
+		emailSvc *MockEmailService,
+		refreshTokenRepo *MockRefreshTokenRepository,
+		masterdataValidator *MockMasterdataValidator,
+		tokenHash string,
+	)
 
 	tests := []struct {
 		name          string
 		req           *authdto.CompleteProfileRegistrationRequest
 		setupToken    func() string
-		setupMocks    func(*MockTransactionManager, *MockInMemoryStore, *MockUserRepository, *MockUserProfileRepository, *MockUserAuthMethodRepository, *MockUserSecurityStateRepository, *MockEmailService, *MockRefreshTokenRepository, string)
+		setupMocks    setupMockFn
 		expectedError string
 		expectedCode  string
 		validateResp  func(*testing.T, *authdto.CompleteProfileRegistrationResponse)
@@ -66,7 +78,7 @@ func TestCompleteProfileRegistration(t *testing.T) {
 				tokenString, _ := generateValidToken()
 				return tokenString
 			},
-			setupMocks: func(txManager *MockTransactionManager, redis *MockInMemoryStore, userRepo *MockUserRepository, profileRepo *MockUserProfileRepository, authMethodRepo *MockUserAuthMethodRepository, securityStateRepo *MockUserSecurityStateRepository, emailSvc *MockEmailService, refreshTokenRepo *MockRefreshTokenRepository, tokenHash string) {
+			setupMocks: func(txManager *MockTransactionManager, redis *MockInMemoryStore, userRepo *MockUserRepository, profileRepo *MockUserProfileRepository, authMethodRepo *MockUserAuthMethodRepository, securityStateRepo *MockUserSecurityStateRepository, emailSvc *MockEmailService, refreshTokenRepo *MockRefreshTokenRepository, mdValidator *MockMasterdataValidator, tokenHash string) {
 				session := &entity.RegistrationSession{
 					ID:                    registrationID,
 					Email:                 email,
@@ -75,6 +87,7 @@ func TestCompleteProfileRegistration(t *testing.T) {
 					ExpiresAt:             time.Now().Add(10 * time.Minute),
 				}
 				redis.On("GetRegistrationSession", mock.Anything, registrationID).Return(session, nil)
+				mdValidator.On("ValidateItemCode", mock.Anything, "GENDER", "GENDER_001", (*uuid.UUID)(nil)).Return(true, nil)
 				redis.On("GetRegistrationPasswordHash", mock.Anything, registrationID).Return(passwordHash, nil)
 				userRepo.On("EmailExists", mock.Anything, email).Return(false, nil)
 				userRepo.On("Create", mock.Anything, mock.AnythingOfType("*entity.User")).Return(nil)
@@ -102,10 +115,10 @@ func TestCompleteProfileRegistration(t *testing.T) {
 			setupToken: func() string {
 				return "invalid-token"
 			},
-			setupMocks: func(txManager *MockTransactionManager, redis *MockInMemoryStore, userRepo *MockUserRepository, profileRepo *MockUserProfileRepository, authMethodRepo *MockUserAuthMethodRepository, securityStateRepo *MockUserSecurityStateRepository, emailSvc *MockEmailService, refreshTokenRepo *MockRefreshTokenRepository, tokenHash string) {
+			setupMocks: func(txManager *MockTransactionManager, redis *MockInMemoryStore, userRepo *MockUserRepository, profileRepo *MockUserProfileRepository, authMethodRepo *MockUserAuthMethodRepository, securityStateRepo *MockUserSecurityStateRepository, emailSvc *MockEmailService, refreshTokenRepo *MockRefreshTokenRepository, mdValidator *MockMasterdataValidator, tokenHash string) {
 			},
 			expectedError: "invalid",
-			expectedCode:  errors.CodeUnauthorized,
+			expectedCode:  pkgerrors.CodeUnauthorized,
 		},
 		{
 			name: "error - expired session",
@@ -114,7 +127,7 @@ func TestCompleteProfileRegistration(t *testing.T) {
 				tokenString, _ := generateValidToken()
 				return tokenString
 			},
-			setupMocks: func(txManager *MockTransactionManager, redis *MockInMemoryStore, userRepo *MockUserRepository, profileRepo *MockUserProfileRepository, authMethodRepo *MockUserAuthMethodRepository, securityStateRepo *MockUserSecurityStateRepository, emailSvc *MockEmailService, refreshTokenRepo *MockRefreshTokenRepository, tokenHash string) {
+			setupMocks: func(txManager *MockTransactionManager, redis *MockInMemoryStore, userRepo *MockUserRepository, profileRepo *MockUserProfileRepository, authMethodRepo *MockUserAuthMethodRepository, securityStateRepo *MockUserSecurityStateRepository, emailSvc *MockEmailService, refreshTokenRepo *MockRefreshTokenRepository, mdValidator *MockMasterdataValidator, tokenHash string) {
 				session := &entity.RegistrationSession{
 					ID:                    registrationID,
 					Email:                 email,
@@ -134,7 +147,7 @@ func TestCompleteProfileRegistration(t *testing.T) {
 				tokenString, _ := generateValidToken()
 				return tokenString
 			},
-			setupMocks: func(txManager *MockTransactionManager, redis *MockInMemoryStore, userRepo *MockUserRepository, profileRepo *MockUserProfileRepository, authMethodRepo *MockUserAuthMethodRepository, securityStateRepo *MockUserSecurityStateRepository, emailSvc *MockEmailService, refreshTokenRepo *MockRefreshTokenRepository, tokenHash string) {
+			setupMocks: func(txManager *MockTransactionManager, redis *MockInMemoryStore, userRepo *MockUserRepository, profileRepo *MockUserProfileRepository, authMethodRepo *MockUserAuthMethodRepository, securityStateRepo *MockUserSecurityStateRepository, emailSvc *MockEmailService, refreshTokenRepo *MockRefreshTokenRepository, mdValidator *MockMasterdataValidator, tokenHash string) {
 				session := &entity.RegistrationSession{
 					ID:                    registrationID,
 					Email:                 email,
@@ -145,23 +158,20 @@ func TestCompleteProfileRegistration(t *testing.T) {
 				redis.On("GetRegistrationSession", mock.Anything, registrationID).Return(session, nil)
 			},
 			expectedError: "not ready",
-			expectedCode:  errors.CodeForbidden,
+			expectedCode:  pkgerrors.CodeForbidden,
 		},
 		{
 			name: "error - missing full_name",
 			req: &authdto.CompleteProfileRegistrationRequest{
-				FullName:      "",
-				PhoneNumber:   "+6281234567890",
-				DateOfBirth:   "1990-01-15",
-				Gender:        "male",
-				MaritalStatus: "single",
-				Address:       "Jl. Sudirman No. 123",
+				FullName:    "",
+				DateOfBirth: "1990-01-15",
+				Gender:      "GENDER_001",
 			},
 			setupToken: func() string {
 				tokenString, _ := generateValidToken()
 				return tokenString
 			},
-			setupMocks: func(txManager *MockTransactionManager, redis *MockInMemoryStore, userRepo *MockUserRepository, profileRepo *MockUserProfileRepository, authMethodRepo *MockUserAuthMethodRepository, securityStateRepo *MockUserSecurityStateRepository, emailSvc *MockEmailService, refreshTokenRepo *MockRefreshTokenRepository, tokenHash string) {
+			setupMocks: func(txManager *MockTransactionManager, redis *MockInMemoryStore, userRepo *MockUserRepository, profileRepo *MockUserProfileRepository, authMethodRepo *MockUserAuthMethodRepository, securityStateRepo *MockUserSecurityStateRepository, emailSvc *MockEmailService, refreshTokenRepo *MockRefreshTokenRepository, mdValidator *MockMasterdataValidator, tokenHash string) {
 				session := &entity.RegistrationSession{
 					ID:                    registrationID,
 					Email:                 email,
@@ -172,23 +182,20 @@ func TestCompleteProfileRegistration(t *testing.T) {
 				redis.On("GetRegistrationSession", mock.Anything, registrationID).Return(session, nil)
 			},
 			expectedError: "full_name",
-			expectedCode:  errors.CodeValidation,
+			expectedCode:  pkgerrors.CodeValidation,
 		},
 		{
 			name: "error - age under 18",
 			req: &authdto.CompleteProfileRegistrationRequest{
-				FullName:      "Young Person",
-				PhoneNumber:   "+6281234567890",
-				DateOfBirth:   time.Now().AddDate(-17, 0, 0).Format("2006-01-02"),
-				Gender:        "male",
-				MaritalStatus: "single",
-				Address:       "Jl. Sudirman No. 123",
+				FullName:    "Young Person",
+				DateOfBirth: time.Now().AddDate(-17, 0, 0).Format("2006-01-02"),
+				Gender:      "GENDER_001",
 			},
 			setupToken: func() string {
 				tokenString, _ := generateValidToken()
 				return tokenString
 			},
-			setupMocks: func(txManager *MockTransactionManager, redis *MockInMemoryStore, userRepo *MockUserRepository, profileRepo *MockUserProfileRepository, authMethodRepo *MockUserAuthMethodRepository, securityStateRepo *MockUserSecurityStateRepository, emailSvc *MockEmailService, refreshTokenRepo *MockRefreshTokenRepository, tokenHash string) {
+			setupMocks: func(txManager *MockTransactionManager, redis *MockInMemoryStore, userRepo *MockUserRepository, profileRepo *MockUserProfileRepository, authMethodRepo *MockUserAuthMethodRepository, securityStateRepo *MockUserSecurityStateRepository, emailSvc *MockEmailService, refreshTokenRepo *MockRefreshTokenRepository, mdValidator *MockMasterdataValidator, tokenHash string) {
 				session := &entity.RegistrationSession{
 					ID:                    registrationID,
 					Email:                 email,
@@ -197,25 +204,48 @@ func TestCompleteProfileRegistration(t *testing.T) {
 					ExpiresAt:             time.Now().Add(10 * time.Minute),
 				}
 				redis.On("GetRegistrationSession", mock.Anything, registrationID).Return(session, nil)
+				mdValidator.On("ValidateItemCode", mock.Anything, "GENDER", "GENDER_001", (*uuid.UUID)(nil)).Return(true, nil)
 			},
 			expectedError: "18 years",
-			expectedCode:  errors.CodeValidation,
+			expectedCode:  pkgerrors.CodeValidation,
 		},
 		{
-			name: "error - invalid gender value",
+			name: "error - Phase A fails - invalid gender format",
 			req: &authdto.CompleteProfileRegistrationRequest{
-				FullName:      "John Doe",
-				PhoneNumber:   "+6281234567890",
-				DateOfBirth:   "1990-01-15",
-				Gender:        "unknown",
-				MaritalStatus: "single",
-				Address:       "Jl. Sudirman No. 123",
+				FullName:    "John Doe",
+				DateOfBirth: "1990-01-15",
+				Gender:      "male",
 			},
 			setupToken: func() string {
 				tokenString, _ := generateValidToken()
 				return tokenString
 			},
-			setupMocks: func(txManager *MockTransactionManager, redis *MockInMemoryStore, userRepo *MockUserRepository, profileRepo *MockUserProfileRepository, authMethodRepo *MockUserAuthMethodRepository, securityStateRepo *MockUserSecurityStateRepository, emailSvc *MockEmailService, refreshTokenRepo *MockRefreshTokenRepository, tokenHash string) {
+			setupMocks: func(txManager *MockTransactionManager, redis *MockInMemoryStore, userRepo *MockUserRepository, profileRepo *MockUserProfileRepository, authMethodRepo *MockUserAuthMethodRepository, securityStateRepo *MockUserSecurityStateRepository, emailSvc *MockEmailService, refreshTokenRepo *MockRefreshTokenRepository, mdValidator *MockMasterdataValidator, tokenHash string) {
+				session := &entity.RegistrationSession{
+					ID:                    registrationID,
+					Email:                 email,
+					Status:                entity.RegistrationSessionStatusPasswordSet,
+					RegistrationTokenHash: &tokenHash,
+					ExpiresAt:             time.Now().Add(10 * time.Minute),
+				}
+				redis.On("GetRegistrationSession", mock.Anything, registrationID).Return(session, nil)
+				// No mdValidator call expected — Phase A regex fails before Phase B
+			},
+			expectedError: "gender must be in format GENDER_NNN",
+			expectedCode:  pkgerrors.CodeValidation,
+		},
+		{
+			name: "error - Phase A fails - empty gender",
+			req: &authdto.CompleteProfileRegistrationRequest{
+				FullName:    "John Doe",
+				DateOfBirth: "1990-01-15",
+				Gender:      "",
+			},
+			setupToken: func() string {
+				tokenString, _ := generateValidToken()
+				return tokenString
+			},
+			setupMocks: func(txManager *MockTransactionManager, redis *MockInMemoryStore, userRepo *MockUserRepository, profileRepo *MockUserProfileRepository, authMethodRepo *MockUserAuthMethodRepository, securityStateRepo *MockUserSecurityStateRepository, emailSvc *MockEmailService, refreshTokenRepo *MockRefreshTokenRepository, mdValidator *MockMasterdataValidator, tokenHash string) {
 				session := &entity.RegistrationSession{
 					ID:                    registrationID,
 					Email:                 email,
@@ -225,8 +255,81 @@ func TestCompleteProfileRegistration(t *testing.T) {
 				}
 				redis.On("GetRegistrationSession", mock.Anything, registrationID).Return(session, nil)
 			},
+			expectedError: "gender must be in format GENDER_NNN",
+			expectedCode:  pkgerrors.CodeValidation,
+		},
+		{
+			name: "error - Phase B fails - gender not in masterdata",
+			req: &authdto.CompleteProfileRegistrationRequest{
+				FullName:    "John Doe",
+				DateOfBirth: "1990-01-15",
+				Gender:      "GENDER_999",
+			},
+			setupToken: func() string {
+				tokenString, _ := generateValidToken()
+				return tokenString
+			},
+			setupMocks: func(txManager *MockTransactionManager, redis *MockInMemoryStore, userRepo *MockUserRepository, profileRepo *MockUserProfileRepository, authMethodRepo *MockUserAuthMethodRepository, securityStateRepo *MockUserSecurityStateRepository, emailSvc *MockEmailService, refreshTokenRepo *MockRefreshTokenRepository, mdValidator *MockMasterdataValidator, tokenHash string) {
+				session := &entity.RegistrationSession{
+					ID:                    registrationID,
+					Email:                 email,
+					Status:                entity.RegistrationSessionStatusPasswordSet,
+					RegistrationTokenHash: &tokenHash,
+					ExpiresAt:             time.Now().Add(10 * time.Minute),
+				}
+				redis.On("GetRegistrationSession", mock.Anything, registrationID).Return(session, nil)
+				mdValidator.On("ValidateItemCode", mock.Anything, "GENDER", "GENDER_999", (*uuid.UUID)(nil)).Return(false, nil)
+			},
 			expectedError: "gender",
-			expectedCode:  errors.CodeValidation,
+			expectedCode:  pkgerrors.CodeValidation,
+		},
+		{
+			name: "error - Phase B fails - masterdata service error",
+			req: &authdto.CompleteProfileRegistrationRequest{
+				FullName:    "John Doe",
+				DateOfBirth: "1990-01-15",
+				Gender:      "GENDER_001",
+			},
+			setupToken: func() string {
+				tokenString, _ := generateValidToken()
+				return tokenString
+			},
+			setupMocks: func(txManager *MockTransactionManager, redis *MockInMemoryStore, userRepo *MockUserRepository, profileRepo *MockUserProfileRepository, authMethodRepo *MockUserAuthMethodRepository, securityStateRepo *MockUserSecurityStateRepository, emailSvc *MockEmailService, refreshTokenRepo *MockRefreshTokenRepository, mdValidator *MockMasterdataValidator, tokenHash string) {
+				session := &entity.RegistrationSession{
+					ID:                    registrationID,
+					Email:                 email,
+					Status:                entity.RegistrationSessionStatusPasswordSet,
+					RegistrationTokenHash: &tokenHash,
+					ExpiresAt:             time.Now().Add(10 * time.Minute),
+				}
+				redis.On("GetRegistrationSession", mock.Anything, registrationID).Return(session, nil)
+				mdValidator.On("ValidateItemCode", mock.Anything, "GENDER", "GENDER_001", (*uuid.UUID)(nil)).Return(false, errors.New("masterdata service unavailable"))
+			},
+			expectedError: "failed to validate gender",
+			expectedCode:  pkgerrors.CodeInternal,
+		},
+		{
+			name: "error - password hash not found in store",
+			req:  validReq,
+			setupToken: func() string {
+				tokenString, _ := generateValidToken()
+				return tokenString
+			},
+			setupMocks: func(txManager *MockTransactionManager, redis *MockInMemoryStore, userRepo *MockUserRepository, profileRepo *MockUserProfileRepository, authMethodRepo *MockUserAuthMethodRepository, securityStateRepo *MockUserSecurityStateRepository, emailSvc *MockEmailService, refreshTokenRepo *MockRefreshTokenRepository, mdValidator *MockMasterdataValidator, tokenHash string) {
+				session := &entity.RegistrationSession{
+					ID:                    registrationID,
+					Email:                 email,
+					Status:                entity.RegistrationSessionStatusPasswordSet,
+					RegistrationTokenHash: &tokenHash,
+					ExpiresAt:             time.Now().Add(10 * time.Minute),
+				}
+				redis.On("GetRegistrationSession", mock.Anything, registrationID).Return(session, nil)
+				mdValidator.On("ValidateItemCode", mock.Anything, "GENDER", "GENDER_001", (*uuid.UUID)(nil)).Return(true, nil)
+				userRepo.On("EmailExists", mock.Anything, email).Return(false, nil)
+				redis.On("GetRegistrationPasswordHash", mock.Anything, registrationID).Return("", errors.New("key not found"))
+			},
+			expectedError: "Password has not been set",
+			expectedCode:  pkgerrors.CodeForbidden,
 		},
 		{
 			name: "error - email already registered (race condition)",
@@ -235,7 +338,7 @@ func TestCompleteProfileRegistration(t *testing.T) {
 				tokenString, _ := generateValidToken()
 				return tokenString
 			},
-			setupMocks: func(txManager *MockTransactionManager, redis *MockInMemoryStore, userRepo *MockUserRepository, profileRepo *MockUserProfileRepository, authMethodRepo *MockUserAuthMethodRepository, securityStateRepo *MockUserSecurityStateRepository, emailSvc *MockEmailService, refreshTokenRepo *MockRefreshTokenRepository, tokenHash string) {
+			setupMocks: func(txManager *MockTransactionManager, redis *MockInMemoryStore, userRepo *MockUserRepository, profileRepo *MockUserProfileRepository, authMethodRepo *MockUserAuthMethodRepository, securityStateRepo *MockUserSecurityStateRepository, emailSvc *MockEmailService, refreshTokenRepo *MockRefreshTokenRepository, mdValidator *MockMasterdataValidator, tokenHash string) {
 				session := &entity.RegistrationSession{
 					ID:                    registrationID,
 					Email:                 email,
@@ -244,26 +347,24 @@ func TestCompleteProfileRegistration(t *testing.T) {
 					ExpiresAt:             time.Now().Add(10 * time.Minute),
 				}
 				redis.On("GetRegistrationSession", mock.Anything, registrationID).Return(session, nil)
+				mdValidator.On("ValidateItemCode", mock.Anything, "GENDER", "GENDER_001", (*uuid.UUID)(nil)).Return(true, nil)
 				userRepo.On("EmailExists", mock.Anything, email).Return(true, nil)
 			},
 			expectedError: "already been registered",
-			expectedCode:  errors.CodeConflict,
+			expectedCode:  pkgerrors.CodeConflict,
 		},
 		{
 			name: "success - name splitting: John Smith",
 			req: &authdto.CompleteProfileRegistrationRequest{
-				FullName:      "John Smith",
-				PhoneNumber:   "+6281234567890",
-				DateOfBirth:   "1990-01-15",
-				Gender:        "male",
-				MaritalStatus: "single",
-				Address:       "Jl. Sudirman No. 123",
+				FullName:    "John Smith",
+				DateOfBirth: "1990-01-15",
+				Gender:      "GENDER_001",
 			},
 			setupToken: func() string {
 				tokenString, _ := generateValidToken()
 				return tokenString
 			},
-			setupMocks: func(txManager *MockTransactionManager, redis *MockInMemoryStore, userRepo *MockUserRepository, profileRepo *MockUserProfileRepository, authMethodRepo *MockUserAuthMethodRepository, securityStateRepo *MockUserSecurityStateRepository, emailSvc *MockEmailService, refreshTokenRepo *MockRefreshTokenRepository, tokenHash string) {
+			setupMocks: func(txManager *MockTransactionManager, redis *MockInMemoryStore, userRepo *MockUserRepository, profileRepo *MockUserProfileRepository, authMethodRepo *MockUserAuthMethodRepository, securityStateRepo *MockUserSecurityStateRepository, emailSvc *MockEmailService, refreshTokenRepo *MockRefreshTokenRepository, mdValidator *MockMasterdataValidator, tokenHash string) {
 				session := &entity.RegistrationSession{
 					ID:                    registrationID,
 					Email:                 email,
@@ -272,6 +373,7 @@ func TestCompleteProfileRegistration(t *testing.T) {
 					ExpiresAt:             time.Now().Add(10 * time.Minute),
 				}
 				redis.On("GetRegistrationSession", mock.Anything, registrationID).Return(session, nil)
+				mdValidator.On("ValidateItemCode", mock.Anything, "GENDER", "GENDER_001", (*uuid.UUID)(nil)).Return(true, nil)
 				redis.On("GetRegistrationPasswordHash", mock.Anything, registrationID).Return(passwordHash, nil)
 				userRepo.On("EmailExists", mock.Anything, email).Return(false, nil)
 				userRepo.On("Create", mock.Anything, mock.AnythingOfType("*entity.User")).Return(nil)
@@ -291,18 +393,15 @@ func TestCompleteProfileRegistration(t *testing.T) {
 		{
 			name: "success - name splitting: Madonna (single name)",
 			req: &authdto.CompleteProfileRegistrationRequest{
-				FullName:      "Madonna",
-				PhoneNumber:   "+6281234567890",
-				DateOfBirth:   "1990-01-15",
-				Gender:        "female",
-				MaritalStatus: "single",
-				Address:       "Jl. Sudirman No. 123",
+				FullName:    "Madonna",
+				DateOfBirth: "1990-01-15",
+				Gender:      "GENDER_002",
 			},
 			setupToken: func() string {
 				tokenString, _ := generateValidToken()
 				return tokenString
 			},
-			setupMocks: func(txManager *MockTransactionManager, redis *MockInMemoryStore, userRepo *MockUserRepository, profileRepo *MockUserProfileRepository, authMethodRepo *MockUserAuthMethodRepository, securityStateRepo *MockUserSecurityStateRepository, emailSvc *MockEmailService, refreshTokenRepo *MockRefreshTokenRepository, tokenHash string) {
+			setupMocks: func(txManager *MockTransactionManager, redis *MockInMemoryStore, userRepo *MockUserRepository, profileRepo *MockUserProfileRepository, authMethodRepo *MockUserAuthMethodRepository, securityStateRepo *MockUserSecurityStateRepository, emailSvc *MockEmailService, refreshTokenRepo *MockRefreshTokenRepository, mdValidator *MockMasterdataValidator, tokenHash string) {
 				session := &entity.RegistrationSession{
 					ID:                    registrationID,
 					Email:                 email,
@@ -311,6 +410,7 @@ func TestCompleteProfileRegistration(t *testing.T) {
 					ExpiresAt:             time.Now().Add(10 * time.Minute),
 				}
 				redis.On("GetRegistrationSession", mock.Anything, registrationID).Return(session, nil)
+				mdValidator.On("ValidateItemCode", mock.Anything, "GENDER", "GENDER_002", (*uuid.UUID)(nil)).Return(true, nil)
 				redis.On("GetRegistrationPasswordHash", mock.Anything, registrationID).Return(passwordHash, nil)
 				userRepo.On("EmailExists", mock.Anything, email).Return(false, nil)
 				userRepo.On("Create", mock.Anything, mock.AnythingOfType("*entity.User")).Return(nil)
@@ -339,6 +439,7 @@ func TestCompleteProfileRegistration(t *testing.T) {
 			securityStateRepo := &MockUserSecurityStateRepository{}
 			emailSvc := &MockEmailService{}
 			refreshTokenRepo := &MockRefreshTokenRepository{}
+			mdValidator := &MockMasterdataValidator{}
 
 			tokenString := tt.setupToken()
 			_, tokenHash := generateValidToken()
@@ -346,7 +447,7 @@ func TestCompleteProfileRegistration(t *testing.T) {
 				hash := sha256.Sum256([]byte(tokenString))
 				tokenHash = hex.EncodeToString(hash[:])
 			}
-			tt.setupMocks(txManager, redis, userRepo, profileRepo, authMethodRepo, securityStateRepo, emailSvc, refreshTokenRepo, tokenHash)
+			tt.setupMocks(txManager, redis, userRepo, profileRepo, authMethodRepo, securityStateRepo, emailSvc, refreshTokenRepo, mdValidator, tokenHash)
 
 			cfg := &config.Config{
 				JWT: config.JWTConfig{
@@ -363,13 +464,14 @@ func TestCompleteProfileRegistration(t *testing.T) {
 			uc := &usecase{
 				Config:                cfg,
 				TxManager:             txManager,
-				InMemoryStore:                 redis,
+				InMemoryStore:         redis,
 				UserRepo:              userRepo,
 				UserProfileRepo:       profileRepo,
 				UserAuthMethodRepo:    authMethodRepo,
 				UserSecurityStateRepo: securityStateRepo,
 				EmailService:          emailSvc,
 				RefreshTokenRepo:      refreshTokenRepo,
+				MasterdataValidator:   mdValidator,
 			}
 
 			tt.req.RegistrationID = registrationID
@@ -383,7 +485,7 @@ func TestCompleteProfileRegistration(t *testing.T) {
 			if tt.expectedError != "" {
 				require.Error(t, err)
 				assert.Contains(t, err.Error(), tt.expectedError)
-				appErr, ok := err.(*errors.AppError)
+				appErr, ok := err.(*pkgerrors.AppError)
 				require.True(t, ok, "Error should be AppError")
 				assert.Equal(t, tt.expectedCode, appErr.Code)
 				return

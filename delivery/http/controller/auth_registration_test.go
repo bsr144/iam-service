@@ -179,7 +179,7 @@ func TestSetPasswordController(t *testing.T) {
 						NextStep: authdto.NextStep{
 							Action:         "set-profile",
 							Endpoint:       "/api/v1/auth/registration/complete-profile",
-							RequiredFields: []string{"full_name", "phone_number"},
+							RequiredFields: []string{"full_name", "gender", "date_of_birth"},
 						},
 					}, nil)
 			},
@@ -191,6 +191,9 @@ func TestSetPasswordController(t *testing.T) {
 				assert.Equal(t, registrationID.String(), data["registration_id"])
 				nextStep := data["next_step"].(map[string]any)
 				assert.Equal(t, "set-profile", nextStep["action"])
+				// Verify the required fields match the actual profile completion contract.
+				requiredFields := nextStep["required_fields"].([]any)
+				assert.Equal(t, []any{"full_name", "gender", "date_of_birth"}, requiredFields)
 			},
 		},
 		{
@@ -288,13 +291,9 @@ func TestCompleteProfileRegistrationController(t *testing.T) {
 			registrationID: registrationID.String(),
 			authHeader:     "Bearer " + registrationToken,
 			body: map[string]any{
-				"full_name":      "John Michael Smith",
-				"phone_number":   "+6281234567890",
-				"date_of_birth":  "1990-01-15",
-				"gender":         "male",
-				"marital_status": "single",
-				"address":        "123 Main Street, Jakarta Selatan",
-				"place_of_birth": "Jakarta",
+				"full_name":     "John Michael Smith",
+				"date_of_birth": "1990-01-15",
+				"gender":        "GENDER_001",
 			},
 			setupMock: func(m *MockAuthUsecase) {
 				m.On("CompleteProfileRegistration", mock.Anything, mock.AnythingOfType("*authdto.CompleteProfileRegistrationRequest")).
@@ -345,13 +344,9 @@ func TestCompleteProfileRegistrationController(t *testing.T) {
 			registrationID: registrationID.String(),
 			authHeader:     "Bearer " + registrationToken,
 			body: map[string]any{
-				"full_name":      "John Smith",
-				"phone_number":   "+6281234567890",
-				"date_of_birth":  "2020-01-01",
-				"gender":         "male",
-				"marital_status": "single",
-				"address":        "123 Main Street, Jakarta",
-				"place_of_birth": "Jakarta",
+				"full_name":     "John Smith",
+				"date_of_birth": "2020-01-01",
+				"gender":        "GENDER_001",
 			},
 			setupMock: func(m *MockAuthUsecase) {
 				m.On("CompleteProfileRegistration", mock.Anything, mock.AnythingOfType("*authdto.CompleteProfileRegistrationRequest")).
@@ -368,13 +363,9 @@ func TestCompleteProfileRegistrationController(t *testing.T) {
 			registrationID: registrationID.String(),
 			authHeader:     "Bearer " + registrationToken,
 			body: map[string]any{
-				"full_name":      "John Smith",
-				"phone_number":   "+6281234567890",
-				"date_of_birth":  "1990-01-15",
-				"gender":         "male",
-				"marital_status": "single",
-				"address":        "123 Main Street, Jakarta",
-				"place_of_birth": "Jakarta",
+				"full_name":     "John Smith",
+				"date_of_birth": "1990-01-15",
+				"gender":        "GENDER_001",
 			},
 			setupMock: func(m *MockAuthUsecase) {
 				m.On("CompleteProfileRegistration", mock.Anything, mock.AnythingOfType("*authdto.CompleteProfileRegistrationRequest")).
@@ -384,6 +375,40 @@ func TestCompleteProfileRegistrationController(t *testing.T) {
 			checkResponse: func(t *testing.T, resp map[string]any) {
 				assert.False(t, resp["success"].(bool))
 				assert.Contains(t, resp["message"], "already been registered")
+			},
+		},
+		{
+			name:           "error - invalid date_of_birth format rejected at DTO validation layer",
+			registrationID: registrationID.String(),
+			authHeader:     "Bearer " + registrationToken,
+			body: map[string]any{
+				"full_name":     "John Smith",
+				"date_of_birth": "not-a-date",
+				"gender":        "GENDER_001",
+			},
+			// Usecase must NOT be called — validation should fail at the controller layer
+			// before the usecase mock is invoked. If the datetime tag is missing, the
+			// mock will be called and AssertExpectations will fail because no expectation
+			// was set.
+			setupMock:      func(m *MockAuthUsecase) {},
+			expectedStatus: fiber.StatusBadRequest,
+			checkResponse: func(t *testing.T, resp map[string]any) {
+				assert.False(t, resp["success"].(bool))
+			},
+		},
+		{
+			name:           "error - date_of_birth with wrong separator rejected at DTO validation layer",
+			registrationID: registrationID.String(),
+			authHeader:     "Bearer " + registrationToken,
+			body: map[string]any{
+				"full_name":     "John Smith",
+				"date_of_birth": "1990/01/15",
+				"gender":        "GENDER_001",
+			},
+			setupMock:      func(m *MockAuthUsecase) {},
+			expectedStatus: fiber.StatusBadRequest,
+			checkResponse: func(t *testing.T, resp map[string]any) {
+				assert.False(t, resp["success"].(bool))
 			},
 		},
 	}

@@ -11,6 +11,15 @@ import (
 	"github.com/stretchr/testify/mock"
 )
 
+type MockMasterdataValidator struct {
+	mock.Mock
+}
+
+func (m *MockMasterdataValidator) ValidateItemCode(ctx context.Context, categoryCode, itemCode string, tenantID *uuid.UUID) (bool, error) {
+	args := m.Called(ctx, categoryCode, itemCode, tenantID)
+	return args.Bool(0), args.Error(1)
+}
+
 type MockTransactionManager struct {
 	mock.Mock
 }
