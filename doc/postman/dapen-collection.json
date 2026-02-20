@@ -12,8 +12,20 @@
     { "key": "tenant_id", "value": "", "type": "string" },
     { "key": "product_id", "value": "", "type": "string" },
     { "key": "registration_id", "value": "", "type": "string" },
+    { "key": "registration_email", "value": "", "type": "string" },
     { "key": "registration_token", "value": "", "type": "string" },
-    { "key": "login_session_id", "value": "", "type": "string" }
+    { "key": "login_session_id", "value": "", "type": "string" },
+    { "key": "user_id", "value": "", "type": "string" },
+    { "key": "participant_id", "value": "", "type": "string" },
+    { "key": "member_id", "value": "", "type": "string" },
+    { "key": "masterdata_category_id", "value": "", "type": "string" },
+    { "key": "masterdata_item_id", "value": "", "type": "string" },
+    { "key": "identity_id", "value": "", "type": "string" },
+    { "key": "address_id", "value": "", "type": "string" },
+    { "key": "bank_account_id", "value": "", "type": "string" },
+    { "key": "family_member_id", "value": "", "type": "string" },
+    { "key": "beneficiary_id", "value": "", "type": "string" },
+    { "key": "test_email", "value": "", "type": "string" }
   ],
   "item": [
     {
@@ -104,12 +116,46 @@
       "item": [
         {
           "name": "Initiate Registration",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "pm.collectionVariables.set('test_email', 'test_' + Date.now() + '@example.com');"
+                ],
+                "type": "text/javascript"
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 201', function () {",
+                  "  pm.response.to.have.status(201);",
+                  "});",
+                  "pm.test('Response has success flag and extracts registration_id', function () {",
+                  "  var json = pm.response.json();",
+                  "  pm.expect(json.success).to.be.true;",
+                  "  if (json.data && json.data.registration_id) {",
+                  "    pm.collectionVariables.set('registration_id', json.data.registration_id);",
+                  "  } else if (json.data && json.data.id) {",
+                  "    pm.collectionVariables.set('registration_id', json.data.id);",
+                  "  }",
+                  "  if (json.data && json.data.email) {",
+                  "    pm.collectionVariables.set('registration_email', json.data.email);",
+                  "  }",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
           "request": {
             "method": "POST",
             "header": [{ "key": "Content-Type", "value": "application/json" }],
             "body": {
               "mode": "raw",
-              "raw": "{\n    \"email\": \"user@example.com\"\n}",
+              "raw": "{\n    \"email\": \"{{test_email}}\"\n}",
               "options": { "raw": { "language": "json" } }
             },
             "url": {
@@ -156,12 +202,34 @@
         },
         {
           "name": "Verify Registration OTP",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test('Response has success flag and extracts registration_token', function () {",
+                  "  var json = pm.response.json();",
+                  "  pm.expect(json.success).to.be.true;",
+                  "  if (json.data && json.data.registration_token) {",
+                  "    pm.collectionVariables.set('registration_token', json.data.registration_token);",
+                  "  } else if (json.data && json.data.token) {",
+                  "    pm.collectionVariables.set('registration_token', json.data.token);",
+                  "  }",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
           "request": {
             "method": "POST",
             "header": [{ "key": "Content-Type", "value": "application/json" }],
             "body": {
               "mode": "raw",
-              "raw": "{\n    \"email\": \"user@example.com\",\n    \"otp_code\": \"123456\"\n}",
+              "raw": "{\n    \"email\": \"{{registration_email}}\",\n    \"otp_code\": \"123456\"\n}",
               "options": { "raw": { "language": "json" } }
             },
             "url": {
@@ -208,12 +276,29 @@
         },
         {
           "name": "Resend Registration OTP",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test('Response has success flag', function () {",
+                  "  var json = pm.response.json();",
+                  "  pm.expect(json.success).to.be.true;",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
           "request": {
             "method": "POST",
             "header": [{ "key": "Content-Type", "value": "application/json" }],
             "body": {
               "mode": "raw",
-              "raw": "{\n    \"email\": \"user@example.com\"\n}",
+              "raw": "{\n    \"email\": \"{{registration_email}}\"\n}",
               "options": { "raw": { "language": "json" } }
             },
             "url": {
@@ -244,14 +329,31 @@
         },
         {
           "name": "Get Registration Status",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test('Response has success flag', function () {",
+                  "  var json = pm.response.json();",
+                  "  pm.expect(json.success).to.be.true;",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
           "request": {
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{base_url}}/api/v1/iam/registrations/{{registration_id}}/status?email=user@example.com",
+              "raw": "{{base_url}}/api/v1/iam/registrations/{{registration_id}}/status?email={{registration_email}}",
               "host": ["{{base_url}}"],
               "path": ["api", "v1", "iam", "registrations", "{{registration_id}}", "status"],
-              "query": [{ "key": "email", "value": "user@example.com" }]
+              "query": [{ "key": "email", "value": "{{registration_email}}" }]
             },
             "description": "Get current registration session status. Requires email query parameter."
           },
@@ -284,6 +386,26 @@
         },
         {
           "name": "Set Password",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test('Response has success flag and extracts updated registration_token', function () {",
+                  "  var json = pm.response.json();",
+                  "  pm.expect(json.success).to.be.true;",
+                  "  if (json.data && json.data.registration_token) {",
+                  "    pm.collectionVariables.set('registration_token', json.data.registration_token);",
+                  "  }",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
           "request": {
             "method": "POST",
             "header": [
@@ -331,6 +453,29 @@
         },
         {
           "name": "Complete Profile Registration",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 201', function () {",
+                  "  pm.response.to.have.status(201);",
+                  "});",
+                  "pm.test('Response has success flag and extracts tokens + user_id', function () {",
+                  "  var json = pm.response.json();",
+                  "  pm.expect(json.success).to.be.true;",
+                  "  if (json.data) {",
+                  "    if (json.data.user_id) { pm.collectionVariables.set('user_id', json.data.user_id); }",
+                  "    if (json.data.id) { pm.collectionVariables.set('user_id', json.data.id); }",
+                  "    if (json.data.access_token) { pm.collectionVariables.set('access_token', json.data.access_token); }",
+                  "    if (json.data.refresh_token) { pm.collectionVariables.set('refresh_token', json.data.refresh_token); }",
+                  "  }",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
           "request": {
             "method": "POST",
             "header": [
@@ -370,6 +515,29 @@
         },
         {
           "name": "Complete Registration",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 201', function () {",
+                  "  pm.response.to.have.status(201);",
+                  "});",
+                  "pm.test('Response has success flag and extracts tokens + user_id', function () {",
+                  "  var json = pm.response.json();",
+                  "  pm.expect(json.success).to.be.true;",
+                  "  if (json.data) {",
+                  "    if (json.data.user_id) { pm.collectionVariables.set('user_id', json.data.user_id); }",
+                  "    if (json.data.id) { pm.collectionVariables.set('user_id', json.data.id); }",
+                  "    if (json.data.access_token) { pm.collectionVariables.set('access_token', json.data.access_token); }",
+                  "    if (json.data.refresh_token) { pm.collectionVariables.set('refresh_token', json.data.refresh_token); }",
+                  "  }",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
           "request": {
             "method": "POST",
             "header": [
@@ -415,6 +583,26 @@
       "item": [
         {
           "name": "Initiate Login",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test('Response has success flag and extracts login_session_id', function () {",
+                  "  var json = pm.response.json();",
+                  "  pm.expect(json.success).to.be.true;",
+                  "  if (json.data && json.data.login_session_id) {",
+                  "    pm.collectionVariables.set('login_session_id', json.data.login_session_id);",
+                  "  }",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
           "request": {
             "method": "POST",
             "header": [{ "key": "Content-Type", "value": "application/json" }],
@@ -459,6 +647,28 @@
         },
         {
           "name": "Verify Login OTP",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test('Response has success flag and extracts access/refresh tokens + user_id', function () {",
+                  "  var json = pm.response.json();",
+                  "  pm.expect(json.success).to.be.true;",
+                  "  if (json.data) {",
+                  "    if (json.data.access_token) { pm.collectionVariables.set('access_token', json.data.access_token); }",
+                  "    if (json.data.refresh_token) { pm.collectionVariables.set('refresh_token', json.data.refresh_token); }",
+                  "    if (json.data.user && json.data.user.id) { pm.collectionVariables.set('user_id', json.data.user.id); }",
+                  "  }",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
           "request": {
             "method": "POST",
             "header": [{ "key": "Content-Type", "value": "application/json" }],
@@ -511,6 +721,23 @@
         },
         {
           "name": "Resend Login OTP",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test('Response has success flag', function () {",
+                  "  var json = pm.response.json();",
+                  "  pm.expect(json.success).to.be.true;",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
           "request": {
             "method": "POST",
             "header": [{ "key": "Content-Type", "value": "application/json" }],
@@ -547,6 +774,23 @@
         },
         {
           "name": "Get Login Status",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test('Response has success flag', function () {",
+                  "  var json = pm.response.json();",
+                  "  pm.expect(json.success).to.be.true;",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
           "request": {
             "method": "GET",
             "header": [],
@@ -585,6 +829,27 @@
       "item": [
         {
           "name": "Refresh Token",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test('Response has success flag and extracts new tokens', function () {",
+                  "  var json = pm.response.json();",
+                  "  pm.expect(json.success).to.be.true;",
+                  "  if (json.data) {",
+                  "    if (json.data.access_token) { pm.collectionVariables.set('access_token', json.data.access_token); }",
+                  "    if (json.data.refresh_token) { pm.collectionVariables.set('refresh_token', json.data.refresh_token); }",
+                  "  }",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
           "request": {
             "method": "POST",
             "header": [{ "key": "Content-Type", "value": "application/json" }],
@@ -637,6 +902,23 @@
         },
         {
           "name": "Logout",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test('Response has success flag', function () {",
+                  "  var json = pm.response.json();",
+                  "  pm.expect(json.success).to.be.true;",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
           "request": {
             "method": "POST",
             "header": [
@@ -676,6 +958,23 @@
         },
         {
           "name": "Logout All",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test('Response has success flag', function () {",
+                  "  var json = pm.response.json();",
+                  "  pm.expect(json.success).to.be.true;",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
           "request": {
             "method": "POST",
             "header": [
@@ -721,6 +1020,23 @@
       "item": [
         {
           "name": "Get My Profile",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test('Response has success flag', function () {",
+                  "  var json = pm.response.json();",
+                  "  pm.expect(json.success).to.be.true;",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
           "request": {
             "method": "GET",
             "header": [{ "key": "Authorization", "value": "Bearer {{access_token}}" }],
@@ -752,6 +1068,23 @@
         },
         {
           "name": "Update My Profile",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test('Response has success flag', function () {",
+                  "  var json = pm.response.json();",
+                  "  pm.expect(json.success).to.be.true;",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
           "request": {
             "method": "PUT",
             "header": [
@@ -791,6 +1124,25 @@
         },
         {
           "name": "Create User (Admin)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 201', function () {",
+                  "  pm.response.to.have.status(201);",
+                  "});",
+                  "pm.test('Response has success flag and extracts user_id', function () {",
+                  "  var json = pm.response.json();",
+                  "  pm.expect(json.success).to.be.true;",
+                  "  if (json.data && json.data.user_id) { pm.collectionVariables.set('user_id', json.data.user_id); }",
+                  "  if (json.data && json.data.id) { pm.collectionVariables.set('user_id', json.data.id); }",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
           "request": {
             "method": "POST",
             "header": [
@@ -846,6 +1198,23 @@
         },
         {
           "name": "List Users (Admin)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test('Response has success flag', function () {",
+                  "  var json = pm.response.json();",
+                  "  pm.expect(json.success).to.be.true;",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
           "request": {
             "method": "GET",
             "header": [{ "key": "Authorization", "value": "Bearer {{access_token}}" }],
@@ -885,14 +1254,30 @@
         },
         {
           "name": "Get User By ID (Admin)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test('Response has success flag', function () {",
+                  "  var json = pm.response.json();",
+                  "  pm.expect(json.success).to.be.true;",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
           "request": {
             "method": "GET",
             "header": [{ "key": "Authorization", "value": "Bearer {{access_token}}" }],
             "url": {
-              "raw": "{{base_url}}/api/v1/iam/users/:id",
+              "raw": "{{base_url}}/api/v1/iam/users/{{user_id}}",
               "host": ["{{base_url}}"],
-              "path": ["api", "v1", "iam", "users", ":id"],
-              "variable": [{ "key": "id", "value": "019500a2-..." }]
+              "path": ["api", "v1", "iam", "users", "{{user_id}}"]
             },
             "description": "Get a specific user by ID. Requires PLATFORM_ADMIN role."
           },
@@ -917,6 +1302,23 @@
         },
         {
           "name": "Update User (Admin)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test('Response has success flag', function () {",
+                  "  var json = pm.response.json();",
+                  "  pm.expect(json.success).to.be.true;",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
           "request": {
             "method": "PUT",
             "header": [
@@ -929,10 +1331,9 @@
               "options": { "raw": { "language": "json" } }
             },
             "url": {
-              "raw": "{{base_url}}/api/v1/iam/users/:id",
+              "raw": "{{base_url}}/api/v1/iam/users/{{user_id}}",
               "host": ["{{base_url}}"],
-              "path": ["api", "v1", "iam", "users", ":id"],
-              "variable": [{ "key": "id", "value": "019500a2-..." }]
+              "path": ["api", "v1", "iam", "users", "{{user_id}}"]
             },
             "description": "Update user by ID. Requires PLATFORM_ADMIN role."
           },
@@ -957,14 +1358,30 @@
         },
         {
           "name": "Delete User (Admin)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test('Response has success flag', function () {",
+                  "  var json = pm.response.json();",
+                  "  pm.expect(json.success).to.be.true;",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
           "request": {
             "method": "DELETE",
             "header": [{ "key": "Authorization", "value": "Bearer {{access_token}}" }],
             "url": {
-              "raw": "{{base_url}}/api/v1/iam/users/:id",
+              "raw": "{{base_url}}/api/v1/iam/users/{{user_id}}",
               "host": ["{{base_url}}"],
-              "path": ["api", "v1", "iam", "users", ":id"],
-              "variable": [{ "key": "id", "value": "019500a2-..." }]
+              "path": ["api", "v1", "iam", "users", "{{user_id}}"]
             },
             "description": "Soft-delete a user. Requires PLATFORM_ADMIN role."
           },
@@ -989,14 +1406,30 @@
         },
         {
           "name": "Approve User (Admin)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test('Response has success flag', function () {",
+                  "  var json = pm.response.json();",
+                  "  pm.expect(json.success).to.be.true;",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
           "request": {
             "method": "POST",
             "header": [{ "key": "Authorization", "value": "Bearer {{access_token}}" }],
             "url": {
-              "raw": "{{base_url}}/api/v1/iam/users/:id/approve",
+              "raw": "{{base_url}}/api/v1/iam/users/{{user_id}}/approve",
               "host": ["{{base_url}}"],
-              "path": ["api", "v1", "iam", "users", ":id", "approve"],
-              "variable": [{ "key": "id", "value": "019500a2-..." }]
+              "path": ["api", "v1", "iam", "users", "{{user_id}}", "approve"]
             },
             "description": "Approve a pending user registration. Requires PLATFORM_ADMIN role."
           },
@@ -1013,6 +1446,23 @@
         },
         {
           "name": "Reject User (Admin)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test('Response has success flag', function () {",
+                  "  var json = pm.response.json();",
+                  "  pm.expect(json.success).to.be.true;",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
           "request": {
             "method": "POST",
             "header": [
@@ -1025,10 +1475,9 @@
               "options": { "raw": { "language": "json" } }
             },
             "url": {
-              "raw": "{{base_url}}/api/v1/iam/users/:id/reject",
+              "raw": "{{base_url}}/api/v1/iam/users/{{user_id}}/reject",
               "host": ["{{base_url}}"],
-              "path": ["api", "v1", "iam", "users", ":id", "reject"],
-              "variable": [{ "key": "id", "value": "019500a2-..." }]
+              "path": ["api", "v1", "iam", "users", "{{user_id}}", "reject"]
             },
             "description": "Reject a pending user registration with reason. Requires PLATFORM_ADMIN role."
           },
@@ -1045,14 +1494,30 @@
         },
         {
           "name": "Unlock User (Admin)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test('Response has success flag', function () {",
+                  "  var json = pm.response.json();",
+                  "  pm.expect(json.success).to.be.true;",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
           "request": {
             "method": "POST",
             "header": [{ "key": "Authorization", "value": "Bearer {{access_token}}" }],
             "url": {
-              "raw": "{{base_url}}/api/v1/iam/users/:id/unlock",
+              "raw": "{{base_url}}/api/v1/iam/users/{{user_id}}/unlock",
               "host": ["{{base_url}}"],
-              "path": ["api", "v1", "iam", "users", ":id", "unlock"],
-              "variable": [{ "key": "id", "value": "019500a2-..." }]
+              "path": ["api", "v1", "iam", "users", "{{user_id}}", "unlock"]
             },
             "description": "Unlock a locked user account. Requires PLATFORM_ADMIN role."
           },
@@ -1069,14 +1534,30 @@
         },
         {
           "name": "Reset User PIN (Admin)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test('Response has success flag', function () {",
+                  "  var json = pm.response.json();",
+                  "  pm.expect(json.success).to.be.true;",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
           "request": {
             "method": "POST",
             "header": [{ "key": "Authorization", "value": "Bearer {{access_token}}" }],
             "url": {
-              "raw": "{{base_url}}/api/v1/iam/users/:id/reset-pin",
+              "raw": "{{base_url}}/api/v1/iam/users/{{user_id}}/reset-pin",
               "host": ["{{base_url}}"],
-              "path": ["api", "v1", "iam", "users", ":id", "reset-pin"],
-              "variable": [{ "key": "id", "value": "019500a2-..." }]
+              "path": ["api", "v1", "iam", "users", "{{user_id}}", "reset-pin"]
             },
             "description": "Reset a user's PIN. Requires PLATFORM_ADMIN role."
           },
@@ -1099,6 +1580,24 @@
       "item": [
         {
           "name": "Create Role (Admin)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 201', function () {",
+                  "  pm.response.to.have.status(201);",
+                  "});",
+                  "pm.test('Response has success flag and extracts role_id', function () {",
+                  "  var json = pm.response.json();",
+                  "  pm.expect(json.success).to.be.true;",
+                  "  if (json.data && json.data.id) { pm.collectionVariables.set('role_id', json.data.id); }",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
           "request": {
             "method": "POST",
             "header": [
@@ -1163,6 +1662,23 @@
           "item": [
             {
               "name": "List Categories",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test('Status code is 200', function () {",
+                      "  pm.response.to.have.status(200);",
+                      "});",
+                      "pm.test('Response has success flag', function () {",
+                      "  var json = pm.response.json();",
+                      "  pm.expect(json.success).to.be.true;",
+                      "});"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ],
               "request": {
                 "method": "GET",
                 "header": [],
@@ -1194,14 +1710,30 @@
             },
             {
               "name": "Get Category By ID",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test('Status code is 200', function () {",
+                      "  pm.response.to.have.status(200);",
+                      "});",
+                      "pm.test('Response has success flag', function () {",
+                      "  var json = pm.response.json();",
+                      "  pm.expect(json.success).to.be.true;",
+                      "});"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ],
               "request": {
                 "method": "GET",
                 "header": [],
                 "url": {
-                  "raw": "{{base_url}}/api/v1/masterdata/categories/:id",
+                  "raw": "{{base_url}}/api/v1/masterdata/categories/{{masterdata_category_id}}",
                   "host": ["{{base_url}}"],
-                  "path": ["api", "v1", "masterdata", "categories", ":id"],
-                  "variable": [{ "key": "id", "value": "019500d1-..." }]
+                  "path": ["api", "v1", "masterdata", "categories", "{{masterdata_category_id}}"]
                 },
                 "description": "Get a specific category by UUID. Public endpoint."
               },
@@ -1226,6 +1758,23 @@
             },
             {
               "name": "Get Category By Code",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test('Status code is 200', function () {",
+                      "  pm.response.to.have.status(200);",
+                      "});",
+                      "pm.test('Response has success flag', function () {",
+                      "  var json = pm.response.json();",
+                      "  pm.expect(json.success).to.be.true;",
+                      "});"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ],
               "request": {
                 "method": "GET",
                 "header": [],
@@ -1250,14 +1799,30 @@
             },
             {
               "name": "Get Category Children",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test('Status code is 200', function () {",
+                      "  pm.response.to.have.status(200);",
+                      "});",
+                      "pm.test('Response has success flag', function () {",
+                      "  var json = pm.response.json();",
+                      "  pm.expect(json.success).to.be.true;",
+                      "});"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ],
               "request": {
                 "method": "GET",
                 "header": [],
                 "url": {
-                  "raw": "{{base_url}}/api/v1/masterdata/categories/:id/children",
+                  "raw": "{{base_url}}/api/v1/masterdata/categories/{{masterdata_category_id}}/children",
                   "host": ["{{base_url}}"],
-                  "path": ["api", "v1", "masterdata", "categories", ":id", "children"],
-                  "variable": [{ "key": "id", "value": "019500d1-..." }]
+                  "path": ["api", "v1", "masterdata", "categories", "{{masterdata_category_id}}", "children"]
                 },
                 "description": "Get child categories of a parent category. Public endpoint."
               },
@@ -1274,6 +1839,24 @@
             },
             {
               "name": "Create Category (Admin)",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test('Status code is 201', function () {",
+                      "  pm.response.to.have.status(201);",
+                      "});",
+                      "pm.test('Response has success flag and extracts masterdata_category_id', function () {",
+                      "  var json = pm.response.json();",
+                      "  pm.expect(json.success).to.be.true;",
+                      "  if (json.data && json.data.id) { pm.collectionVariables.set('masterdata_category_id', json.data.id); }",
+                      "});"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ],
               "request": {
                 "method": "POST",
                 "header": [
@@ -1321,6 +1904,23 @@
             },
             {
               "name": "Update Category (Admin)",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test('Status code is 200', function () {",
+                      "  pm.response.to.have.status(200);",
+                      "});",
+                      "pm.test('Response has success flag', function () {",
+                      "  var json = pm.response.json();",
+                      "  pm.expect(json.success).to.be.true;",
+                      "});"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ],
               "request": {
                 "method": "PUT",
                 "header": [
@@ -1333,10 +1933,9 @@
                   "options": { "raw": { "language": "json" } }
                 },
                 "url": {
-                  "raw": "{{base_url}}/api/v1/masterdata/categories/:id",
+                  "raw": "{{base_url}}/api/v1/masterdata/categories/{{masterdata_category_id}}",
                   "host": ["{{base_url}}"],
-                  "path": ["api", "v1", "masterdata", "categories", ":id"],
-                  "variable": [{ "key": "id", "value": "019500d2-..." }]
+                  "path": ["api", "v1", "masterdata", "categories", "{{masterdata_category_id}}"]
                 },
                 "description": "Update a masterdata category. Requires PLATFORM_ADMIN. version field required for optimistic locking."
               },
@@ -1353,14 +1952,30 @@
             },
             {
               "name": "Delete Category (Admin)",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test('Status code is 200', function () {",
+                      "  pm.response.to.have.status(200);",
+                      "});",
+                      "pm.test('Response has success flag', function () {",
+                      "  var json = pm.response.json();",
+                      "  pm.expect(json.success).to.be.true;",
+                      "});"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ],
               "request": {
                 "method": "DELETE",
                 "header": [{ "key": "Authorization", "value": "Bearer {{access_token}}" }],
                 "url": {
-                  "raw": "{{base_url}}/api/v1/masterdata/categories/:id",
+                  "raw": "{{base_url}}/api/v1/masterdata/categories/{{masterdata_category_id}}",
                   "host": ["{{base_url}}"],
-                  "path": ["api", "v1", "masterdata", "categories", ":id"],
-                  "variable": [{ "key": "id", "value": "019500d2-..." }]
+                  "path": ["api", "v1", "masterdata", "categories", "{{masterdata_category_id}}"]
                 },
                 "description": "Delete a masterdata category. Requires PLATFORM_ADMIN."
               },
@@ -1382,6 +1997,23 @@
           "item": [
             {
               "name": "List Items",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test('Status code is 200', function () {",
+                      "  pm.response.to.have.status(200);",
+                      "});",
+                      "pm.test('Response has success flag', function () {",
+                      "  var json = pm.response.json();",
+                      "  pm.expect(json.success).to.be.true;",
+                      "});"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ],
               "request": {
                 "method": "GET",
                 "header": [],
@@ -1412,14 +2044,30 @@
             },
             {
               "name": "Get Item By ID",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test('Status code is 200', function () {",
+                      "  pm.response.to.have.status(200);",
+                      "});",
+                      "pm.test('Response has success flag', function () {",
+                      "  var json = pm.response.json();",
+                      "  pm.expect(json.success).to.be.true;",
+                      "});"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ],
               "request": {
                 "method": "GET",
                 "header": [],
                 "url": {
-                  "raw": "{{base_url}}/api/v1/masterdata/items/:id",
+                  "raw": "{{base_url}}/api/v1/masterdata/items/{{masterdata_item_id}}",
                   "host": ["{{base_url}}"],
-                  "path": ["api", "v1", "masterdata", "items", ":id"],
-                  "variable": [{ "key": "id", "value": "019500e1-..." }]
+                  "path": ["api", "v1", "masterdata", "items", "{{masterdata_item_id}}"]
                 },
                 "description": "Get a specific item by UUID. Public endpoint."
               },
@@ -1444,6 +2092,23 @@
             },
             {
               "name": "Get Item By Code",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test('Status code is 200', function () {",
+                      "  pm.response.to.have.status(200);",
+                      "});",
+                      "pm.test('Response has success flag', function () {",
+                      "  var json = pm.response.json();",
+                      "  pm.expect(json.success).to.be.true;",
+                      "});"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ],
               "request": {
                 "method": "GET",
                 "header": [],
@@ -1471,6 +2136,23 @@
             },
             {
               "name": "Get Item Tree",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test('Status code is 200', function () {",
+                      "  pm.response.to.have.status(200);",
+                      "});",
+                      "pm.test('Response has success flag', function () {",
+                      "  var json = pm.response.json();",
+                      "  pm.expect(json.success).to.be.true;",
+                      "});"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ],
               "request": {
                 "method": "GET",
                 "header": [],
@@ -1495,6 +2177,23 @@
             },
             {
               "name": "Get Default Item",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test('Status code is 200', function () {",
+                      "  pm.response.to.have.status(200);",
+                      "});",
+                      "pm.test('Response has success flag', function () {",
+                      "  var json = pm.response.json();",
+                      "  pm.expect(json.success).to.be.true;",
+                      "});"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ],
               "request": {
                 "method": "GET",
                 "header": [],
@@ -1519,6 +2218,23 @@
             },
             {
               "name": "List Items By Parent",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test('Status code is 200', function () {",
+                      "  pm.response.to.have.status(200);",
+                      "});",
+                      "pm.test('Response has success flag', function () {",
+                      "  var json = pm.response.json();",
+                      "  pm.expect(json.success).to.be.true;",
+                      "});"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ],
               "request": {
                 "method": "GET",
                 "header": [],
@@ -1546,14 +2262,30 @@
             },
             {
               "name": "Get Item Children",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test('Status code is 200', function () {",
+                      "  pm.response.to.have.status(200);",
+                      "});",
+                      "pm.test('Response has success flag', function () {",
+                      "  var json = pm.response.json();",
+                      "  pm.expect(json.success).to.be.true;",
+                      "});"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ],
               "request": {
                 "method": "GET",
                 "header": [],
                 "url": {
-                  "raw": "{{base_url}}/api/v1/masterdata/items/:id/children",
+                  "raw": "{{base_url}}/api/v1/masterdata/items/{{masterdata_item_id}}/children",
                   "host": ["{{base_url}}"],
-                  "path": ["api", "v1", "masterdata", "items", ":id", "children"],
-                  "variable": [{ "key": "id", "value": "019500e3-..." }]
+                  "path": ["api", "v1", "masterdata", "items", "{{masterdata_item_id}}", "children"]
                 },
                 "description": "Get child items of a parent item. Public endpoint."
               },
@@ -1570,6 +2302,24 @@
             },
             {
               "name": "Create Item (Admin)",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test('Status code is 201', function () {",
+                      "  pm.response.to.have.status(201);",
+                      "});",
+                      "pm.test('Response has success flag and extracts masterdata_item_id', function () {",
+                      "  var json = pm.response.json();",
+                      "  pm.expect(json.success).to.be.true;",
+                      "  if (json.data && json.data.id) { pm.collectionVariables.set('masterdata_item_id', json.data.id); }",
+                      "});"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ],
               "request": {
                 "method": "POST",
                 "header": [
@@ -1578,7 +2328,7 @@
                 ],
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n    \"category_id\": \"019500d1-...\",\n    \"code\": \"OTHER\",\n    \"name\": \"Other\",\n    \"sort_order\": 3,\n    \"is_system\": true,\n    \"is_default\": false\n}",
+                  "raw": "{\n    \"category_id\": \"{{masterdata_category_id}}\",\n    \"code\": \"OTHER\",\n    \"name\": \"Other\",\n    \"sort_order\": 3,\n    \"is_system\": true,\n    \"is_default\": false\n}",
                   "options": { "raw": { "language": "json" } }
                 },
                 "url": {
@@ -1601,6 +2351,23 @@
             },
             {
               "name": "Update Item (Admin)",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test('Status code is 200', function () {",
+                      "  pm.response.to.have.status(200);",
+                      "});",
+                      "pm.test('Response has success flag', function () {",
+                      "  var json = pm.response.json();",
+                      "  pm.expect(json.success).to.be.true;",
+                      "});"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ],
               "request": {
                 "method": "PUT",
                 "header": [
@@ -1613,10 +2380,9 @@
                   "options": { "raw": { "language": "json" } }
                 },
                 "url": {
-                  "raw": "{{base_url}}/api/v1/masterdata/items/:id",
+                  "raw": "{{base_url}}/api/v1/masterdata/items/{{masterdata_item_id}}",
                   "host": ["{{base_url}}"],
-                  "path": ["api", "v1", "masterdata", "items", ":id"],
-                  "variable": [{ "key": "id", "value": "019500e4-..." }]
+                  "path": ["api", "v1", "masterdata", "items", "{{masterdata_item_id}}"]
                 },
                 "description": "Update a masterdata item. Requires PLATFORM_ADMIN. version field required for optimistic locking."
               },
@@ -1633,14 +2399,30 @@
             },
             {
               "name": "Delete Item (Admin)",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test('Status code is 200', function () {",
+                      "  pm.response.to.have.status(200);",
+                      "});",
+                      "pm.test('Response has success flag', function () {",
+                      "  var json = pm.response.json();",
+                      "  pm.expect(json.success).to.be.true;",
+                      "});"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ],
               "request": {
                 "method": "DELETE",
                 "header": [{ "key": "Authorization", "value": "Bearer {{access_token}}" }],
                 "url": {
-                  "raw": "{{base_url}}/api/v1/masterdata/items/:id",
+                  "raw": "{{base_url}}/api/v1/masterdata/items/{{masterdata_item_id}}",
                   "host": ["{{base_url}}"],
-                  "path": ["api", "v1", "masterdata", "items", ":id"],
-                  "variable": [{ "key": "id", "value": "019500e4-..." }]
+                  "path": ["api", "v1", "masterdata", "items", "{{masterdata_item_id}}"]
                 },
                 "description": "Delete a masterdata item. Requires PLATFORM_ADMIN."
               },
@@ -1662,6 +2444,23 @@
           "item": [
             {
               "name": "Validate Code",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test('Status code is 200', function () {",
+                      "  pm.response.to.have.status(200);",
+                      "});",
+                      "pm.test('Response has success flag', function () {",
+                      "  var json = pm.response.json();",
+                      "  pm.expect(json.success).to.be.true;",
+                      "});"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ],
               "request": {
                 "method": "POST",
                 "header": [{ "key": "Content-Type", "value": "application/json" }],
@@ -1690,6 +2489,23 @@
             },
             {
               "name": "Validate Codes (Batch)",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test('Status code is 200', function () {",
+                      "  pm.response.to.have.status(200);",
+                      "});",
+                      "pm.test('Response has success flag', function () {",
+                      "  var json = pm.response.json();",
+                      "  pm.expect(json.success).to.be.true;",
+                      "});"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ],
               "request": {
                 "method": "POST",
                 "header": [{ "key": "Content-Type", "value": "application/json" }],
@@ -1725,7 +2541,90 @@
       "description": "Participant management. JWT + X-Tenant-ID + product-scoped. Base: /api/v1/saving/products/{productId}/participants",
       "item": [
         {
+          "name": "Self Register Participant",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 201', function () {",
+                  "  pm.response.to.have.status(201);",
+                  "});",
+                  "pm.test('Response has success flag and extracts participant_id', function () {",
+                  "  var json = pm.response.json();",
+                  "  pm.expect(json.success).to.be.true;",
+                  "  if (json.data && json.data.id) { pm.collectionVariables.set('participant_id', json.data.id); }",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{access_token}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"product_id\": \"{{product_id}}\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/iam/participants/self-register",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "iam", "participants", "self-register"]
+            },
+            "description": "Self-register the authenticated user as a participant for the given product. Rate limited to 5 req/min. No X-Tenant-ID required — tenant derived from product_id."
+          },
+          "response": [
+            {
+              "name": "201 - Self Registered",
+              "status": "Created",
+              "code": 201,
+              "_postman_previewlanguage": "json",
+              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "body": "{\n    \"success\": true,\n    \"data\": {\n        \"id\": \"019500f1-...\",\n        \"product_id\": \"019500a1-...\",\n        \"user_id\": \"019500a2-...\",\n        \"status\": \"DRAFT\",\n        \"created_at\": \"2026-02-18T10:00:00Z\"\n    }\n}"
+            },
+            {
+              "name": "401 - Unauthorized",
+              "status": "Unauthorized",
+              "code": 401,
+              "_postman_previewlanguage": "json",
+              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "body": "{\n    \"success\": false,\n    \"error\": \"missing authorization header\",\n    \"code\": \"ERR_UNAUTHORIZED\"\n}"
+            },
+            {
+              "name": "429 - Too Many Requests",
+              "status": "Too Many Requests",
+              "code": 429,
+              "_postman_previewlanguage": "json",
+              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "body": "{\n    \"success\": false,\n    \"error\": \"too many requests\",\n    \"code\": \"ERR_TOO_MANY_REQUESTS\"\n}"
+            }
+          ]
+        },
+        {
           "name": "Create Participant",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 201', function () {",
+                  "  pm.response.to.have.status(201);",
+                  "});",
+                  "pm.test('Response has success flag and extracts participant_id', function () {",
+                  "  var json = pm.response.json();",
+                  "  pm.expect(json.success).to.be.true;",
+                  "  if (json.data && json.data.id) { pm.collectionVariables.set('participant_id', json.data.id); }",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
           "request": {
             "method": "POST",
             "header": [
@@ -1774,6 +2673,23 @@
         },
         {
           "name": "List Participants",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test('Response has success flag', function () {",
+                  "  var json = pm.response.json();",
+                  "  pm.expect(json.success).to.be.true;",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
           "request": {
             "method": "GET",
             "header": [
@@ -1781,7 +2697,7 @@
               { "key": "X-Tenant-ID", "value": "{{tenant_id}}" }
             ],
             "url": {
-              "raw": "{{base_url}}/api/v1/saving/products/{{product_id}}/participants/?page=1&per_page=10&status=DRAFT&sort_by=created_at&sort_order=desc",
+              "raw": "{{base_url}}/api/v1/saving/products/{{product_id}}/participants/?page=1&per_page=10&sort_by=created_at&sort_order=desc",
               "host": ["{{base_url}}"],
               "path": ["api", "v1", "saving", "products", "{{product_id}}", "participants", ""],
               "query": [
@@ -1808,6 +2724,23 @@
         },
         {
           "name": "Get Participant",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test('Response has success flag', function () {",
+                  "  var json = pm.response.json();",
+                  "  pm.expect(json.success).to.be.true;",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
           "request": {
             "method": "GET",
             "header": [
@@ -1815,10 +2748,9 @@
               { "key": "X-Tenant-ID", "value": "{{tenant_id}}" }
             ],
             "url": {
-              "raw": "{{base_url}}/api/v1/saving/products/{{product_id}}/participants/:id",
+              "raw": "{{base_url}}/api/v1/saving/products/{{product_id}}/participants/{{participant_id}}",
               "host": ["{{base_url}}"],
-              "path": ["api", "v1", "saving", "products", "{{product_id}}", "participants", ":id"],
-              "variable": [{ "key": "id", "value": "019500f1-..." }]
+              "path": ["api", "v1", "saving", "products", "{{product_id}}", "participants", "{{participant_id}}"]
             },
             "description": "Get participant by ID. Permission: participant:read"
           },
@@ -1843,6 +2775,23 @@
         },
         {
           "name": "Update Personal Data",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test('Response has success flag', function () {",
+                  "  var json = pm.response.json();",
+                  "  pm.expect(json.success).to.be.true;",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
           "request": {
             "method": "PUT",
             "header": [
@@ -1856,10 +2805,9 @@
               "options": { "raw": { "language": "json" } }
             },
             "url": {
-              "raw": "{{base_url}}/api/v1/saving/products/{{product_id}}/participants/:id/personal-data",
+              "raw": "{{base_url}}/api/v1/saving/products/{{product_id}}/participants/{{participant_id}}/personal-data",
               "host": ["{{base_url}}"],
-              "path": ["api", "v1", "saving", "products", "{{product_id}}", "participants", ":id", "personal-data"],
-              "variable": [{ "key": "id", "value": "019500f1-..." }]
+              "path": ["api", "v1", "saving", "products", "{{product_id}}", "participants", "{{participant_id}}", "personal-data"]
             },
             "description": "Update participant personal data. Permission: participant:update"
           },
@@ -1876,6 +2824,24 @@
         },
         {
           "name": "Save Identity",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test('Response has success flag and extracts identity_id', function () {",
+                  "  var json = pm.response.json();",
+                  "  pm.expect(json.success).to.be.true;",
+                  "  if (json.data && json.data.id) { pm.collectionVariables.set('identity_id', json.data.id); }",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
           "request": {
             "method": "PUT",
             "header": [
@@ -1889,10 +2855,9 @@
               "options": { "raw": { "language": "json" } }
             },
             "url": {
-              "raw": "{{base_url}}/api/v1/saving/products/{{product_id}}/participants/:id/identities",
+              "raw": "{{base_url}}/api/v1/saving/products/{{product_id}}/participants/{{participant_id}}/identities",
               "host": ["{{base_url}}"],
-              "path": ["api", "v1", "saving", "products", "{{product_id}}", "participants", ":id", "identities"],
-              "variable": [{ "key": "id", "value": "019500f1-..." }]
+              "path": ["api", "v1", "saving", "products", "{{product_id}}", "participants", "{{participant_id}}", "identities"]
             },
             "description": "Add or update identity document. Include id field to update existing. Permission: participant:update"
           },
@@ -1909,6 +2874,19 @@
         },
         {
           "name": "Delete Identity",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 2xx', function () {",
+                  "  pm.expect(pm.response.code).to.be.oneOf([200, 204]);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
           "request": {
             "method": "DELETE",
             "header": [
@@ -1916,13 +2894,9 @@
               { "key": "X-Tenant-ID", "value": "{{tenant_id}}" }
             ],
             "url": {
-              "raw": "{{base_url}}/api/v1/saving/products/{{product_id}}/participants/:id/identities/:identityId",
+              "raw": "{{base_url}}/api/v1/saving/products/{{product_id}}/participants/{{participant_id}}/identities/{{identity_id}}",
               "host": ["{{base_url}}"],
-              "path": ["api", "v1", "saving", "products", "{{product_id}}", "participants", ":id", "identities", ":identityId"],
-              "variable": [
-                { "key": "id", "value": "019500f1-..." },
-                { "key": "identityId", "value": "019500f2-..." }
-              ]
+              "path": ["api", "v1", "saving", "products", "{{product_id}}", "participants", "{{participant_id}}", "identities", "{{identity_id}}"]
             },
             "description": "Delete an identity document. Permission: participant:update"
           },
@@ -1939,6 +2913,24 @@
         },
         {
           "name": "Save Address",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test('Response has success flag and extracts address_id', function () {",
+                  "  var json = pm.response.json();",
+                  "  pm.expect(json.success).to.be.true;",
+                  "  if (json.data && json.data.id) { pm.collectionVariables.set('address_id', json.data.id); }",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
           "request": {
             "method": "PUT",
             "header": [
@@ -1952,10 +2944,9 @@
               "options": { "raw": { "language": "json" } }
             },
             "url": {
-              "raw": "{{base_url}}/api/v1/saving/products/{{product_id}}/participants/:id/addresses",
+              "raw": "{{base_url}}/api/v1/saving/products/{{product_id}}/participants/{{participant_id}}/addresses",
               "host": ["{{base_url}}"],
-              "path": ["api", "v1", "saving", "products", "{{product_id}}", "participants", ":id", "addresses"],
-              "variable": [{ "key": "id", "value": "019500f1-..." }]
+              "path": ["api", "v1", "saving", "products", "{{product_id}}", "participants", "{{participant_id}}", "addresses"]
             },
             "description": "Add or update address. Permission: participant:update"
           },
@@ -1972,6 +2963,19 @@
         },
         {
           "name": "Delete Address",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 2xx', function () {",
+                  "  pm.expect(pm.response.code).to.be.oneOf([200, 204]);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
           "request": {
             "method": "DELETE",
             "header": [
@@ -1979,13 +2983,9 @@
               { "key": "X-Tenant-ID", "value": "{{tenant_id}}" }
             ],
             "url": {
-              "raw": "{{base_url}}/api/v1/saving/products/{{product_id}}/participants/:id/addresses/:addressId",
+              "raw": "{{base_url}}/api/v1/saving/products/{{product_id}}/participants/{{participant_id}}/addresses/{{address_id}}",
               "host": ["{{base_url}}"],
-              "path": ["api", "v1", "saving", "products", "{{product_id}}", "participants", ":id", "addresses", ":addressId"],
-              "variable": [
-                { "key": "id", "value": "019500f1-..." },
-                { "key": "addressId", "value": "019500f3-..." }
-              ]
+              "path": ["api", "v1", "saving", "products", "{{product_id}}", "participants", "{{participant_id}}", "addresses", "{{address_id}}"]
             },
             "description": "Delete an address. Permission: participant:update"
           },
@@ -2002,6 +3002,24 @@
         },
         {
           "name": "Save Bank Account",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test('Response has success flag and extracts bank_account_id', function () {",
+                  "  var json = pm.response.json();",
+                  "  pm.expect(json.success).to.be.true;",
+                  "  if (json.data && json.data.id) { pm.collectionVariables.set('bank_account_id', json.data.id); }",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
           "request": {
             "method": "PUT",
             "header": [
@@ -2015,10 +3033,9 @@
               "options": { "raw": { "language": "json" } }
             },
             "url": {
-              "raw": "{{base_url}}/api/v1/saving/products/{{product_id}}/participants/:id/bank-accounts",
+              "raw": "{{base_url}}/api/v1/saving/products/{{product_id}}/participants/{{participant_id}}/bank-accounts",
               "host": ["{{base_url}}"],
-              "path": ["api", "v1", "saving", "products", "{{product_id}}", "participants", ":id", "bank-accounts"],
-              "variable": [{ "key": "id", "value": "019500f1-..." }]
+              "path": ["api", "v1", "saving", "products", "{{product_id}}", "participants", "{{participant_id}}", "bank-accounts"]
             },
             "description": "Add or update bank account. Permission: participant:update"
           },
@@ -2035,6 +3052,19 @@
         },
         {
           "name": "Delete Bank Account",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 2xx', function () {",
+                  "  pm.expect(pm.response.code).to.be.oneOf([200, 204]);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
           "request": {
             "method": "DELETE",
             "header": [
@@ -2042,13 +3072,9 @@
               { "key": "X-Tenant-ID", "value": "{{tenant_id}}" }
             ],
             "url": {
-              "raw": "{{base_url}}/api/v1/saving/products/{{product_id}}/participants/:id/bank-accounts/:accountId",
+              "raw": "{{base_url}}/api/v1/saving/products/{{product_id}}/participants/{{participant_id}}/bank-accounts/{{bank_account_id}}",
               "host": ["{{base_url}}"],
-              "path": ["api", "v1", "saving", "products", "{{product_id}}", "participants", ":id", "bank-accounts", ":accountId"],
-              "variable": [
-                { "key": "id", "value": "019500f1-..." },
-                { "key": "accountId", "value": "019500f4-..." }
-              ]
+              "path": ["api", "v1", "saving", "products", "{{product_id}}", "participants", "{{participant_id}}", "bank-accounts", "{{bank_account_id}}"]
             },
             "description": "Delete a bank account. Permission: participant:update"
           },
@@ -2065,6 +3091,24 @@
         },
         {
           "name": "Save Family Member",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test('Response has success flag and extracts family_member_id', function () {",
+                  "  var json = pm.response.json();",
+                  "  pm.expect(json.success).to.be.true;",
+                  "  if (json.data && json.data.id) { pm.collectionVariables.set('family_member_id', json.data.id); }",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
           "request": {
             "method": "PUT",
             "header": [
@@ -2078,10 +3122,9 @@
               "options": { "raw": { "language": "json" } }
             },
             "url": {
-              "raw": "{{base_url}}/api/v1/saving/products/{{product_id}}/participants/:id/family-members",
+              "raw": "{{base_url}}/api/v1/saving/products/{{product_id}}/participants/{{participant_id}}/family-members",
               "host": ["{{base_url}}"],
-              "path": ["api", "v1", "saving", "products", "{{product_id}}", "participants", ":id", "family-members"],
-              "variable": [{ "key": "id", "value": "019500f1-..." }]
+              "path": ["api", "v1", "saving", "products", "{{product_id}}", "participants", "{{participant_id}}", "family-members"]
             },
             "description": "Add or update a family member. Permission: participant:update"
           },
@@ -2098,6 +3141,19 @@
         },
         {
           "name": "Delete Family Member",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 2xx', function () {",
+                  "  pm.expect(pm.response.code).to.be.oneOf([200, 204]);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
           "request": {
             "method": "DELETE",
             "header": [
@@ -2105,13 +3161,9 @@
               { "key": "X-Tenant-ID", "value": "{{tenant_id}}" }
             ],
             "url": {
-              "raw": "{{base_url}}/api/v1/saving/products/{{product_id}}/participants/:id/family-members/:memberId",
+              "raw": "{{base_url}}/api/v1/saving/products/{{product_id}}/participants/{{participant_id}}/family-members/{{family_member_id}}",
               "host": ["{{base_url}}"],
-              "path": ["api", "v1", "saving", "products", "{{product_id}}", "participants", ":id", "family-members", ":memberId"],
-              "variable": [
-                { "key": "id", "value": "019500f1-..." },
-                { "key": "memberId", "value": "019500f5-..." }
-              ]
+              "path": ["api", "v1", "saving", "products", "{{product_id}}", "participants", "{{participant_id}}", "family-members", "{{family_member_id}}"]
             },
             "description": "Delete a family member. Permission: participant:update"
           },
@@ -2128,6 +3180,23 @@
         },
         {
           "name": "Save Employment",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test('Response has success flag', function () {",
+                  "  var json = pm.response.json();",
+                  "  pm.expect(json.success).to.be.true;",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
           "request": {
             "method": "PUT",
             "header": [
@@ -2141,10 +3210,9 @@
               "options": { "raw": { "language": "json" } }
             },
             "url": {
-              "raw": "{{base_url}}/api/v1/saving/products/{{product_id}}/participants/:id/employment",
+              "raw": "{{base_url}}/api/v1/saving/products/{{product_id}}/participants/{{participant_id}}/employment",
               "host": ["{{base_url}}"],
-              "path": ["api", "v1", "saving", "products", "{{product_id}}", "participants", ":id", "employment"],
-              "variable": [{ "key": "id", "value": "019500f1-..." }]
+              "path": ["api", "v1", "saving", "products", "{{product_id}}", "participants", "{{participant_id}}", "employment"]
             },
             "description": "Save or update employment information. Permission: participant:update"
           },
@@ -2160,7 +3228,24 @@
           ]
         },
         {
-          "name": "Save Beneficiary",
+          "name": "Save Pension",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test('Response has success flag', function () {",
+                  "  var json = pm.response.json();",
+                  "  pm.expect(json.success).to.be.true;",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
           "request": {
             "method": "PUT",
             "header": [
@@ -2170,14 +3255,63 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n    \"family_member_id\": \"019500f5-...\",\n    \"account_number\": \"1234567890\"\n}",
+              "raw": "{\n    \"pension_number\": \"PEN-001\",\n    \"pension_type\": \"DPLK\",\n    \"contribution_amount\": 500000,\n    \"start_date\": \"2015-01-15T00:00:00Z\"\n}",
               "options": { "raw": { "language": "json" } }
             },
             "url": {
-              "raw": "{{base_url}}/api/v1/saving/products/{{product_id}}/participants/:id/beneficiaries",
+              "raw": "{{base_url}}/api/v1/saving/products/{{product_id}}/participants/{{participant_id}}/pension",
               "host": ["{{base_url}}"],
-              "path": ["api", "v1", "saving", "products", "{{product_id}}", "participants", ":id", "beneficiaries"],
-              "variable": [{ "key": "id", "value": "019500f1-..." }]
+              "path": ["api", "v1", "saving", "products", "{{product_id}}", "participants", "{{participant_id}}", "pension"]
+            },
+            "description": "Save or update pension information. Permission: participant:update"
+          },
+          "response": [
+            {
+              "name": "200 - Pension Saved",
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "body": "{\n    \"success\": true,\n    \"data\": {\n        \"id\": \"019500f8-...\",\n        \"pension_number\": \"PEN-001\",\n        \"pension_type\": \"DPLK\",\n        \"contribution_amount\": 500000,\n        \"version\": 1\n    }\n}"
+            }
+          ]
+        },
+        {
+          "name": "Save Beneficiary",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test('Response has success flag and extracts beneficiary_id', function () {",
+                  "  var json = pm.response.json();",
+                  "  pm.expect(json.success).to.be.true;",
+                  "  if (json.data && json.data.id) { pm.collectionVariables.set('beneficiary_id', json.data.id); }",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{access_token}}" },
+              { "key": "X-Tenant-ID", "value": "{{tenant_id}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"family_member_id\": \"{{family_member_id}}\",\n    \"account_number\": \"1234567890\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/saving/products/{{product_id}}/participants/{{participant_id}}/beneficiaries",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "saving", "products", "{{product_id}}", "participants", "{{participant_id}}", "beneficiaries"]
             },
             "description": "Add or update a beneficiary. Permission: participant:update"
           },
@@ -2194,6 +3328,19 @@
         },
         {
           "name": "Delete Beneficiary",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 2xx', function () {",
+                  "  pm.expect(pm.response.code).to.be.oneOf([200, 204]);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
           "request": {
             "method": "DELETE",
             "header": [
@@ -2201,13 +3348,9 @@
               { "key": "X-Tenant-ID", "value": "{{tenant_id}}" }
             ],
             "url": {
-              "raw": "{{base_url}}/api/v1/saving/products/{{product_id}}/participants/:id/beneficiaries/:beneficiaryId",
+              "raw": "{{base_url}}/api/v1/saving/products/{{product_id}}/participants/{{participant_id}}/beneficiaries/{{beneficiary_id}}",
               "host": ["{{base_url}}"],
-              "path": ["api", "v1", "saving", "products", "{{product_id}}", "participants", ":id", "beneficiaries", ":beneficiaryId"],
-              "variable": [
-                { "key": "id", "value": "019500f1-..." },
-                { "key": "beneficiaryId", "value": "019500f7-..." }
-              ]
+              "path": ["api", "v1", "saving", "products", "{{product_id}}", "participants", "{{participant_id}}", "beneficiaries", "{{beneficiary_id}}"]
             },
             "description": "Delete a beneficiary. Permission: participant:update"
           },
@@ -2224,6 +3367,23 @@
         },
         {
           "name": "Upload File",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test('Response has success flag', function () {",
+                  "  var json = pm.response.json();",
+                  "  pm.expect(json.success).to.be.true;",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
           "request": {
             "method": "POST",
             "header": [
@@ -2238,10 +3398,9 @@
               ]
             },
             "url": {
-              "raw": "{{base_url}}/api/v1/saving/products/{{product_id}}/participants/:id/files",
+              "raw": "{{base_url}}/api/v1/saving/products/{{product_id}}/participants/{{participant_id}}/files",
               "host": ["{{base_url}}"],
-              "path": ["api", "v1", "saving", "products", "{{product_id}}", "participants", ":id", "files"],
-              "variable": [{ "key": "id", "value": "019500f1-..." }]
+              "path": ["api", "v1", "saving", "products", "{{product_id}}", "participants", "{{participant_id}}", "files"]
             },
             "description": "Upload a file for a participant. Allowed types: jpeg, png, gif, pdf. Max size: 5MB. Permission: participant:update"
           },
@@ -2266,6 +3425,23 @@
         },
         {
           "name": "Get Status History",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test('Response has success flag', function () {",
+                  "  var json = pm.response.json();",
+                  "  pm.expect(json.success).to.be.true;",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
           "request": {
             "method": "GET",
             "header": [
@@ -2273,10 +3449,9 @@
               { "key": "X-Tenant-ID", "value": "{{tenant_id}}" }
             ],
             "url": {
-              "raw": "{{base_url}}/api/v1/saving/products/{{product_id}}/participants/:id/status-history",
+              "raw": "{{base_url}}/api/v1/saving/products/{{product_id}}/participants/{{participant_id}}/status-history",
               "host": ["{{base_url}}"],
-              "path": ["api", "v1", "saving", "products", "{{product_id}}", "participants", ":id", "status-history"],
-              "variable": [{ "key": "id", "value": "019500f1-..." }]
+              "path": ["api", "v1", "saving", "products", "{{product_id}}", "participants", "{{participant_id}}", "status-history"]
             },
             "description": "Get participant status change history. Permission: participant:read"
           },
@@ -2293,6 +3468,23 @@
         },
         {
           "name": "Submit Participant",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test('Response has success flag', function () {",
+                  "  var json = pm.response.json();",
+                  "  pm.expect(json.success).to.be.true;",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
           "request": {
             "method": "POST",
             "header": [
@@ -2300,10 +3492,9 @@
               { "key": "X-Tenant-ID", "value": "{{tenant_id}}" }
             ],
             "url": {
-              "raw": "{{base_url}}/api/v1/saving/products/{{product_id}}/participants/:id/submit",
+              "raw": "{{base_url}}/api/v1/saving/products/{{product_id}}/participants/{{participant_id}}/submit",
               "host": ["{{base_url}}"],
-              "path": ["api", "v1", "saving", "products", "{{product_id}}", "participants", ":id", "submit"],
-              "variable": [{ "key": "id", "value": "019500f1-..." }]
+              "path": ["api", "v1", "saving", "products", "{{product_id}}", "participants", "{{participant_id}}", "submit"]
             },
             "description": "Submit participant for approval. Moves DRAFT → PENDING_APPROVAL. Permission: participant:submit"
           },
@@ -2320,6 +3511,23 @@
         },
         {
           "name": "Approve Participant",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test('Response has success flag', function () {",
+                  "  var json = pm.response.json();",
+                  "  pm.expect(json.success).to.be.true;",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
           "request": {
             "method": "POST",
             "header": [
@@ -2327,10 +3535,9 @@
               { "key": "X-Tenant-ID", "value": "{{tenant_id}}" }
             ],
             "url": {
-              "raw": "{{base_url}}/api/v1/saving/products/{{product_id}}/participants/:id/approve",
+              "raw": "{{base_url}}/api/v1/saving/products/{{product_id}}/participants/{{participant_id}}/approve",
               "host": ["{{base_url}}"],
-              "path": ["api", "v1", "saving", "products", "{{product_id}}", "participants", ":id", "approve"],
-              "variable": [{ "key": "id", "value": "019500f1-..." }]
+              "path": ["api", "v1", "saving", "products", "{{product_id}}", "participants", "{{participant_id}}", "approve"]
             },
             "description": "Approve a participant. Moves PENDING_APPROVAL → APPROVED. Permission: participant:approve"
           },
@@ -2347,6 +3554,23 @@
         },
         {
           "name": "Reject Participant",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test('Response has success flag', function () {",
+                  "  var json = pm.response.json();",
+                  "  pm.expect(json.success).to.be.true;",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
           "request": {
             "method": "POST",
             "header": [
@@ -2360,10 +3584,9 @@
               "options": { "raw": { "language": "json" } }
             },
             "url": {
-              "raw": "{{base_url}}/api/v1/saving/products/{{product_id}}/participants/:id/reject",
+              "raw": "{{base_url}}/api/v1/saving/products/{{product_id}}/participants/{{participant_id}}/reject",
               "host": ["{{base_url}}"],
-              "path": ["api", "v1", "saving", "products", "{{product_id}}", "participants", ":id", "reject"],
-              "variable": [{ "key": "id", "value": "019500f1-..." }]
+              "path": ["api", "v1", "saving", "products", "{{product_id}}", "participants", "{{participant_id}}", "reject"]
             },
             "description": "Reject a participant with reason. Moves PENDING_APPROVAL → REJECTED. Permission: participant:reject. Reason: min 10, max 500 chars."
           },
@@ -2380,6 +3603,19 @@
         },
         {
           "name": "Delete Participant",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 2xx', function () {",
+                  "  pm.expect(pm.response.code).to.be.oneOf([200, 204]);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
           "request": {
             "method": "DELETE",
             "header": [
@@ -2387,10 +3623,9 @@
               { "key": "X-Tenant-ID", "value": "{{tenant_id}}" }
             ],
             "url": {
-              "raw": "{{base_url}}/api/v1/saving/products/{{product_id}}/participants/:id",
+              "raw": "{{base_url}}/api/v1/saving/products/{{product_id}}/participants/{{participant_id}}",
               "host": ["{{base_url}}"],
-              "path": ["api", "v1", "saving", "products", "{{product_id}}", "participants", ":id"],
-              "variable": [{ "key": "id", "value": "019500f1-..." }]
+              "path": ["api", "v1", "saving", "products", "{{product_id}}", "participants", "{{participant_id}}"]
             },
             "description": "Soft-delete a participant. Permission: participant:delete"
           },
@@ -2413,6 +3648,24 @@
       "item": [
         {
           "name": "Register as Member",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 201', function () {",
+                  "  pm.response.to.have.status(201);",
+                  "});",
+                  "pm.test('Response has success flag and extracts member_id', function () {",
+                  "  var json = pm.response.json();",
+                  "  pm.expect(json.success).to.be.true;",
+                  "  if (json.data && json.data.id) { pm.collectionVariables.set('member_id', json.data.id); }",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
           "request": {
             "method": "POST",
             "header": [
@@ -2455,6 +3708,23 @@
         },
         {
           "name": "List Members (Admin)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test('Response has success flag', function () {",
+                  "  var json = pm.response.json();",
+                  "  pm.expect(json.success).to.be.true;",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
           "request": {
             "method": "GET",
             "header": [
@@ -2489,6 +3759,23 @@
         },
         {
           "name": "Get Member (Admin)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test('Response has success flag', function () {",
+                  "  var json = pm.response.json();",
+                  "  pm.expect(json.success).to.be.true;",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
           "request": {
             "method": "GET",
             "header": [
@@ -2496,10 +3783,9 @@
               { "key": "X-Tenant-ID", "value": "{{tenant_id}}" }
             ],
             "url": {
-              "raw": "{{base_url}}/api/v1/saving/products/{{product_id}}/members/:memberId",
+              "raw": "{{base_url}}/api/v1/saving/products/{{product_id}}/members/{{member_id}}",
               "host": ["{{base_url}}"],
-              "path": ["api", "v1", "saving", "products", "{{product_id}}", "members", ":memberId"],
-              "variable": [{ "key": "memberId", "value": "019500g1-..." }]
+              "path": ["api", "v1", "saving", "products", "{{product_id}}", "members", "{{member_id}}"]
             },
             "description": "Get member details. Requires TENANT_PRODUCT_ADMIN role."
           },
@@ -2524,6 +3810,23 @@
         },
         {
           "name": "Approve Member (Admin)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test('Response has success flag', function () {",
+                  "  var json = pm.response.json();",
+                  "  pm.expect(json.success).to.be.true;",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
           "request": {
             "method": "POST",
             "header": [
@@ -2537,10 +3840,9 @@
               "options": { "raw": { "language": "json" } }
             },
             "url": {
-              "raw": "{{base_url}}/api/v1/saving/products/{{product_id}}/members/:memberId/approve",
+              "raw": "{{base_url}}/api/v1/saving/products/{{product_id}}/members/{{member_id}}/approve",
               "host": ["{{base_url}}"],
-              "path": ["api", "v1", "saving", "products", "{{product_id}}", "members", ":memberId", "approve"],
-              "variable": [{ "key": "memberId", "value": "019500g1-..." }]
+              "path": ["api", "v1", "saving", "products", "{{product_id}}", "members", "{{member_id}}", "approve"]
             },
             "description": "Approve a member registration and assign a role. Requires TENANT_PRODUCT_ADMIN role."
           },
@@ -2557,6 +3859,23 @@
         },
         {
           "name": "Reject Member (Admin)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test('Response has success flag', function () {",
+                  "  var json = pm.response.json();",
+                  "  pm.expect(json.success).to.be.true;",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
           "request": {
             "method": "POST",
             "header": [
@@ -2570,10 +3889,9 @@
               "options": { "raw": { "language": "json" } }
             },
             "url": {
-              "raw": "{{base_url}}/api/v1/saving/products/{{product_id}}/members/:memberId/reject",
+              "raw": "{{base_url}}/api/v1/saving/products/{{product_id}}/members/{{member_id}}/reject",
               "host": ["{{base_url}}"],
-              "path": ["api", "v1", "saving", "products", "{{product_id}}", "members", ":memberId", "reject"],
-              "variable": [{ "key": "memberId", "value": "019500g1-..." }]
+              "path": ["api", "v1", "saving", "products", "{{product_id}}", "members", "{{member_id}}", "reject"]
             },
             "description": "Reject a member registration with reason. Requires TENANT_PRODUCT_ADMIN. Reason: min 10, max 500 chars."
           },
@@ -2590,6 +3908,23 @@
         },
         {
           "name": "Change Member Role (Admin)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test('Response has success flag', function () {",
+                  "  var json = pm.response.json();",
+                  "  pm.expect(json.success).to.be.true;",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
           "request": {
             "method": "PUT",
             "header": [
@@ -2603,10 +3938,9 @@
               "options": { "raw": { "language": "json" } }
             },
             "url": {
-              "raw": "{{base_url}}/api/v1/saving/products/{{product_id}}/members/:memberId/role",
+              "raw": "{{base_url}}/api/v1/saving/products/{{product_id}}/members/{{member_id}}/role",
               "host": ["{{base_url}}"],
-              "path": ["api", "v1", "saving", "products", "{{product_id}}", "members", ":memberId", "role"],
-              "variable": [{ "key": "memberId", "value": "019500g1-..." }]
+              "path": ["api", "v1", "saving", "products", "{{product_id}}", "members", "{{member_id}}", "role"]
             },
             "description": "Change a member's role. Requires TENANT_PRODUCT_ADMIN role."
           },
@@ -2623,6 +3957,23 @@
         },
         {
           "name": "Deactivate Member (Admin)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test('Response has success flag', function () {",
+                  "  var json = pm.response.json();",
+                  "  pm.expect(json.success).to.be.true;",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
           "request": {
             "method": "POST",
             "header": [
@@ -2636,10 +3987,9 @@
               "options": { "raw": { "language": "json" } }
             },
             "url": {
-              "raw": "{{base_url}}/api/v1/saving/products/{{product_id}}/members/:memberId/deactivate",
+              "raw": "{{base_url}}/api/v1/saving/products/{{product_id}}/members/{{member_id}}/deactivate",
               "host": ["{{base_url}}"],
-              "path": ["api", "v1", "saving", "products", "{{product_id}}", "members", ":memberId", "deactivate"],
-              "variable": [{ "key": "memberId", "value": "019500g1-..." }]
+              "path": ["api", "v1", "saving", "products", "{{product_id}}", "members", "{{member_id}}", "deactivate"]
             },
             "description": "Deactivate a member. Requires TENANT_PRODUCT_ADMIN role."
           },
