@@ -17,10 +17,10 @@ const (
 )
 
 type Participant struct {
-	ID            uuid.UUID  `json:"id" gorm:"column:id;primaryKey;type:uuid;default:uuidv7()" db:"id"`
-	TenantID      uuid.UUID  `json:"tenant_id" gorm:"column:tenant_id;not null" db:"tenant_id"`
-	ApplicationID uuid.UUID  `json:"application_id" gorm:"column:application_id;not null" db:"application_id"`
-	UserID        *uuid.UUID `json:"user_id,omitempty" gorm:"column:user_id" db:"user_id"`
+	ID        uuid.UUID  `json:"id" gorm:"column:id;primaryKey;type:uuid;default:uuidv7()" db:"id"`
+	TenantID  uuid.UUID  `json:"tenant_id" gorm:"column:tenant_id;not null" db:"tenant_id"`
+	ProductID uuid.UUID  `json:"product_id" gorm:"column:product_id;not null" db:"product_id"`
+	UserID    *uuid.UUID `json:"user_id,omitempty" gorm:"column:user_id" db:"user_id"`
 
 	FullName      string     `json:"full_name" gorm:"column:full_name;not null" db:"full_name"`
 	Gender        *string    `json:"gender,omitempty" gorm:"column:gender" db:"gender"`

@@ -17,20 +17,20 @@ const (
 )
 
 type Product struct {
-	ID          uuid.UUID       `json:"id" db:"id"`
-	TenantID    uuid.UUID       `json:"tenant_id" db:"tenant_id"`
-	Code        string          `json:"code" db:"code"`
-	Name        string          `json:"name" db:"name"`
-	Description *string         `json:"description,omitempty" db:"description"`
-	Settings    json.RawMessage `json:"settings" db:"settings"`
-	Status      string          `json:"status" db:"status"`
-	CreatedBy   *uuid.UUID      `json:"created_by,omitempty" db:"created_by"`
-	Version     int             `json:"version" db:"version"`
+	ID          uuid.UUID       `json:"id" gorm:"column:id;primaryKey;type:uuid;default:uuidv7()" db:"id"`
+	TenantID    uuid.UUID       `json:"tenant_id" gorm:"column:tenant_id;not null" db:"tenant_id"`
+	Code        string          `json:"code" gorm:"column:code;not null" db:"code"`
+	Name        string          `json:"name" gorm:"column:name;not null" db:"name"`
+	Description *string         `json:"description,omitempty" gorm:"column:description" db:"description"`
+	Settings    json.RawMessage `json:"settings" gorm:"column:settings;type:jsonb" db:"settings"`
+	Status      string          `json:"status" gorm:"column:status;not null" db:"status"`
+	CreatedBy   *uuid.UUID      `json:"created_by,omitempty" gorm:"column:created_by" db:"created_by"`
+	Version     int             `json:"version" gorm:"column:version;not null" db:"version"`
 	Timestamps
 }
 
 func (Product) TableName() string {
-	return "applications"
+	return "products"
 }
 
 func (p *Product) IsActive() bool {
@@ -38,35 +38,39 @@ func (p *Product) IsActive() bool {
 }
 
 type Permission struct {
-	ID            uuid.UUID  `json:"id" db:"id"`
-	ApplicationID uuid.UUID  `json:"application_id" db:"application_id"`
-	Code          string     `json:"code" db:"code"`
-	Name          string     `json:"name" db:"name"`
-	Description   *string    `json:"description,omitempty" db:"description"`
-	ResourceType  *string    `json:"resource_type,omitempty" db:"resource_type"`
-	Action        *string    `json:"action,omitempty" db:"action"`
-	Status        string     `json:"status" db:"status"`
-	CreatedBy     *uuid.UUID `json:"created_by,omitempty" db:"created_by"`
-	Version       int        `json:"version" db:"version"`
+	ID           uuid.UUID  `json:"id" gorm:"column:id;primaryKey;type:uuid;default:uuidv7()" db:"id"`
+	ProductID    uuid.UUID  `json:"product_id" gorm:"column:product_id;not null" db:"product_id"`
+	Code         string     `json:"code" gorm:"column:code;not null" db:"code"`
+	Name         string     `json:"name" gorm:"column:name;not null" db:"name"`
+	Description  *string    `json:"description,omitempty" gorm:"column:description" db:"description"`
+	ResourceType *string    `json:"resource_type,omitempty" gorm:"column:resource_type" db:"resource_type"`
+	Action       *string    `json:"action,omitempty" gorm:"column:action" db:"action"`
+	Status       string     `json:"status" gorm:"column:status;not null" db:"status"`
+	CreatedBy    *uuid.UUID `json:"created_by,omitempty" gorm:"column:created_by" db:"created_by"`
+	Version      int        `json:"version" gorm:"column:version;not null" db:"version"`
 	Timestamps
 }
+
+func (Permission) TableName() string { return "permissions" }
 
 func (p *Permission) IsActive() bool {
 	return p.Status == "ACTIVE"
 }
 
 type Role struct {
-	ID            uuid.UUID  `json:"id" gorm:"column:id;primaryKey;type:uuid;default:uuidv7()" db:"id"`
-	ApplicationID uuid.UUID  `json:"application_id" gorm:"column:application_id;not null" db:"application_id"`
-	Code          string     `json:"code" db:"code"`
-	Name          string     `json:"name" db:"name"`
-	Description   *string    `json:"description,omitempty" db:"description"`
-	IsSystem      bool       `json:"is_system" db:"is_system"`
-	Status        string     `json:"status" db:"status"`
-	CreatedBy     *uuid.UUID `json:"created_by,omitempty" db:"created_by"`
-	Version       int        `json:"version" db:"version"`
+	ID          uuid.UUID  `json:"id" gorm:"column:id;primaryKey;type:uuid;default:uuidv7()" db:"id"`
+	ProductID   uuid.UUID  `json:"product_id" gorm:"column:product_id;not null" db:"product_id"`
+	Code        string     `json:"code" gorm:"column:code;not null" db:"code"`
+	Name        string     `json:"name" gorm:"column:name;not null" db:"name"`
+	Description *string    `json:"description,omitempty" gorm:"column:description" db:"description"`
+	IsSystem    bool       `json:"is_system" gorm:"column:is_system;not null" db:"is_system"`
+	Status      string     `json:"status" gorm:"column:status;not null" db:"status"`
+	CreatedBy   *uuid.UUID `json:"created_by,omitempty" gorm:"column:created_by" db:"created_by"`
+	Version     int        `json:"version" gorm:"column:version;not null" db:"version"`
 	Timestamps
 }
+
+func (Role) TableName() string { return "roles" }
 
 func (r *Role) IsActive() bool {
 	return r.Status == "ACTIVE"
@@ -79,6 +83,8 @@ type RolePermission struct {
 	CreatedBy    *uuid.UUID `json:"created_by,omitempty" gorm:"column:created_by" db:"created_by"`
 	CreatedAt    time.Time  `json:"created_at" gorm:"column:created_at" db:"created_at"`
 }
+
+func (RolePermission) TableName() string { return "role_permissions" }
 
 type UserRole struct {
 	ID         uuid.UUID  `json:"id" gorm:"column:id;primaryKey;type:uuid;default:uuidv7()" db:"id"`
