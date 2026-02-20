@@ -18,6 +18,13 @@ type usecase struct {
 	beneficiaryRepo   contract.ParticipantBeneficiaryRepository
 	statusHistoryRepo contract.ParticipantStatusHistoryRepository
 	fileStorage       contract.FileStorageAdapter
+
+	tenantRepo        contract.TenantRepository
+	productRepo       contract.ProductRepository
+	configRepo        contract.ProductRegistrationConfigRepository
+	utrRepo           contract.UserTenantRegistrationRepository
+	userProfileRepo   contract.UserProfileRepository
+	masterdataUsecase contract.MasterdataUsecase
 }
 
 func NewUsecase(
@@ -33,6 +40,12 @@ func NewUsecase(
 	beneficiaryRepo contract.ParticipantBeneficiaryRepository,
 	statusHistoryRepo contract.ParticipantStatusHistoryRepository,
 	fileStorage contract.FileStorageAdapter,
+	tenantRepo contract.TenantRepository,
+	productRepo contract.ProductRepository,
+	configRepo contract.ProductRegistrationConfigRepository,
+	utrRepo contract.UserTenantRegistrationRepository,
+	userProfileRepo contract.UserProfileRepository,
+	masterdataUsecase contract.MasterdataUsecase,
 ) contract.Usecase {
 	return &usecase{
 		cfg:               cfg,
@@ -47,5 +60,11 @@ func NewUsecase(
 		beneficiaryRepo:   beneficiaryRepo,
 		statusHistoryRepo: statusHistoryRepo,
 		fileStorage:       fileStorage,
+		tenantRepo:        tenantRepo,
+		productRepo:       productRepo,
+		configRepo:        configRepo,
+		utrRepo:           utrRepo,
+		userProfileRepo:   userProfileRepo,
+		masterdataUsecase: masterdataUsecase,
 	}
 }

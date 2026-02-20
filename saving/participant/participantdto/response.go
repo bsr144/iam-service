@@ -7,39 +7,39 @@ import (
 )
 
 type ParticipantResponse struct {
-	ID              uuid.UUID                       `json:"id"`
-	TenantID        uuid.UUID                       `json:"tenant_id"`
-	ApplicationID   uuid.UUID                       `json:"application_id"`
-	UserID          *uuid.UUID                      `json:"user_id,omitempty"`
-	FullName        string                          `json:"full_name"`
-	Gender          *string                         `json:"gender,omitempty"`
-	PlaceOfBirth    *string                         `json:"place_of_birth,omitempty"`
-	DateOfBirth     *time.Time                      `json:"date_of_birth,omitempty"`
-	MaritalStatus   *string                         `json:"marital_status,omitempty"`
-	Citizenship     *string                         `json:"citizenship,omitempty"`
-	Religion        *string                         `json:"religion,omitempty"`
-	KTPNumber       *string                         `json:"ktp_number,omitempty"`
-	EmployeeNumber  *string                         `json:"employee_number,omitempty"`
-	PhoneNumber     *string                         `json:"phone_number,omitempty"`
-	Status          string                          `json:"status"`
-	CreatedBy       uuid.UUID                       `json:"created_by"`
-	SubmittedBy     *uuid.UUID                      `json:"submitted_by,omitempty"`
-	SubmittedAt     *time.Time                      `json:"submitted_at,omitempty"`
-	ApprovedBy      *uuid.UUID                      `json:"approved_by,omitempty"`
-	ApprovedAt      *time.Time                      `json:"approved_at,omitempty"`
-	RejectedBy      *uuid.UUID                      `json:"rejected_by,omitempty"`
-	RejectedAt      *time.Time                      `json:"rejected_at,omitempty"`
-	RejectionReason *string                         `json:"rejection_reason,omitempty"`
-	Version         int                             `json:"version"`
-	CreatedAt       time.Time                       `json:"created_at"`
-	UpdatedAt       time.Time                       `json:"updated_at"`
-	Identities      []IdentityResponse              `json:"identities,omitempty"`
-	Addresses       []AddressResponse               `json:"addresses,omitempty"`
-	BankAccounts    []BankAccountResponse           `json:"bank_accounts,omitempty"`
-	FamilyMembers   []FamilyMemberResponse          `json:"family_members,omitempty"`
-	Employment      *EmploymentResponse             `json:"employment,omitempty"`
-	Pension         *PensionResponse                `json:"pension,omitempty"`
-	Beneficiaries   []BeneficiaryResponse           `json:"beneficiaries,omitempty"`
+	ID              uuid.UUID              `json:"id"`
+	TenantID        uuid.UUID              `json:"tenant_id"`
+	ApplicationID   uuid.UUID              `json:"application_id"`
+	UserID          *uuid.UUID             `json:"user_id,omitempty"`
+	FullName        string                 `json:"full_name"`
+	Gender          *string                `json:"gender,omitempty"`
+	PlaceOfBirth    *string                `json:"place_of_birth,omitempty"`
+	DateOfBirth     *time.Time             `json:"date_of_birth,omitempty"`
+	MaritalStatus   *string                `json:"marital_status,omitempty"`
+	Citizenship     *string                `json:"citizenship,omitempty"`
+	Religion        *string                `json:"religion,omitempty"`
+	KTPNumber       *string                `json:"ktp_number,omitempty"`
+	EmployeeNumber  *string                `json:"employee_number,omitempty"`
+	PhoneNumber     *string                `json:"phone_number,omitempty"`
+	Status          string                 `json:"status"`
+	CreatedBy       uuid.UUID              `json:"created_by"`
+	SubmittedBy     *uuid.UUID             `json:"submitted_by,omitempty"`
+	SubmittedAt     *time.Time             `json:"submitted_at,omitempty"`
+	ApprovedBy      *uuid.UUID             `json:"approved_by,omitempty"`
+	ApprovedAt      *time.Time             `json:"approved_at,omitempty"`
+	RejectedBy      *uuid.UUID             `json:"rejected_by,omitempty"`
+	RejectedAt      *time.Time             `json:"rejected_at,omitempty"`
+	RejectionReason *string                `json:"rejection_reason,omitempty"`
+	Version         int                    `json:"version"`
+	CreatedAt       time.Time              `json:"created_at"`
+	UpdatedAt       time.Time              `json:"updated_at"`
+	Identities      []IdentityResponse     `json:"identities,omitempty"`
+	Addresses       []AddressResponse      `json:"addresses,omitempty"`
+	BankAccounts    []BankAccountResponse  `json:"bank_accounts,omitempty"`
+	FamilyMembers   []FamilyMemberResponse `json:"family_members,omitempty"`
+	Employment      *EmploymentResponse    `json:"employment,omitempty"`
+	Pension         *PensionResponse       `json:"pension,omitempty"`
+	Beneficiaries   []BeneficiaryResponse  `json:"beneficiaries,omitempty"`
 }
 
 type ParticipantSummaryResponse struct {
@@ -161,13 +161,13 @@ type BeneficiaryResponse struct {
 }
 
 type StatusHistoryResponse struct {
-	ID         uuid.UUID  `json:"id"`
-	FromStatus *string    `json:"from_status,omitempty"`
-	ToStatus   string     `json:"to_status"`
-	ChangedBy  uuid.UUID  `json:"changed_by"`
-	Reason     *string    `json:"reason,omitempty"`
-	ChangedAt  time.Time  `json:"changed_at"`
-	CreatedAt  time.Time  `json:"created_at"`
+	ID         uuid.UUID `json:"id"`
+	FromStatus *string   `json:"from_status,omitempty"`
+	ToStatus   string    `json:"to_status"`
+	ChangedBy  uuid.UUID `json:"changed_by"`
+	Reason     *string   `json:"reason,omitempty"`
+	ChangedAt  time.Time `json:"changed_at"`
+	CreatedAt  time.Time `json:"created_at"`
 }
 
 type ListParticipantsResponse struct {
@@ -185,4 +185,16 @@ type PaginationMeta struct {
 type FileUploadResponse struct {
 	FilePath string `json:"file_path"`
 	URL      string `json:"url,omitempty"`
+}
+
+type SelfRegisterParticipantData struct {
+	ParticipantNumber string    `json:"participant_number"`
+	Status            string    `json:"status"`
+	CreatedAt         time.Time `json:"created_at"`
+}
+
+type SelfRegisterResponse struct {
+	IsLinked           bool                         `json:"is_linked"`
+	RegistrationStatus string                       `json:"registration_status"`
+	Data               *SelfRegisterParticipantData `json:"data"`
 }

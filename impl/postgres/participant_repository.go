@@ -6,8 +6,8 @@ import (
 	"strings"
 
 	"iam-service/entity"
+	apperrors "iam-service/pkg/errors"
 	"iam-service/saving/participant/contract"
-	"iam-service/pkg/errors"
 
 	"github.com/google/uuid"
 	"gorm.io/gorm"
@@ -47,6 +47,55 @@ func (r *participantRepository) Create(ctx context.Context, participant *entity.
 	return nil
 }
 
+func (r *participantRepository) GetByKTPAndPensionNumber(ctx context.Context, ktpNumber, pensionNumber string, tenantID, applicationID uuid.UUID) (*entity.Participant, *entity.ParticipantPension, error) {
+	// MEM-001: single JOIN query — one DB round-trip instead of two
+	type joinedRow struct {
+		// Participant columns (all columns from participants table)
+		entity.Participant `gorm:"embedded"`
+		// Pension columns selected with aliases to avoid collision.
+		// uuid.UUID fields allow GORM to scan UUID-formatted strings directly,
+		// eliminating uuid.MustParse and its panic risk (MEM-003).
+		PensionID            uuid.UUID `gorm:"column:pension_id"`
+		PensionParticipantID uuid.UUID `gorm:"column:pension_participant_id"`
+		PensionNumber        *string   `gorm:"column:pension_participant_number"`
+	}
+
+	var row joinedRow
+	err := r.getDB(ctx).Raw(`
+		SELECT
+			p.*,
+			pp.id                  AS pension_id,
+			pp.participant_id      AS pension_participant_id,
+			pp.participant_number  AS pension_participant_number
+		FROM participants p
+		JOIN participant_pensions pp
+		  ON pp.participant_id = p.id
+		  AND pp.deleted_at IS NULL
+		WHERE p.ktp_number     = ?
+		  AND pp.participant_number = ?
+		  AND p.tenant_id      = ?
+		  AND p.application_id = ?
+		  AND p.deleted_at     IS NULL
+		LIMIT 1
+	`, ktpNumber, pensionNumber, tenantID, applicationID).Scan(&row).Error
+
+	if err != nil {
+		return nil, nil, fmt.Errorf("GetByKTPAndPensionNumber: %w", err)
+	}
+
+	// Scan() returns nil error when no rows found; detect via empty PK
+	if row.Participant.ID == (uuid.UUID{}) {
+		return nil, nil, apperrors.ErrNotFound("participant not found")
+	}
+
+	pension := &entity.ParticipantPension{
+		ID:                row.PensionID,
+		ParticipantID:     row.PensionParticipantID,
+		ParticipantNumber: row.PensionNumber,
+	}
+	return &row.Participant, pension, nil
+}
+
 func (r *participantRepository) GetByID(ctx context.Context, id uuid.UUID) (*entity.Participant, error) {
 	var participant entity.Participant
 	err := r.getDB(ctx).Where("id = ? AND deleted_at IS NULL", id).First(&participant).Error
@@ -67,7 +116,7 @@ func (r *participantRepository) Update(ctx context.Context, participant *entity.
 	}
 	if result.RowsAffected == 0 {
 		participant.Version = oldVersion
-		return errors.ErrConflict("participant was modified by another request")
+		return apperrors.ErrConflict("participant was modified by another request")
 	}
 	return nil
 }

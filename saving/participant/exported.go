@@ -21,6 +21,12 @@ func NewUsecase(
 	beneficiaryRepo contract.ParticipantBeneficiaryRepository,
 	statusHistoryRepo contract.ParticipantStatusHistoryRepository,
 	fileStorage contract.FileStorageAdapter,
+	tenantRepo contract.TenantRepository,
+	productRepo contract.ProductRepository,
+	configRepo contract.ProductRegistrationConfigRepository,
+	utrRepo contract.UserTenantRegistrationRepository,
+	userProfileRepo contract.UserProfileRepository,
+	masterdataUsecase contract.MasterdataUsecase,
 ) Usecase {
 	return internal.NewUsecase(
 		cfg,
@@ -35,5 +41,11 @@ func NewUsecase(
 		beneficiaryRepo,
 		statusHistoryRepo,
 		fileStorage,
+		tenantRepo,
+		productRepo,
+		configRepo,
+		utrRepo,
+		userProfileRepo,
+		masterdataUsecase,
 	)
 }

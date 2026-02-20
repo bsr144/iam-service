@@ -194,3 +194,11 @@ type DeleteChildEntityRequest struct {
 	TenantID      uuid.UUID `json:"-"`
 	ApplicationID uuid.UUID `json:"-"`
 }
+
+type SelfRegisterRequest struct {
+	UserID            uuid.UUID `json:"-"`
+	Organization      string    `json:"organization"       validate:"required,min=6,max=50"`
+	IdentityNumber    string    `json:"identity_number"    validate:"required,len=16,numeric"`
+	ParticipantNumber string    `json:"participant_number" validate:"required,min=5,max=20,alphanum"`
+	PhoneNumber       string    `json:"phone_number"       validate:"required,min=9,max=16"`
+}

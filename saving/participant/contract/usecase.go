@@ -4,9 +4,17 @@ import (
 	"context"
 	"io"
 
+	"iam-service/masterdata/masterdatadto"
 	"iam-service/saving/participant/participantdto"
 )
 
+type MasterdataValidateUsecase interface {
+	ValidateItemCode(ctx context.Context, req *masterdatadto.ValidateCodeRequest) (*masterdatadto.ValidateCodeResponse, error)
+}
+
+type MasterdataUsecase interface {
+	MasterdataValidateUsecase
+}
 type Usecase interface {
 	CreateParticipant(ctx context.Context, req *participantdto.CreateParticipantRequest) (*participantdto.ParticipantResponse, error)
 	UpdatePersonalData(ctx context.Context, req *participantdto.UpdatePersonalDataRequest) (*participantdto.ParticipantResponse, error)
@@ -40,4 +48,6 @@ type Usecase interface {
 	RejectParticipant(ctx context.Context, req *participantdto.RejectParticipantRequest) (*participantdto.ParticipantResponse, error)
 
 	GetStatusHistory(ctx context.Context, req *participantdto.GetParticipantRequest) ([]participantdto.StatusHistoryResponse, error)
+
+	SelfRegister(ctx context.Context, req *participantdto.SelfRegisterRequest) (*participantdto.SelfRegisterResponse, error)
 }

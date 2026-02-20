@@ -25,6 +25,28 @@ type ParticipantRepository interface {
 	Update(ctx context.Context, participant *entity.Participant) error
 	SoftDelete(ctx context.Context, id uuid.UUID) error
 	List(ctx context.Context, filter *ParticipantFilter) ([]*entity.Participant, int64, error)
+	GetByKTPAndPensionNumber(ctx context.Context, ktpNumber, pensionNumber string, tenantID, applicationID uuid.UUID) (*entity.Participant, *entity.ParticipantPension, error)
+}
+
+type TenantRepository interface {
+	GetByCode(ctx context.Context, code string) (*entity.Tenant, error)
+}
+
+type ProductRepository interface {
+	GetByCodeAndTenant(ctx context.Context, tenantID uuid.UUID, code string) (*entity.Product, error)
+}
+
+type ProductRegistrationConfigRepository interface {
+	GetByApplicationAndType(ctx context.Context, applicationID uuid.UUID, regType string) (*entity.ProductRegistrationConfig, error)
+}
+
+type UserTenantRegistrationRepository interface {
+	Create(ctx context.Context, reg *entity.UserTenantRegistration) error
+	GetByUserAndProduct(ctx context.Context, userID, tenantID, applicationID uuid.UUID, regType string) (*entity.UserTenantRegistration, error)
+}
+
+type UserProfileRepository interface {
+	GetByUserID(ctx context.Context, userID uuid.UUID) (*entity.UserProfile, error)
 }
 
 type ParticipantIdentityRepository interface {
