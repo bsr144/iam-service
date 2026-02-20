@@ -58,6 +58,7 @@ const (
 	CodeForbidden          = "ERR_FORBIDDEN"
 	CodeTooManyRequests    = "ERR_TOO_MANY_REQUESTS"
 	CodeServiceUnavailable = "ERR_SERVICE_UNAVAILABLE"
+	CodeUnprocessable      = "ERR_UNPROCESSABLE"
 
 	CodeInvalidCredentials = "ERR_INVALID_CREDENTIALS"
 	CodeTokenExpired       = "ERR_TOKEN_EXPIRED"
@@ -333,6 +334,10 @@ func ErrDatabase(message string) *AppError {
 	return newWithCaller(CodeDatabaseError, message, http.StatusInternalServerError, KindConnection, 2)
 }
 
+func ErrUnprocessable(message string) *AppError {
+	return newWithCaller(CodeUnprocessable, message, http.StatusUnprocessableEntity, KindValidation, 2)
+}
+
 func ErrDuplicateEntry(field string) *AppError {
 	return newWithCaller(CodeDuplicateEntry, fmt.Sprintf("Duplicate entry for %s", field), http.StatusConflict, KindDuplicate, 2)
 }
@@ -402,6 +407,17 @@ func IsConflict(err error) bool {
 func IsValidation(err error) bool {
 	if appErr := GetAppError(err); appErr != nil {
 		return appErr.Kind == KindValidation
+	}
+	return false
+}
+
+func IsUniqueViolation(err error) bool {
+	if err == nil {
+		return false
+	}
+
+	if appErr := GetAppError(err); appErr != nil {
+		return appErr.Kind == KindDuplicate
 	}
 	return false
 }
