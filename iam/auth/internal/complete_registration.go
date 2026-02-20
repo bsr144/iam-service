@@ -164,19 +164,6 @@ func (uc *usecase) generateAuthTokensForRegistration(ctx context.Context, userID
 		Audience:      uc.Config.JWT.Audience,
 	}
 
-	if uc.Config.JWT.SigningMethod == "RS256" {
-		privateKey, err := jwtpkg.LoadPrivateKeyFromFile(uc.Config.JWT.PrivateKeyPath)
-		if err != nil {
-			return "", "", 0, errors.ErrInternal("failed to load private key").WithError(err)
-		}
-		publicKey, err := jwtpkg.LoadPublicKeyFromFile(uc.Config.JWT.PublicKeyPath)
-		if err != nil {
-			return "", "", 0, errors.ErrInternal("failed to load public key").WithError(err)
-		}
-		tokenConfig.PrivateKey = privateKey
-		tokenConfig.PublicKey = publicKey
-	}
-
 	accessToken, err := jwtpkg.GenerateAccessToken(
 		userID,
 		email,

@@ -1,35 +1,32 @@
 package iamclient
 
 import (
-	"crypto/rsa"
 	"fmt"
 
 	"iam-service/pkg/jwt"
 )
 
 type Client struct {
-	PublicKey        *rsa.PublicKey
+	AccessSecret     string
 	Issuer           string
 	RequiredAudience string
 	RequiredProduct  string
 }
 
 type Config struct {
-	PublicKeyPath    string
+	AccessSecret     string
 	Issuer           string
 	RequiredAudience string
 	RequiredProduct  string
 }
 
 func NewClient(config *Config) (*Client, error) {
-
-	publicKey, err := jwt.LoadPublicKeyFromFile(config.PublicKeyPath)
-	if err != nil {
-		return nil, fmt.Errorf("failed to load public key: %w", err)
+	if config.AccessSecret == "" {
+		return nil, fmt.Errorf("AccessSecret is required")
 	}
 
 	return &Client{
-		PublicKey:        publicKey,
+		AccessSecret:     config.AccessSecret,
 		Issuer:           config.Issuer,
 		RequiredAudience: config.RequiredAudience,
 		RequiredProduct:  config.RequiredProduct,
@@ -38,9 +35,9 @@ func NewClient(config *Config) (*Client, error) {
 
 func (c *Client) ValidateToken(tokenString string) (*jwt.JWTClaims, error) {
 	tokenConfig := &jwt.TokenConfig{
-		SigningMethod: "RS256",
-		PublicKey:     c.PublicKey,
-		Issuer:        c.Issuer,
+		SigningMethod: "HS256",
+		AccessSecret: c.AccessSecret,
+		Issuer:       c.Issuer,
 	}
 
 	claims, err := jwt.ParseAccessToken(tokenString, tokenConfig)
@@ -56,7 +53,6 @@ func (c *Client) ValidateToken(tokenString string) (*jwt.JWTClaims, error) {
 		if claims.ProductID == nil {
 			return nil, fmt.Errorf("product context required but not found in token")
 		}
-
 	}
 
 	return claims, nil

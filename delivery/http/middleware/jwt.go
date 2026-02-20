@@ -19,16 +19,6 @@ func JWTAuth(cfg *config.Config, blacklistStore ...contract.TokenBlacklistStore)
 		Issuer:        cfg.JWT.Issuer,
 	}
 
-	if cfg.JWT.SigningMethod == "RS256" {
-		if privateKey, err := jwtpkg.LoadPrivateKeyFromFile(cfg.JWT.PrivateKeyPath); err == nil {
-			tokenConfig.PrivateKey = privateKey
-		}
-		if publicKey, err := jwtpkg.LoadPublicKeyFromFile(cfg.JWT.PublicKeyPath); err == nil {
-			tokenConfig.PublicKey = publicKey
-		}
-		tokenConfig.SigningMethod = "RS256"
-	}
-
 	var store contract.TokenBlacklistStore
 	if len(blacklistStore) > 0 {
 		store = blacklistStore[0]

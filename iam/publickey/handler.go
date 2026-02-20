@@ -1,11 +1,7 @@
 package publickey
 
 import (
-	"encoding/base64"
 	"iam-service/config"
-	"iam-service/pkg/jwt"
-	"math/big"
-	"os"
 
 	"github.com/gofiber/fiber/v2"
 )
@@ -21,17 +17,9 @@ func NewHandler(cfg *config.Config) *Handler {
 }
 
 func (h *Handler) GetPublicKeyPEM(c *fiber.Ctx) error {
-	keyData, err := os.ReadFile(h.Config.JWT.PublicKeyPath)
-	if err != nil {
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-			"error": "Failed to read public key",
-		})
-	}
-
-	c.Set("Content-Type", "application/x-pem-file")
-	c.Set("Cache-Control", "public, max-age=3600")
-
-	return c.Send(keyData)
+	return c.Status(fiber.StatusNotImplemented).JSON(fiber.Map{
+		"error": "Public key endpoint not available when using HS256 signing method",
+	})
 }
 
 type JWKSResponse struct {
@@ -47,38 +35,9 @@ type JWK struct {
 }
 
 func (h *Handler) GetJWKS(c *fiber.Ctx) error {
-
-	publicKey, err := jwt.LoadPublicKeyFromFile(h.Config.JWT.PublicKeyPath)
-	if err != nil {
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-			"error": "Failed to load public key",
-		})
-	}
-
-	jwk := JWK{
-		Kty: "RSA",
-		Use: "sig",
-		Kid: "2024-01-key",
-		N:   encodeBase64URL(publicKey.N.Bytes()),
-		E:   encodeBase64URL(bigIntToBytes(publicKey.E)),
-	}
-
-	response := JWKSResponse{
-		Keys: []JWK{jwk},
-	}
-
-	c.Set("Content-Type", "application/json")
-	c.Set("Cache-Control", "public, max-age=3600")
-
-	return c.JSON(response)
-}
-
-func encodeBase64URL(data []byte) string {
-	return base64.RawURLEncoding.EncodeToString(data)
-}
-
-func bigIntToBytes(n int) []byte {
-	return big.NewInt(int64(n)).Bytes()
+	return c.Status(fiber.StatusNotImplemented).JSON(fiber.Map{
+		"error": "JWKS endpoint not available when using HS256 signing method",
+	})
 }
 
 func (h *Handler) RegisterRoutes(router fiber.Router) {

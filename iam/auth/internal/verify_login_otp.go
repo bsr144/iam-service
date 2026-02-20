@@ -258,19 +258,5 @@ func (uc *usecase) buildTokenConfig() (*jwtpkg.TokenConfig, error) {
 		Audience:      uc.Config.JWT.Audience,
 	}
 
-	if uc.Config.JWT.SigningMethod == "RS256" {
-		privateKey, err := jwtpkg.LoadPrivateKeyFromFile(uc.Config.JWT.PrivateKeyPath)
-		if err != nil {
-			return nil, errors.ErrInternal("failed to load JWT private key").WithError(err)
-		}
-		tokenConfig.PrivateKey = privateKey
-
-		publicKey, err := jwtpkg.LoadPublicKeyFromFile(uc.Config.JWT.PublicKeyPath)
-		if err != nil {
-			return nil, errors.ErrInternal("failed to load JWT public key").WithError(err)
-		}
-		tokenConfig.PublicKey = publicKey
-	}
-
 	return tokenConfig, nil
 }
