@@ -5,6 +5,12 @@ import (
 	"iam-service/saving/participant/participantdto"
 )
 
+// MapSelfRegisterResponse maps SelfRegisterResponse for the HTTP response envelope.
+// SelfRegisterParticipantData deliberately omits ktp_number (CR-005).
+func MapSelfRegisterResponse(resp *participantdto.SelfRegisterResponse) *participantdto.SelfRegisterResponse {
+	return resp
+}
+
 func MapEmploymentResponse(dto *participantdto.EmploymentResponse) response.EmploymentResponse {
 	return response.EmploymentResponse{
 		ID:                 dto.ID,

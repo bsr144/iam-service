@@ -1,13 +1,40 @@
 package router
 
 import (
+	"time"
+
 	"iam-service/delivery/http/controller"
 	"iam-service/delivery/http/middleware"
 
 	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v2/middleware/limiter"
 )
 
+func selfRegRateLimit() fiber.Handler {
+	return limiter.New(limiter.Config{
+		Max:        5,
+		Expiration: 1 * time.Minute,
+		KeyGenerator: func(c *fiber.Ctx) string {
+			if uid, ok := c.Locals("userID").(string); ok && uid != "" {
+				return "self-reg:" + uid
+			}
+			return "self-reg:" + c.IP()
+		},
+		LimitReached: func(c *fiber.Ctx) error {
+			return c.Status(fiber.StatusTooManyRequests).JSON(fiber.Map{
+				"success": false,
+				"error":   "too many requests",
+				"code":    "ERR_TOO_MANY_REQUESTS",
+			})
+		},
+	})
+}
+
 func SetupParticipantRoutes(api fiber.Router, ctrl *controller.ParticipantController, jwtMiddleware fiber.Handler) {
+	selfReg := api.Group("/participants")
+	selfReg.Use(jwtMiddleware)
+	selfReg.Post("/self-register", selfRegRateLimit(), ctrl.SelfRegister)
+
 	participants := api.Group("/products/:productId/participants")
 	participants.Use(jwtMiddleware)
 	participants.Use(middleware.ExtractTenantContext())

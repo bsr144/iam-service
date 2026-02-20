@@ -178,6 +178,12 @@ func NewServer(cfg *config.Config) *Server {
 		participantBeneficiaryRepo,
 		participantStatusHistoryRepo,
 		fileStorage,
+		tenantRepo,
+		productRepo,
+		productRegConfigRepo,
+		userTenantRegRepo,
+		userProfileRepo,
+		masterdataUsecase,
 	)
 
 	healthController := controller.NewHealthController(cfg, healthUsecase)
@@ -253,7 +259,8 @@ func createErrorHandler(cfg *config.Config, zapLogger *zap.Logger) fiber.ErrorHa
 		var appErr *apperrors.AppError
 		if apperrors.As(err, &appErr) {
 
-			logFields := []zap.Field{
+			logFields := make([]zap.Field, 0, 10)
+			logFields = append(logFields,
 				zap.String("request_id", requestID),
 				zap.String("code", appErr.Code),
 				zap.String("message", appErr.Message),
@@ -262,7 +269,7 @@ func createErrorHandler(cfg *config.Config, zapLogger *zap.Logger) fiber.ErrorHa
 				zap.Int("line", appErr.Line),
 				zap.String("path", c.Path()),
 				zap.String("method", c.Method()),
-			}
+			)
 			if appErr.Op != "" {
 				logFields = append(logFields, zap.String("op", appErr.Op))
 			}
@@ -295,9 +302,9 @@ func createErrorHandler(cfg *config.Config, zapLogger *zap.Logger) fiber.ErrorHa
 				}
 			}
 
-			if includeDebug && appErr.Err != nil {
+			if includeDebug && appErr.Op != "" {
 				resp.Debug = &response.DebugInfo{
-					Cause: appErr.Err.Error(),
+					Cause: appErr.Op,
 				}
 			}
 

@@ -1,6 +1,7 @@
 package controller
 
 import (
+	stderrors "errors"
 	"io"
 	"net/http"
 	"strconv"
@@ -66,7 +67,11 @@ func (ctrl *ParticipantController) Create(c *fiber.Ctx) error {
 	}
 
 	if err := validate.Struct(&req); err != nil {
-		return errors.ErrValidationWithFields(convertValidationErrors(err.(validator.ValidationErrors)))
+		var ve validator.ValidationErrors
+		if stderrors.As(err, &ve) {
+			return participantError(c, errors.ErrValidationWithFields(convertValidationErrors(ve)))
+		}
+		return participantError(c, errors.ErrBadRequest("invalid request"))
 	}
 
 	productID, err := middleware.GetProductIDFromContext(c)
@@ -156,7 +161,11 @@ func (ctrl *ParticipantController) List(c *fiber.Ctx) error {
 	}
 
 	if err := validate.Struct(req); err != nil {
-		return errors.ErrValidationWithFields(convertValidationErrors(err.(validator.ValidationErrors)))
+		var ve validator.ValidationErrors
+		if stderrors.As(err, &ve) {
+			return participantError(c, errors.ErrValidationWithFields(convertValidationErrors(ve)))
+		}
+		return participantError(c, errors.ErrBadRequest("invalid request"))
 	}
 
 	result, err := ctrl.usecase.ListParticipants(c.UserContext(), req)
@@ -192,7 +201,11 @@ func (ctrl *ParticipantController) UpdatePersonalData(c *fiber.Ctx) error {
 	}
 
 	if err := validate.Struct(&req); err != nil {
-		return errors.ErrValidationWithFields(convertValidationErrors(err.(validator.ValidationErrors)))
+		var ve validator.ValidationErrors
+		if stderrors.As(err, &ve) {
+			return participantError(c, errors.ErrValidationWithFields(convertValidationErrors(ve)))
+		}
+		return participantError(c, errors.ErrBadRequest("invalid request"))
 	}
 
 	productID, err := middleware.GetProductIDFromContext(c)
@@ -233,7 +246,11 @@ func (ctrl *ParticipantController) SaveIdentity(c *fiber.Ctx) error {
 	}
 
 	if err := validate.Struct(&req); err != nil {
-		return errors.ErrValidationWithFields(convertValidationErrors(err.(validator.ValidationErrors)))
+		var ve validator.ValidationErrors
+		if stderrors.As(err, &ve) {
+			return participantError(c, errors.ErrValidationWithFields(convertValidationErrors(ve)))
+		}
+		return participantError(c, errors.ErrBadRequest("invalid request"))
 	}
 
 	productID, err := middleware.GetProductIDFromContext(c)
@@ -306,7 +323,11 @@ func (ctrl *ParticipantController) SaveAddress(c *fiber.Ctx) error {
 	}
 
 	if err := validate.Struct(&req); err != nil {
-		return errors.ErrValidationWithFields(convertValidationErrors(err.(validator.ValidationErrors)))
+		var ve validator.ValidationErrors
+		if stderrors.As(err, &ve) {
+			return participantError(c, errors.ErrValidationWithFields(convertValidationErrors(ve)))
+		}
+		return participantError(c, errors.ErrBadRequest("invalid request"))
 	}
 
 	productID, err := middleware.GetProductIDFromContext(c)
@@ -379,7 +400,11 @@ func (ctrl *ParticipantController) SaveBankAccount(c *fiber.Ctx) error {
 	}
 
 	if err := validate.Struct(&req); err != nil {
-		return errors.ErrValidationWithFields(convertValidationErrors(err.(validator.ValidationErrors)))
+		var ve validator.ValidationErrors
+		if stderrors.As(err, &ve) {
+			return participantError(c, errors.ErrValidationWithFields(convertValidationErrors(ve)))
+		}
+		return participantError(c, errors.ErrBadRequest("invalid request"))
 	}
 
 	productID, err := middleware.GetProductIDFromContext(c)
@@ -452,7 +477,11 @@ func (ctrl *ParticipantController) SaveFamilyMember(c *fiber.Ctx) error {
 	}
 
 	if err := validate.Struct(&req); err != nil {
-		return errors.ErrValidationWithFields(convertValidationErrors(err.(validator.ValidationErrors)))
+		var ve validator.ValidationErrors
+		if stderrors.As(err, &ve) {
+			return participantError(c, errors.ErrValidationWithFields(convertValidationErrors(ve)))
+		}
+		return participantError(c, errors.ErrBadRequest("invalid request"))
 	}
 
 	productID, err := middleware.GetProductIDFromContext(c)
@@ -525,7 +554,11 @@ func (ctrl *ParticipantController) SaveEmployment(c *fiber.Ctx) error {
 	}
 
 	if err := validate.Struct(&req); err != nil {
-		return errors.ErrValidationWithFields(convertValidationErrors(err.(validator.ValidationErrors)))
+		var ve validator.ValidationErrors
+		if stderrors.As(err, &ve) {
+			return participantError(c, errors.ErrValidationWithFields(convertValidationErrors(ve)))
+		}
+		return participantError(c, errors.ErrBadRequest("invalid request"))
 	}
 
 	productID, err := middleware.GetProductIDFromContext(c)
@@ -565,7 +598,11 @@ func (ctrl *ParticipantController) SavePension(c *fiber.Ctx) error {
 	}
 
 	if err := validate.Struct(&req); err != nil {
-		return errors.ErrValidationWithFields(convertValidationErrors(err.(validator.ValidationErrors)))
+		var ve validator.ValidationErrors
+		if stderrors.As(err, &ve) {
+			return participantError(c, errors.ErrValidationWithFields(convertValidationErrors(ve)))
+		}
+		return participantError(c, errors.ErrBadRequest("invalid request"))
 	}
 
 	productID, err := middleware.GetProductIDFromContext(c)
@@ -605,7 +642,11 @@ func (ctrl *ParticipantController) SaveBeneficiary(c *fiber.Ctx) error {
 	}
 
 	if err := validate.Struct(&req); err != nil {
-		return errors.ErrValidationWithFields(convertValidationErrors(err.(validator.ValidationErrors)))
+		var ve validator.ValidationErrors
+		if stderrors.As(err, &ve) {
+			return participantError(c, errors.ErrValidationWithFields(convertValidationErrors(ve)))
+		}
+		return participantError(c, errors.ErrBadRequest("invalid request"))
 	}
 
 	productID, err := middleware.GetProductIDFromContext(c)
@@ -868,7 +909,11 @@ func (ctrl *ParticipantController) Reject(c *fiber.Ctx) error {
 	}
 
 	if err := validate.Struct(&body); err != nil {
-		return errors.ErrValidationWithFields(convertValidationErrors(err.(validator.ValidationErrors)))
+		var ve validator.ValidationErrors
+		if stderrors.As(err, &ve) {
+			return participantError(c, errors.ErrValidationWithFields(convertValidationErrors(ve)))
+		}
+		return participantError(c, errors.ErrBadRequest("invalid request"))
 	}
 
 	productID, err := middleware.GetProductIDFromContext(c)
@@ -892,6 +937,42 @@ func (ctrl *ParticipantController) Reject(c *fiber.Ctx) error {
 	return c.JSON(fiber.Map{
 		"success": true,
 		"data":    presenter.MapParticipantResponse(result),
+	})
+}
+
+func (ctrl *ParticipantController) SelfRegister(c *fiber.Ctx) error {
+	claims, err := middleware.GetUserClaims(c)
+	if err != nil {
+		return participantError(c, err)
+	}
+
+	var req participantdto.SelfRegisterRequest
+	if err := c.BodyParser(&req); err != nil {
+		return participantError(c, errors.ErrBadRequest("invalid request body"))
+	}
+
+	if err := validate.Struct(&req); err != nil {
+		var ve validator.ValidationErrors
+		if stderrors.As(err, &ve) {
+			return participantError(c, errors.ErrValidationWithFields(convertValidationErrors(ve)))
+		}
+		return participantError(c, errors.ErrBadRequest("invalid request"))
+	}
+
+	req.UserID = claims.UserID
+
+	result, err := ctrl.usecase.SelfRegister(c.UserContext(), &req)
+	if err != nil {
+		return participantError(c, err)
+	}
+
+	status := fiber.StatusCreated
+	if result.IsLinked {
+		status = fiber.StatusOK
+	}
+	return c.Status(status).JSON(fiber.Map{
+		"success": true,
+		"data":    presenter.MapSelfRegisterResponse(result),
 	})
 }
 
