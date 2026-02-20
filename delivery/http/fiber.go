@@ -12,6 +12,7 @@ import (
 	"iam-service/delivery/http/router"
 	"iam-service/health"
 	"iam-service/iam/auth"
+	"iam-service/iam/product"
 	"iam-service/iam/role"
 	"iam-service/iam/user"
 	"iam-service/impl/mailer"
@@ -230,9 +231,12 @@ func NewServer(cfg *config.Config) *Server {
 
 	jwtMiddleware := middleware.JWTAuth(cfg, inMemoryStore)
 
+	productUsecase := product.NewUsecase(productRepo, inMemoryStore)
+	frendzSavingMW := middleware.ExtractFrendzSavingProduct(productUsecase)
+
 	saving := v1.Group("/saving")
-	router.SetupParticipantRoutes(saving, participantController, jwtMiddleware)
-	router.SetupMemberRoutes(saving, memberController, jwtMiddleware)
+	router.SetupParticipantRoutes(saving, participantController, jwtMiddleware, frendzSavingMW)
+	router.SetupMemberRoutes(saving, memberController, jwtMiddleware, frendzSavingMW)
 
 	return server
 }

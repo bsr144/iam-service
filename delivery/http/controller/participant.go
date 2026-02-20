@@ -80,7 +80,7 @@ func (ctrl *ParticipantController) Create(c *fiber.Ctx) error {
 	}
 
 	req.TenantID = tenantID
-	req.ApplicationID = productID
+	req.ProductID = productID
 	req.UserID = userClaims.UserID
 
 	result, err := ctrl.usecase.CreateParticipant(c.UserContext(), &req)
@@ -113,7 +113,7 @@ func (ctrl *ParticipantController) Get(c *fiber.Ctx) error {
 	result, err := ctrl.usecase.GetParticipant(c.UserContext(), &participantdto.GetParticipantRequest{
 		ParticipantID: pID,
 		TenantID:      tenantID,
-		ApplicationID: productID,
+		ProductID: productID,
 	})
 	if err != nil {
 		return participantError(c, err)
@@ -147,7 +147,7 @@ func (ctrl *ParticipantController) List(c *fiber.Ctx) error {
 
 	req := &participantdto.ListParticipantsRequest{
 		TenantID:      tenantID,
-		ApplicationID: productID,
+		ProductID: productID,
 		Search:        c.Query("search"),
 		Status:        nil,
 		Page:          page,
@@ -216,7 +216,7 @@ func (ctrl *ParticipantController) UpdatePersonalData(c *fiber.Ctx) error {
 	req.TenantID = tenantID
 	req.ParticipantID = pID
 	req.UserID = userClaims.UserID
-	req.ApplicationID = productID
+	req.ProductID = productID
 
 	result, err := ctrl.usecase.UpdatePersonalData(c.UserContext(), &req)
 	if err != nil {
@@ -260,7 +260,7 @@ func (ctrl *ParticipantController) SaveIdentity(c *fiber.Ctx) error {
 
 	req.TenantID = tenantID
 	req.ParticipantID = pID
-	req.ApplicationID = productID
+	req.ProductID = productID
 
 	result, err := ctrl.usecase.SaveIdentity(c.UserContext(), &req)
 	if err != nil {
@@ -298,7 +298,7 @@ func (ctrl *ParticipantController) DeleteIdentity(c *fiber.Ctx) error {
 		ChildID:       iID,
 		ParticipantID: pID,
 		TenantID:      tenantID,
-		ApplicationID: productID,
+		ProductID: productID,
 	}); err != nil {
 		return participantError(c, err)
 	}
@@ -337,7 +337,7 @@ func (ctrl *ParticipantController) SaveAddress(c *fiber.Ctx) error {
 
 	req.TenantID = tenantID
 	req.ParticipantID = pID
-	req.ApplicationID = productID
+	req.ProductID = productID
 
 	result, err := ctrl.usecase.SaveAddress(c.UserContext(), &req)
 	if err != nil {
@@ -375,7 +375,7 @@ func (ctrl *ParticipantController) DeleteAddress(c *fiber.Ctx) error {
 		ChildID:       aID,
 		ParticipantID: pID,
 		TenantID:      tenantID,
-		ApplicationID: productID,
+		ProductID: productID,
 	}); err != nil {
 		return participantError(c, err)
 	}
@@ -414,7 +414,7 @@ func (ctrl *ParticipantController) SaveBankAccount(c *fiber.Ctx) error {
 
 	req.TenantID = tenantID
 	req.ParticipantID = pID
-	req.ApplicationID = productID
+	req.ProductID = productID
 
 	result, err := ctrl.usecase.SaveBankAccount(c.UserContext(), &req)
 	if err != nil {
@@ -452,7 +452,7 @@ func (ctrl *ParticipantController) DeleteBankAccount(c *fiber.Ctx) error {
 		ChildID:       aID,
 		ParticipantID: pID,
 		TenantID:      tenantID,
-		ApplicationID: productID,
+		ProductID: productID,
 	}); err != nil {
 		return participantError(c, err)
 	}
@@ -491,7 +491,7 @@ func (ctrl *ParticipantController) SaveFamilyMember(c *fiber.Ctx) error {
 
 	req.TenantID = tenantID
 	req.ParticipantID = pID
-	req.ApplicationID = productID
+	req.ProductID = productID
 
 	result, err := ctrl.usecase.SaveFamilyMember(c.UserContext(), &req)
 	if err != nil {
@@ -529,7 +529,7 @@ func (ctrl *ParticipantController) DeleteFamilyMember(c *fiber.Ctx) error {
 		ChildID:       mID,
 		ParticipantID: pID,
 		TenantID:      tenantID,
-		ApplicationID: productID,
+		ProductID: productID,
 	}); err != nil {
 		return participantError(c, err)
 	}
@@ -568,7 +568,7 @@ func (ctrl *ParticipantController) SaveEmployment(c *fiber.Ctx) error {
 
 	req.TenantID = tenantID
 	req.ParticipantID = pID
-	req.ApplicationID = productID
+	req.ProductID = productID
 
 	result, err := ctrl.usecase.SaveEmployment(c.UserContext(), &req)
 	if err != nil {
@@ -612,7 +612,7 @@ func (ctrl *ParticipantController) SavePension(c *fiber.Ctx) error {
 
 	req.TenantID = tenantID
 	req.ParticipantID = pID
-	req.ApplicationID = productID
+	req.ProductID = productID
 
 	result, err := ctrl.usecase.SavePension(c.UserContext(), &req)
 	if err != nil {
@@ -656,7 +656,7 @@ func (ctrl *ParticipantController) SaveBeneficiary(c *fiber.Ctx) error {
 
 	req.TenantID = tenantID
 	req.ParticipantID = pID
-	req.ApplicationID = productID
+	req.ProductID = productID
 
 	result, err := ctrl.usecase.SaveBeneficiary(c.UserContext(), &req)
 	if err != nil {
@@ -694,7 +694,7 @@ func (ctrl *ParticipantController) DeleteBeneficiary(c *fiber.Ctx) error {
 		ChildID:       bID,
 		ParticipantID: pID,
 		TenantID:      tenantID,
-		ApplicationID: productID,
+		ProductID: productID,
 	}); err != nil {
 		return participantError(c, err)
 	}
@@ -761,7 +761,7 @@ func (ctrl *ParticipantController) UploadFile(c *fiber.Ctx) error {
 	req := &participantdto.UploadFileRequest{
 		TenantID:      tenantID,
 		ParticipantID: pID,
-		ApplicationID: productID,
+		ProductID: productID,
 		FieldName:     fieldName,
 	}
 
@@ -795,7 +795,7 @@ func (ctrl *ParticipantController) GetStatusHistory(c *fiber.Ctx) error {
 	result, err := ctrl.usecase.GetStatusHistory(c.UserContext(), &participantdto.GetParticipantRequest{
 		ParticipantID: pID,
 		TenantID:      tenantID,
-		ApplicationID: productID,
+		ProductID: productID,
 	})
 	if err != nil {
 		return participantError(c, err)
@@ -831,7 +831,7 @@ func (ctrl *ParticipantController) Submit(c *fiber.Ctx) error {
 	req := &participantdto.SubmitParticipantRequest{
 		TenantID:      tenantID,
 		ParticipantID: pID,
-		ApplicationID: productID,
+		ProductID: productID,
 		UserID:        userClaims.UserID,
 	}
 
@@ -870,7 +870,7 @@ func (ctrl *ParticipantController) Approve(c *fiber.Ctx) error {
 	req := &participantdto.ApproveParticipantRequest{
 		TenantID:      tenantID,
 		ParticipantID: pID,
-		ApplicationID: productID,
+		ProductID: productID,
 		UserID:        userClaims.UserID,
 	}
 
@@ -924,7 +924,7 @@ func (ctrl *ParticipantController) Reject(c *fiber.Ctx) error {
 	req := &participantdto.RejectParticipantRequest{
 		TenantID:      tenantID,
 		ParticipantID: pID,
-		ApplicationID: productID,
+		ProductID: productID,
 		UserID:        userClaims.UserID,
 		Reason:        body.Reason,
 	}
@@ -1000,7 +1000,7 @@ func (ctrl *ParticipantController) Delete(c *fiber.Ctx) error {
 	err = ctrl.usecase.DeleteParticipant(c.UserContext(), &participantdto.DeleteParticipantRequest{
 		ParticipantID: pID,
 		TenantID:      tenantID,
-		ApplicationID: productID,
+		ProductID: productID,
 		UserID:        userClaims.UserID,
 	})
 	if err != nil {

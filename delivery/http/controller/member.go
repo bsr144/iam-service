@@ -54,7 +54,7 @@ func (ctrl *MemberController) Register(c *fiber.Ctx) error {
 
 	req := &memberdto.RegisterRequest{
 		TenantID:      tenantID,
-		ApplicationID: productID,
+		ProductID: productID,
 		UserID:        userClaims.UserID,
 	}
 
@@ -103,7 +103,7 @@ func (ctrl *MemberController) List(c *fiber.Ctx) error {
 
 	req := &memberdto.ListRequest{
 		TenantID:      tenantID,
-		ApplicationID: productID,
+		ProductID: productID,
 		Search:        c.Query("search"),
 		Page:          page,
 		PerPage:       perPage,
@@ -160,7 +160,7 @@ func (ctrl *MemberController) Get(c *fiber.Ctx) error {
 	req := &memberdto.GetMemberRequest{
 		MemberID:      memberID,
 		TenantID:      tenantID,
-		ApplicationID: productID,
+		ProductID: productID,
 	}
 
 	result, err := ctrl.usecase.GetMember(c.UserContext(), req)
@@ -231,7 +231,7 @@ func (ctrl *MemberController) Approve(c *fiber.Ctx) error {
 	req := &memberdto.ApproveRequest{
 		MemberID:      memberID,
 		TenantID:      tenantID,
-		ApplicationID: productID,
+		ProductID: productID,
 		ApproverID:    userClaims.UserID,
 		RoleCode:      body.RoleCode,
 	}
@@ -304,7 +304,7 @@ func (ctrl *MemberController) Reject(c *fiber.Ctx) error {
 	req := &memberdto.RejectRequest{
 		MemberID:      memberID,
 		TenantID:      tenantID,
-		ApplicationID: productID,
+		ProductID: productID,
 		ApproverID:    userClaims.UserID,
 		Reason:        body.Reason,
 	}
@@ -377,7 +377,7 @@ func (ctrl *MemberController) ChangeRole(c *fiber.Ctx) error {
 	req := &memberdto.ChangeRoleRequest{
 		MemberID:      memberID,
 		TenantID:      tenantID,
-		ApplicationID: productID,
+		ProductID: productID,
 		ActorID:       userClaims.UserID,
 		RoleCode:      body.RoleCode,
 	}
@@ -436,7 +436,7 @@ func (ctrl *MemberController) Deactivate(c *fiber.Ctx) error {
 	req := &memberdto.DeactivateRequest{
 		MemberID:      memberID,
 		TenantID:      tenantID,
-		ApplicationID: productID,
+		ProductID: productID,
 		ActorID:       userClaims.UserID,
 	}
 

@@ -30,118 +30,49 @@ func selfRegRateLimit() fiber.Handler {
 	})
 }
 
-func SetupParticipantRoutes(api fiber.Router, ctrl *controller.ParticipantController, jwtMiddleware fiber.Handler) {
+func SetupParticipantRoutes(api fiber.Router, ctrl *controller.ParticipantController, jwtMiddleware fiber.Handler, frendzSavingMW fiber.Handler) {
 	selfReg := api.Group("/participants")
 	selfReg.Use(jwtMiddleware)
 	selfReg.Post("/self-register", selfRegRateLimit(), ctrl.SelfRegister)
 
-	participants := api.Group("/products/:productId/participants")
+	participants := api.Group("/participants")
 	participants.Use(jwtMiddleware)
 	participants.Use(middleware.ExtractTenantContext())
-	participants.Use(middleware.ExtractProductContext())
+	participants.Use(frendzSavingMW)
 
-	participants.Post("/",
-		middleware.RequireProductPermission("participant:create"),
-		ctrl.Create,
-	)
+	creatorMW := middleware.RequireProductRole("PARTICIPANT_CREATOR")
+	approverMW := middleware.RequireProductRole("PARTICIPANT_APPROVER")
+	anyRoleMW := middleware.RequireProductRole("PARTICIPANT_CREATOR", "PARTICIPANT_APPROVER")
 
-	participants.Get("/",
-		middleware.RequireProductPermission("participant:read"),
-		ctrl.List,
-	)
+	participants.Post("/", creatorMW, ctrl.Create)
+	participants.Get("/", anyRoleMW, ctrl.List)
+	participants.Get("/:id", anyRoleMW, ctrl.Get)
 
-	participants.Get("/:id",
-		middleware.RequireProductPermission("participant:read"),
-		ctrl.Get,
-	)
+	participants.Put("/:id/personal-data", creatorMW, ctrl.UpdatePersonalData)
 
-	participants.Put("/:id/personal-data",
-		middleware.RequireProductPermission("participant:update"),
-		ctrl.UpdatePersonalData,
-	)
+	participants.Put("/:id/identities", creatorMW, ctrl.SaveIdentity)
+	participants.Delete("/:id/identities/:identityId", creatorMW, ctrl.DeleteIdentity)
 
-	participants.Put("/:id/identities",
-		middleware.RequireProductPermission("participant:update"),
-		ctrl.SaveIdentity,
-	)
-	participants.Delete("/:id/identities/:identityId",
-		middleware.RequireProductPermission("participant:update"),
-		ctrl.DeleteIdentity,
-	)
+	participants.Put("/:id/addresses", creatorMW, ctrl.SaveAddress)
+	participants.Delete("/:id/addresses/:addressId", creatorMW, ctrl.DeleteAddress)
 
-	participants.Put("/:id/addresses",
-		middleware.RequireProductPermission("participant:update"),
-		ctrl.SaveAddress,
-	)
-	participants.Delete("/:id/addresses/:addressId",
-		middleware.RequireProductPermission("participant:update"),
-		ctrl.DeleteAddress,
-	)
+	participants.Put("/:id/bank-accounts", creatorMW, ctrl.SaveBankAccount)
+	participants.Delete("/:id/bank-accounts/:accountId", creatorMW, ctrl.DeleteBankAccount)
 
-	participants.Put("/:id/bank-accounts",
-		middleware.RequireProductPermission("participant:update"),
-		ctrl.SaveBankAccount,
-	)
-	participants.Delete("/:id/bank-accounts/:accountId",
-		middleware.RequireProductPermission("participant:update"),
-		ctrl.DeleteBankAccount,
-	)
+	participants.Put("/:id/family-members", creatorMW, ctrl.SaveFamilyMember)
+	participants.Delete("/:id/family-members/:memberId", creatorMW, ctrl.DeleteFamilyMember)
 
-	participants.Put("/:id/family-members",
-		middleware.RequireProductPermission("participant:update"),
-		ctrl.SaveFamilyMember,
-	)
-	participants.Delete("/:id/family-members/:memberId",
-		middleware.RequireProductPermission("participant:update"),
-		ctrl.DeleteFamilyMember,
-	)
+	participants.Put("/:id/employment", creatorMW, ctrl.SaveEmployment)
+	participants.Put("/:id/pension", creatorMW, ctrl.SavePension)
 
-	participants.Put("/:id/employment",
-		middleware.RequireProductPermission("participant:update"),
-		ctrl.SaveEmployment,
-	)
+	participants.Put("/:id/beneficiaries", creatorMW, ctrl.SaveBeneficiary)
+	participants.Delete("/:id/beneficiaries/:beneficiaryId", creatorMW, ctrl.DeleteBeneficiary)
 
-	participants.Put("/:id/pension",
-		middleware.RequireProductPermission("participant:update"),
-		ctrl.SavePension,
-	)
+	participants.Post("/:id/files", creatorMW, ctrl.UploadFile)
+	participants.Get("/:id/status-history", anyRoleMW, ctrl.GetStatusHistory)
 
-	participants.Put("/:id/beneficiaries",
-		middleware.RequireProductPermission("participant:update"),
-		ctrl.SaveBeneficiary,
-	)
-	participants.Delete("/:id/beneficiaries/:beneficiaryId",
-		middleware.RequireProductPermission("participant:update"),
-		ctrl.DeleteBeneficiary,
-	)
-
-	participants.Post("/:id/files",
-		middleware.RequireProductPermission("participant:update"),
-		ctrl.UploadFile,
-	)
-
-	participants.Get("/:id/status-history",
-		middleware.RequireProductPermission("participant:read"),
-		ctrl.GetStatusHistory,
-	)
-
-	participants.Post("/:id/submit",
-		middleware.RequireProductPermission("participant:submit"),
-		ctrl.Submit,
-	)
-
-	participants.Post("/:id/approve",
-		middleware.RequireProductPermission("participant:approve"),
-		ctrl.Approve,
-	)
-
-	participants.Post("/:id/reject",
-		middleware.RequireProductPermission("participant:reject"),
-		ctrl.Reject,
-	)
-
-	participants.Delete("/:id",
-		middleware.RequireProductPermission("participant:delete"),
-		ctrl.Delete,
-	)
+	participants.Post("/:id/submit", creatorMW, ctrl.Submit)
+	participants.Post("/:id/approve", approverMW, ctrl.Approve)
+	participants.Post("/:id/reject", approverMW, ctrl.Reject)
+	participants.Delete("/:id", approverMW, ctrl.Delete)
 }

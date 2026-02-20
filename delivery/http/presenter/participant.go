@@ -179,7 +179,7 @@ func MapParticipantResponse(dto *participantdto.ParticipantResponse) response.Pa
 	return response.ParticipantResponse{
 		ID:              dto.ID,
 		TenantID:        dto.TenantID,
-		ApplicationID:   dto.ApplicationID,
+		ProductID:       dto.ProductID,
 		UserID:          dto.UserID,
 		FullName:        dto.FullName,
 		Gender:          dto.Gender,

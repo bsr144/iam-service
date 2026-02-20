@@ -4,6 +4,7 @@ import (
 	"net"
 	"strings"
 
+	"iam-service/iam/product"
 	"iam-service/pkg/errors"
 	jwtpkg "iam-service/pkg/jwt"
 
@@ -12,8 +13,8 @@ import (
 )
 
 const (
-	UserClaimsKey         = "user_claims"
-	MultiTenantClaimsKey  = "multi_tenant_claims"
+	UserClaimsKey        = "user_claims"
+	MultiTenantClaimsKey = "multi_tenant_claims"
 )
 
 func GetUserClaims(c *fiber.Ctx) (*jwtpkg.JWTClaims, error) {
@@ -247,6 +248,61 @@ func ExtractProductContext() fiber.Handler {
 
 		c.Locals("product_id", productID)
 
+		return c.Next()
+	}
+}
+
+func ExtractFrendzSavingProduct(productUC product.Usecase) fiber.Handler {
+	return func(c *fiber.Ctx) error {
+		tenantID, err := GetTenantIDFromContext(c)
+		if err != nil {
+			appErr := errors.ErrForbidden("tenant context not found")
+			return c.Status(appErr.HTTPStatus).JSON(fiber.Map{
+				"success": false,
+				"error":   appErr.Message,
+				"code":    appErr.Code,
+			})
+		}
+
+		product, err := productUC.GetFrendzSaving(c.UserContext(), tenantID)
+		if err != nil {
+			appErr := errors.ErrNotFound("product not available for this tenant")
+			return c.Status(appErr.HTTPStatus).JSON(fiber.Map{
+				"success": false,
+				"error":   appErr.Message,
+				"code":    appErr.Code,
+			})
+		}
+
+		multiClaims, _ := GetMultiTenantClaims(c)
+		if multiClaims != nil && !multiClaims.IsPlatformAdmin() {
+			tc := multiClaims.GetTenantClaim(tenantID)
+			if tc == nil {
+				appErr := errors.ErrForbidden("access denied to this tenant")
+				return c.Status(appErr.HTTPStatus).JSON(fiber.Map{
+					"success": false,
+					"error":   appErr.Message,
+					"code":    appErr.Code,
+				})
+			}
+			hasProduct := false
+			for _, p := range tc.Products {
+				if p.ProductID == product.ID {
+					hasProduct = true
+					break
+				}
+			}
+			if !hasProduct {
+				appErr := errors.ErrForbidden("access denied to this product")
+				return c.Status(appErr.HTTPStatus).JSON(fiber.Map{
+					"success": false,
+					"error":   appErr.Message,
+					"code":    appErr.Code,
+				})
+			}
+		}
+
+		c.Locals("product_id", product.ID)
 		return c.Next()
 	}
 }

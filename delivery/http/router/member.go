@@ -7,20 +7,20 @@ import (
 	"github.com/gofiber/fiber/v2"
 )
 
-func SetupMemberRoutes(api fiber.Router, ctrl *controller.MemberController, jwtMiddleware fiber.Handler) {
-	products := api.Group("/products/:productId/members")
-	products.Use(jwtMiddleware)
-	products.Use(middleware.ExtractTenantContext())
-	products.Use(middleware.ExtractProductContext())
+func SetupMemberRoutes(api fiber.Router, ctrl *controller.MemberController, jwtMiddleware fiber.Handler, frendzSavingMW fiber.Handler) {
+	members := api.Group("/members")
+	members.Use(jwtMiddleware)
+	members.Use(middleware.ExtractTenantContext())
+	members.Use(frendzSavingMW)
 
-	products.Post("/register", ctrl.Register)
+	members.Post("/register", ctrl.Register)
 
-	adminMiddleware := middleware.RequireProductRole("TENANT_PRODUCT_ADMIN")
+	adminMW := middleware.RequireProductRole("TENANT_PRODUCT_ADMIN")
 
-	products.Get("/", adminMiddleware, ctrl.List)
-	products.Get("/:memberId", adminMiddleware, ctrl.Get)
-	products.Post("/:memberId/approve", adminMiddleware, ctrl.Approve)
-	products.Post("/:memberId/reject", adminMiddleware, ctrl.Reject)
-	products.Put("/:memberId/role", adminMiddleware, ctrl.ChangeRole)
-	products.Post("/:memberId/deactivate", adminMiddleware, ctrl.Deactivate)
+	members.Get("/", adminMW, ctrl.List)
+	members.Get("/:memberId", adminMW, ctrl.Get)
+	members.Post("/:memberId/approve", adminMW, ctrl.Approve)
+	members.Post("/:memberId/reject", adminMW, ctrl.Reject)
+	members.Put("/:memberId/role", adminMW, ctrl.ChangeRole)
+	members.Post("/:memberId/deactivate", adminMW, ctrl.Deactivate)
 }
