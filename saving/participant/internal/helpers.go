@@ -14,11 +14,11 @@ import (
 	"golang.org/x/sync/errgroup"
 )
 
-func validateParticipantOwnership(participant *entity.Participant, tenantID, applicationID uuid.UUID) error {
+func validateParticipantOwnership(participant *entity.Participant, tenantID, productID uuid.UUID) error {
 	if participant.TenantID != tenantID {
 		return errors.ErrForbidden("participant does not belong to this tenant")
 	}
-	if participant.ApplicationID != applicationID {
+	if participant.ProductID != productID {
 		return errors.ErrForbidden("participant does not belong to this product")
 	}
 	return nil
@@ -60,10 +60,10 @@ func sanitizeFilename(filename string) string {
 	return safe
 }
 
-func generateObjectKey(tenantID, applicationID, participantID uuid.UUID, fieldName, filename string) string {
+func generateObjectKey(tenantID, productID, participantID uuid.UUID, fieldName, filename string) string {
 	safeField := sanitizeFieldName(fieldName)
 	safeFile := sanitizeFilename(filename)
-	return fmt.Sprintf("participants/%s/%s/%s/%s/%s", tenantID.String(), applicationID.String(), participantID.String(), safeField, safeFile)
+	return fmt.Sprintf("participants/%s/%s/%s/%s/%s", tenantID.String(), productID.String(), participantID.String(), safeField, safeFile)
 }
 
 func mapIdentityToResponse(identity *entity.ParticipantIdentity) participantdto.IdentityResponse {
@@ -201,7 +201,7 @@ func (uc *usecase) buildFullParticipantResponse(ctx context.Context, participant
 	resp := &participantdto.ParticipantResponse{
 		ID:              participant.ID,
 		TenantID:        participant.TenantID,
-		ApplicationID:   participant.ApplicationID,
+		ProductID:       participant.ProductID,
 		UserID:          participant.UserID,
 		FullName:        participant.FullName,
 		Gender:          participant.Gender,

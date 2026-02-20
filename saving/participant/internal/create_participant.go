@@ -16,9 +16,9 @@ func (uc *usecase) CreateParticipant(ctx context.Context, req *participantdto.Cr
 		now := time.Now()
 
 		participant := &entity.Participant{
-			TenantID:      req.TenantID,
-			ApplicationID: req.ApplicationID,
-			UserID:        &req.UserID,
+			TenantID:  req.TenantID,
+			ProductID: req.ProductID,
+			UserID:    &req.UserID,
 			FullName:      req.FullName,
 			Status:        entity.ParticipantStatusDraft,
 			CreatedBy:     req.UserID,

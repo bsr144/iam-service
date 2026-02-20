@@ -44,8 +44,8 @@ type mockProductRegistrationConfigRepository struct {
 	mock.Mock
 }
 
-func (m *mockProductRegistrationConfigRepository) GetByApplicationAndType(ctx context.Context, applicationID uuid.UUID, regType string) (*entity.ProductRegistrationConfig, error) {
-	args := m.Called(ctx, applicationID, regType)
+func (m *mockProductRegistrationConfigRepository) GetByProductAndType(ctx context.Context, productID uuid.UUID, regType string) (*entity.ProductRegistrationConfig, error) {
+	args := m.Called(ctx, productID, regType)
 	if args.Get(0) == nil {
 		return nil, args.Error(1)
 	}
@@ -61,8 +61,8 @@ func (m *mockUserTenantRegistrationRepository) Create(ctx context.Context, reg *
 	return args.Error(0)
 }
 
-func (m *mockUserTenantRegistrationRepository) GetByUserAndProduct(ctx context.Context, userID, tenantID, applicationID uuid.UUID, regType string) (*entity.UserTenantRegistration, error) {
-	args := m.Called(ctx, userID, tenantID, applicationID, regType)
+func (m *mockUserTenantRegistrationRepository) GetByUserAndProduct(ctx context.Context, userID, tenantID, productID uuid.UUID, regType string) (*entity.UserTenantRegistration, error) {
+	args := m.Called(ctx, userID, tenantID, productID, regType)
 	if args.Get(0) == nil {
 		return nil, args.Error(1)
 	}
@@ -97,8 +97,8 @@ type mockParticipantRepositoryWithKTP struct {
 	MockParticipantRepository
 }
 
-func (m *mockParticipantRepositoryWithKTP) GetByKTPAndPensionNumber(ctx context.Context, ktpNumber, pensionNumber string, tenantID, applicationID uuid.UUID) (*entity.Participant, *entity.ParticipantPension, error) {
-	args := m.Called(ctx, ktpNumber, pensionNumber, tenantID, applicationID)
+func (m *mockParticipantRepositoryWithKTP) GetByKTPAndPensionNumber(ctx context.Context, ktpNumber, pensionNumber string, tenantID, productID uuid.UUID) (*entity.Participant, *entity.ParticipantPension, error) {
+	args := m.Called(ctx, ktpNumber, pensionNumber, tenantID, productID)
 	var p *entity.Participant
 	var pp *entity.ParticipantPension
 	if args.Get(0) != nil {
@@ -136,10 +136,10 @@ func activeProduct(tenantID uuid.UUID) *entity.Product {
 	}
 }
 
-func activeConfig(applicationID uuid.UUID) *entity.ProductRegistrationConfig {
+func activeConfig(productID uuid.UUID) *entity.ProductRegistrationConfig {
 	return &entity.ProductRegistrationConfig{
 		ID:               uuid.New(),
-		ApplicationID:    applicationID,
+		ProductID:    productID,
 		RegistrationType: "PARTICIPANT",
 		IsActive:         true,
 	}
@@ -214,7 +214,7 @@ func TestSelfRegister_Success_NewParticipant(t *testing.T) {
 
 	tenantRepo.On("GetByCode", ctx, req.Organization).Return(tenant, nil)
 	productRepo.On("GetByCodeAndTenant", ctx, tenant.ID, "frendz-saving").Return(product, nil)
-	configRepo.On("GetByApplicationAndType", ctx, product.ID, "PARTICIPANT").Return(config, nil)
+	configRepo.On("GetByProductAndType", ctx, product.ID, "PARTICIPANT").Return(config, nil)
 	profileRepo.On("GetByUserID", ctx, req.UserID).Return(profile, nil)
 	partRepo.On("GetByKTPAndPensionNumber", ctx, req.IdentityNumber, req.ParticipantNumber, tenant.ID, product.ID).
 		Return(nil, nil, apperrors.ErrNotFound("not found"))
@@ -230,7 +230,7 @@ func TestSelfRegister_Success_NewParticipant(t *testing.T) {
 	partRepo.MockParticipantRepository.On("GetByID", ctx, mock.Anything).Return(&entity.Participant{
 		ID:            uuid.New(),
 		TenantID:      tenant.ID,
-		ApplicationID: product.ID,
+		ProductID: product.ID,
 		UserID:        &req.UserID,
 		FullName:      profile.FullName(),
 		Status:        entity.ParticipantStatusDraft,
@@ -270,7 +270,7 @@ func TestSelfRegister_Success_ResponseDataHasNoKTPNumber(t *testing.T) {
 	mdValidator.On("ValidateItemCode", ctx, mock.Anything).Return(&masterdatadto.ValidateCodeResponse{Valid: true}, nil)
 	tenantRepo.On("GetByCode", ctx, req.Organization).Return(tenant, nil)
 	productRepo.On("GetByCodeAndTenant", ctx, tenant.ID, "frendz-saving").Return(product, nil)
-	configRepo.On("GetByApplicationAndType", ctx, product.ID, "PARTICIPANT").Return(config, nil)
+	configRepo.On("GetByProductAndType", ctx, product.ID, "PARTICIPANT").Return(config, nil)
 	profileRepo.On("GetByUserID", ctx, req.UserID).Return(profile, nil)
 	partRepo.On("GetByKTPAndPensionNumber", ctx, req.IdentityNumber, req.ParticipantNumber, tenant.ID, product.ID).
 		Return(nil, nil, apperrors.ErrNotFound("not found"))
@@ -307,7 +307,7 @@ func TestSelfRegister_Success_LinkExistingParticipant(t *testing.T) {
 	existingParticipant := &entity.Participant{
 		ID:            uuid.New(),
 		TenantID:      tenant.ID,
-		ApplicationID: product.ID,
+		ProductID: product.ID,
 		UserID:        nil,
 		FullName:      "Existing Person",
 		Status:        entity.ParticipantStatusDraft,
@@ -332,7 +332,7 @@ func TestSelfRegister_Success_LinkExistingParticipant(t *testing.T) {
 	mdValidator.On("ValidateItemCode", ctx, mock.Anything).Return(&masterdatadto.ValidateCodeResponse{Valid: true}, nil)
 	tenantRepo.On("GetByCode", ctx, req.Organization).Return(tenant, nil)
 	productRepo.On("GetByCodeAndTenant", ctx, tenant.ID, "frendz-saving").Return(product, nil)
-	configRepo.On("GetByApplicationAndType", ctx, product.ID, "PARTICIPANT").Return(config, nil)
+	configRepo.On("GetByProductAndType", ctx, product.ID, "PARTICIPANT").Return(config, nil)
 	profileRepo.On("GetByUserID", ctx, req.UserID).Return(profile, nil)
 	partRepo.On("GetByKTPAndPensionNumber", ctx, req.IdentityNumber, req.ParticipantNumber, tenant.ID, product.ID).
 		Return(existingParticipant, existingPension, nil)
@@ -534,7 +534,7 @@ func TestSelfRegister_ConfigNotFound(t *testing.T) {
 	productRepo.On("GetByCodeAndTenant", ctx, tenant.ID, "frendz-saving").Return(product, nil)
 	configRepo := &mockProductRegistrationConfigRepository{}
 
-	configRepo.On("GetByApplicationAndType", ctx, product.ID, "PARTICIPANT").Return(nil, apperrors.ErrNotFound("config not found"))
+	configRepo.On("GetByProductAndType", ctx, product.ID, "PARTICIPANT").Return(nil, apperrors.ErrNotFound("config not found"))
 
 	uc := &usecase{
 		masterdataUsecase: mdValidator,
@@ -558,7 +558,7 @@ func TestSelfRegister_ConfigNotActive(t *testing.T) {
 	product := activeProduct(tenant.ID)
 	inactiveConfig := &entity.ProductRegistrationConfig{
 		ID:               uuid.New(),
-		ApplicationID:    product.ID,
+		ProductID:    product.ID,
 		RegistrationType: "PARTICIPANT",
 		IsActive:         false,
 	}
@@ -570,7 +570,7 @@ func TestSelfRegister_ConfigNotActive(t *testing.T) {
 	productRepo := &mockProductRepository{}
 	productRepo.On("GetByCodeAndTenant", ctx, tenant.ID, "frendz-saving").Return(product, nil)
 	configRepo := &mockProductRegistrationConfigRepository{}
-	configRepo.On("GetByApplicationAndType", ctx, product.ID, "PARTICIPANT").Return(inactiveConfig, nil)
+	configRepo.On("GetByProductAndType", ctx, product.ID, "PARTICIPANT").Return(inactiveConfig, nil)
 
 	uc := &usecase{
 		masterdataUsecase: mdValidator,
@@ -609,7 +609,7 @@ func TestSelfRegister_IncompleteProfile_MissingGender(t *testing.T) {
 	productRepo := &mockProductRepository{}
 	productRepo.On("GetByCodeAndTenant", ctx, tenant.ID, "frendz-saving").Return(product, nil)
 	configRepo := &mockProductRegistrationConfigRepository{}
-	configRepo.On("GetByApplicationAndType", ctx, product.ID, "PARTICIPANT").Return(config, nil)
+	configRepo.On("GetByProductAndType", ctx, product.ID, "PARTICIPANT").Return(config, nil)
 	profileRepo := &mockUserProfileRepository{}
 	profileRepo.On("GetByUserID", ctx, req.UserID).Return(incompleteProfile, nil)
 
@@ -640,7 +640,7 @@ func TestSelfRegister_AlreadyLinked_DifferentUser(t *testing.T) {
 	linkedParticipant := &entity.Participant{
 		ID:            uuid.New(),
 		TenantID:      tenant.ID,
-		ApplicationID: product.ID,
+		ProductID: product.ID,
 		UserID:        &existingUserID,
 		FullName:      "Someone Else",
 		Status:        entity.ParticipantStatusApproved,
@@ -657,7 +657,7 @@ func TestSelfRegister_AlreadyLinked_DifferentUser(t *testing.T) {
 	productRepo := &mockProductRepository{}
 	productRepo.On("GetByCodeAndTenant", ctx, tenant.ID, "frendz-saving").Return(product, nil)
 	configRepo := &mockProductRegistrationConfigRepository{}
-	configRepo.On("GetByApplicationAndType", ctx, product.ID, "PARTICIPANT").Return(config, nil)
+	configRepo.On("GetByProductAndType", ctx, product.ID, "PARTICIPANT").Return(config, nil)
 	profileRepo := &mockUserProfileRepository{}
 	profileRepo.On("GetByUserID", ctx, req.UserID).Return(profile, nil)
 	partRepo := &mockParticipantRepositoryWithKTP{}
@@ -695,7 +695,7 @@ func TestSelfRegister_AlreadyLinked_SameUser(t *testing.T) {
 	linkedParticipant := &entity.Participant{
 		ID:            uuid.New(),
 		TenantID:      tenant.ID,
-		ApplicationID: product.ID,
+		ProductID: product.ID,
 		UserID:        &sameUserID,
 		FullName:      "Same User",
 		Status:        entity.ParticipantStatusApproved,
@@ -712,7 +712,7 @@ func TestSelfRegister_AlreadyLinked_SameUser(t *testing.T) {
 	productRepo := &mockProductRepository{}
 	productRepo.On("GetByCodeAndTenant", ctx, tenant.ID, "frendz-saving").Return(product, nil)
 	configRepo := &mockProductRegistrationConfigRepository{}
-	configRepo.On("GetByApplicationAndType", ctx, product.ID, "PARTICIPANT").Return(config, nil)
+	configRepo.On("GetByProductAndType", ctx, product.ID, "PARTICIPANT").Return(config, nil)
 	profileRepo := &mockUserProfileRepository{}
 	profileRepo.On("GetByUserID", ctx, req.UserID).Return(profile, nil)
 	partRepo := &mockParticipantRepositoryWithKTP{}
@@ -753,7 +753,7 @@ func TestSelfRegister_AlreadyRegistered_UTRExists(t *testing.T) {
 	productRepo := &mockProductRepository{}
 	productRepo.On("GetByCodeAndTenant", ctx, tenant.ID, "frendz-saving").Return(product, nil)
 	configRepo := &mockProductRegistrationConfigRepository{}
-	configRepo.On("GetByApplicationAndType", ctx, product.ID, "PARTICIPANT").Return(config, nil)
+	configRepo.On("GetByProductAndType", ctx, product.ID, "PARTICIPANT").Return(config, nil)
 	profileRepo := &mockUserProfileRepository{}
 	profileRepo.On("GetByUserID", ctx, req.UserID).Return(profile, nil)
 	partRepo := &mockParticipantRepositoryWithKTP{}
@@ -805,7 +805,7 @@ func TestSelfRegister_UniqueConstraintViolation_OnCreate(t *testing.T) {
 	mdValidator.On("ValidateItemCode", ctx, mock.Anything).Return(&masterdatadto.ValidateCodeResponse{Valid: true}, nil)
 	tenantRepo.On("GetByCode", ctx, req.Organization).Return(tenant, nil)
 	productRepo.On("GetByCodeAndTenant", ctx, tenant.ID, "frendz-saving").Return(product, nil)
-	configRepo.On("GetByApplicationAndType", ctx, product.ID, "PARTICIPANT").Return(config, nil)
+	configRepo.On("GetByProductAndType", ctx, product.ID, "PARTICIPANT").Return(config, nil)
 	profileRepo.On("GetByUserID", ctx, req.UserID).Return(profile, nil)
 	partRepo.On("GetByKTPAndPensionNumber", ctx, req.IdentityNumber, req.ParticipantNumber, tenant.ID, product.ID).
 		Return(nil, nil, apperrors.ErrNotFound("not found"))
@@ -849,7 +849,7 @@ func TestSelfRegister_TransactionRollback_OnUTRCreateFailure(t *testing.T) {
 	mdValidator.On("ValidateItemCode", ctx, mock.Anything).Return(&masterdatadto.ValidateCodeResponse{Valid: true}, nil)
 	tenantRepo.On("GetByCode", ctx, req.Organization).Return(tenant, nil)
 	productRepo.On("GetByCodeAndTenant", ctx, tenant.ID, "frendz-saving").Return(product, nil)
-	configRepo.On("GetByApplicationAndType", ctx, product.ID, "PARTICIPANT").Return(config, nil)
+	configRepo.On("GetByProductAndType", ctx, product.ID, "PARTICIPANT").Return(config, nil)
 	profileRepo.On("GetByUserID", ctx, req.UserID).Return(profile, nil)
 	partRepo.On("GetByKTPAndPensionNumber", ctx, req.IdentityNumber, req.ParticipantNumber, tenant.ID, product.ID).
 		Return(nil, nil, apperrors.ErrNotFound("not found"))

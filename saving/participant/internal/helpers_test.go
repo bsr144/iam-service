@@ -38,12 +38,12 @@ func newTestUsecase(
 	}
 }
 
-func createMockParticipant(status entity.ParticipantStatus, tenantID, applicationID, userID uuid.UUID) *entity.Participant {
+func createMockParticipant(status entity.ParticipantStatus, tenantID, productID, userID uuid.UUID) *entity.Participant {
 	now := time.Now()
 	return &entity.Participant{
 		ID:            uuid.New(),
 		TenantID:      tenantID,
-		ApplicationID: applicationID,
+		ProductID: productID,
 		UserID:        &userID,
 		FullName:      "Test Participant",
 		Status:        status,

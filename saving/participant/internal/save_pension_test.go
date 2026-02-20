@@ -17,7 +17,7 @@ import (
 
 func TestUsecase_SavePension(t *testing.T) {
 	tenantID := uuid.New()
-	applicationID := uuid.New()
+	productID := uuid.New()
 	userID := uuid.New()
 	participantID := uuid.New()
 	pensionID := uuid.New()
@@ -36,7 +36,7 @@ func TestUsecase_SavePension(t *testing.T) {
 			req: &participantdto.SavePensionRequest{
 				ParticipantID:   participantID,
 				TenantID:        tenantID,
-				ApplicationID:   applicationID,
+				ProductID:   productID,
 				ParticipantNumber: strPtr("PEN-001"),
 				PensionCategory:   strPtr("PARTICIPANT_CATEGORY_001"),
 				PensionStatus:     strPtr("PARTICIPANT_STATUS_001"),
@@ -44,7 +44,7 @@ func TestUsecase_SavePension(t *testing.T) {
 			},
 			setup: func(txMgr *MockTransactionManager, partRepo *MockParticipantRepository, penRepo *MockParticipantPensionRepository) {
 				txMgr.On("WithTransaction", mock.Anything, mock.Anything).Return(nil)
-				participant := createMockParticipant(entity.ParticipantStatusDraft, tenantID, applicationID, userID)
+				participant := createMockParticipant(entity.ParticipantStatusDraft, tenantID, productID, userID)
 				participant.ID = participantID
 				partRepo.On("GetByID", mock.Anything, participantID).Return(participant, nil)
 				penRepo.On("GetByParticipantID", mock.Anything, participantID).Return(nil, errors.ErrNotFound("not found"))
@@ -61,13 +61,13 @@ func TestUsecase_SavePension(t *testing.T) {
 			req: &participantdto.SavePensionRequest{
 				ParticipantID:   participantID,
 				TenantID:        tenantID,
-				ApplicationID:   applicationID,
+				ProductID:   productID,
 				ParticipantNumber: strPtr("PEN-002"),
 				PensionStatus:     strPtr("PARTICIPANT_STATUS_002"),
 			},
 			setup: func(txMgr *MockTransactionManager, partRepo *MockParticipantRepository, penRepo *MockParticipantPensionRepository) {
 				txMgr.On("WithTransaction", mock.Anything, mock.Anything).Return(nil)
-				participant := createMockParticipant(entity.ParticipantStatusDraft, tenantID, applicationID, userID)
+				participant := createMockParticipant(entity.ParticipantStatusDraft, tenantID, productID, userID)
 				participant.ID = participantID
 				partRepo.On("GetByID", mock.Anything, participantID).Return(participant, nil)
 
@@ -86,12 +86,12 @@ func TestUsecase_SavePension(t *testing.T) {
 				ID:              &pensionID,
 				ParticipantID:   participantID,
 				TenantID:        tenantID,
-				ApplicationID:   applicationID,
+				ProductID:   productID,
 				ParticipantNumber: strPtr("PEN-003"),
 			},
 			setup: func(txMgr *MockTransactionManager, partRepo *MockParticipantRepository, penRepo *MockParticipantPensionRepository) {
 				txMgr.On("WithTransaction", mock.Anything, mock.Anything).Return(nil)
-				participant := createMockParticipant(entity.ParticipantStatusDraft, tenantID, applicationID, userID)
+				participant := createMockParticipant(entity.ParticipantStatusDraft, tenantID, productID, userID)
 				participant.ID = participantID
 				partRepo.On("GetByID", mock.Anything, participantID).Return(participant, nil)
 
@@ -109,12 +109,12 @@ func TestUsecase_SavePension(t *testing.T) {
 			req: &participantdto.SavePensionRequest{
 				ParticipantID:   participantID,
 				TenantID:        tenantID,
-				ApplicationID:   applicationID,
+				ProductID:   productID,
 				ParticipantNumber: strPtr("PEN-004"),
 			},
 			setup: func(txMgr *MockTransactionManager, partRepo *MockParticipantRepository, penRepo *MockParticipantPensionRepository) {
 				txMgr.On("WithTransaction", mock.Anything, mock.Anything).Return(nil)
-				participant := createMockParticipant(entity.ParticipantStatusRejected, tenantID, applicationID, userID)
+				participant := createMockParticipant(entity.ParticipantStatusRejected, tenantID, productID, userID)
 				participant.ID = participantID
 				partRepo.On("GetByID", mock.Anything, participantID).Return(participant, nil)
 				penRepo.On("GetByParticipantID", mock.Anything, participantID).Return(nil, errors.ErrNotFound("not found"))
@@ -127,7 +127,7 @@ func TestUsecase_SavePension(t *testing.T) {
 			req: &participantdto.SavePensionRequest{
 				ParticipantID:   participantID,
 				TenantID:        tenantID,
-				ApplicationID:   applicationID,
+				ProductID:   productID,
 				ParticipantNumber: strPtr("PEN-005"),
 			},
 			setup: func(txMgr *MockTransactionManager, partRepo *MockParticipantRepository, penRepo *MockParticipantPensionRepository) {
@@ -142,12 +142,12 @@ func TestUsecase_SavePension(t *testing.T) {
 			req: &participantdto.SavePensionRequest{
 				ParticipantID:   participantID,
 				TenantID:        otherTenantID,
-				ApplicationID:   applicationID,
+				ProductID:   productID,
 				ParticipantNumber: strPtr("PEN-006"),
 			},
 			setup: func(txMgr *MockTransactionManager, partRepo *MockParticipantRepository, penRepo *MockParticipantPensionRepository) {
 				txMgr.On("WithTransaction", mock.Anything, mock.Anything).Return(nil)
-				participant := createMockParticipant(entity.ParticipantStatusDraft, tenantID, applicationID, userID)
+				participant := createMockParticipant(entity.ParticipantStatusDraft, tenantID, productID, userID)
 				participant.ID = participantID
 				partRepo.On("GetByID", mock.Anything, participantID).Return(participant, nil)
 			},
@@ -159,12 +159,12 @@ func TestUsecase_SavePension(t *testing.T) {
 			req: &participantdto.SavePensionRequest{
 				ParticipantID:   participantID,
 				TenantID:        tenantID,
-				ApplicationID:   applicationID,
+				ProductID:   productID,
 				ParticipantNumber: strPtr("PEN-007"),
 			},
 			setup: func(txMgr *MockTransactionManager, partRepo *MockParticipantRepository, penRepo *MockParticipantPensionRepository) {
 				txMgr.On("WithTransaction", mock.Anything, mock.Anything).Return(nil)
-				participant := createMockParticipant(entity.ParticipantStatusPendingApproval, tenantID, applicationID, userID)
+				participant := createMockParticipant(entity.ParticipantStatusPendingApproval, tenantID, productID, userID)
 				participant.ID = participantID
 				partRepo.On("GetByID", mock.Anything, participantID).Return(participant, nil)
 			},
@@ -176,12 +176,12 @@ func TestUsecase_SavePension(t *testing.T) {
 			req: &participantdto.SavePensionRequest{
 				ParticipantID:   participantID,
 				TenantID:        tenantID,
-				ApplicationID:   applicationID,
+				ProductID:   productID,
 				ParticipantNumber: strPtr("PEN-008"),
 			},
 			setup: func(txMgr *MockTransactionManager, partRepo *MockParticipantRepository, penRepo *MockParticipantPensionRepository) {
 				txMgr.On("WithTransaction", mock.Anything, mock.Anything).Return(nil)
-				participant := createMockParticipant(entity.ParticipantStatusApproved, tenantID, applicationID, userID)
+				participant := createMockParticipant(entity.ParticipantStatusApproved, tenantID, productID, userID)
 				participant.ID = participantID
 				partRepo.On("GetByID", mock.Anything, participantID).Return(participant, nil)
 			},
@@ -194,12 +194,12 @@ func TestUsecase_SavePension(t *testing.T) {
 				ID:              &pensionID,
 				ParticipantID:   participantID,
 				TenantID:        tenantID,
-				ApplicationID:   applicationID,
+				ProductID:   productID,
 				ParticipantNumber: strPtr("PEN-009"),
 			},
 			setup: func(txMgr *MockTransactionManager, partRepo *MockParticipantRepository, penRepo *MockParticipantPensionRepository) {
 				txMgr.On("WithTransaction", mock.Anything, mock.Anything).Return(nil)
-				participant := createMockParticipant(entity.ParticipantStatusDraft, tenantID, applicationID, userID)
+				participant := createMockParticipant(entity.ParticipantStatusDraft, tenantID, productID, userID)
 				participant.ID = participantID
 				partRepo.On("GetByID", mock.Anything, participantID).Return(participant, nil)
 				penRepo.On("GetByID", mock.Anything, pensionID).Return(nil, errors.ErrNotFound("pension not found"))
@@ -213,12 +213,12 @@ func TestUsecase_SavePension(t *testing.T) {
 				ID:              &pensionID,
 				ParticipantID:   participantID,
 				TenantID:        tenantID,
-				ApplicationID:   applicationID,
+				ProductID:   productID,
 				ParticipantNumber: strPtr("PEN-010"),
 			},
 			setup: func(txMgr *MockTransactionManager, partRepo *MockParticipantRepository, penRepo *MockParticipantPensionRepository) {
 				txMgr.On("WithTransaction", mock.Anything, mock.Anything).Return(nil)
-				participant := createMockParticipant(entity.ParticipantStatusDraft, tenantID, applicationID, userID)
+				participant := createMockParticipant(entity.ParticipantStatusDraft, tenantID, productID, userID)
 				participant.ID = participantID
 				partRepo.On("GetByID", mock.Anything, participantID).Return(participant, nil)
 

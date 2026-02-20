@@ -26,7 +26,7 @@ func TestUsecase_CreateParticipant(t *testing.T) {
 			name: "success - creates participant in DRAFT status",
 			req: &participantdto.CreateParticipantRequest{
 				TenantID:      uuid.New(),
-				ApplicationID: uuid.New(),
+				ProductID: uuid.New(),
 				UserID:        uuid.New(),
 				FullName:      "John Doe",
 			},
@@ -52,7 +52,7 @@ func TestUsecase_CreateParticipant(t *testing.T) {
 			name: "error - repository create fails",
 			req: &participantdto.CreateParticipantRequest{
 				TenantID:      uuid.New(),
-				ApplicationID: uuid.New(),
+				ProductID: uuid.New(),
 				UserID:        uuid.New(),
 				FullName:      "John Doe",
 			},
@@ -66,7 +66,7 @@ func TestUsecase_CreateParticipant(t *testing.T) {
 			name: "error - status history creation fails",
 			req: &participantdto.CreateParticipantRequest{
 				TenantID:      uuid.New(),
-				ApplicationID: uuid.New(),
+				ProductID: uuid.New(),
 				UserID:        uuid.New(),
 				FullName:      "John Doe",
 			},
@@ -108,7 +108,7 @@ func TestUsecase_CreateParticipant(t *testing.T) {
 				assert.Equal(t, tt.req.FullName, resp.FullName)
 				assert.Equal(t, string(entity.ParticipantStatusDraft), resp.Status)
 				assert.Equal(t, tt.req.TenantID, resp.TenantID)
-				assert.Equal(t, tt.req.ApplicationID, resp.ApplicationID)
+				assert.Equal(t, tt.req.ProductID, resp.ProductID)
 			}
 
 			txMgr.AssertExpectations(t)

@@ -16,7 +16,7 @@ import (
 
 func TestUsecase_GetParticipant(t *testing.T) {
 	tenantID := uuid.New()
-	applicationID := uuid.New()
+	productID := uuid.New()
 	userID := uuid.New()
 	participantID := uuid.New()
 	otherTenantID := uuid.New()
@@ -33,10 +33,10 @@ func TestUsecase_GetParticipant(t *testing.T) {
 			req: &participantdto.GetParticipantRequest{
 				ParticipantID: participantID,
 				TenantID:      tenantID,
-				ApplicationID: applicationID,
+				ProductID: productID,
 			},
 			setup: func(partRepo *MockParticipantRepository, identRepo *MockParticipantIdentityRepository, addrRepo *MockParticipantAddressRepository, bankRepo *MockParticipantBankAccountRepository, famRepo *MockParticipantFamilyMemberRepository, empRepo *MockParticipantEmploymentRepository, penRepo *MockParticipantPensionRepository, benRepo *MockParticipantBeneficiaryRepository) {
-				participant := createMockParticipant(entity.ParticipantStatusDraft, tenantID, applicationID, userID)
+				participant := createMockParticipant(entity.ParticipantStatusDraft, tenantID, productID, userID)
 				participant.ID = participantID
 				partRepo.On("GetByID", mock.Anything, participantID).Return(participant, nil)
 
@@ -67,10 +67,10 @@ func TestUsecase_GetParticipant(t *testing.T) {
 			req: &participantdto.GetParticipantRequest{
 				ParticipantID: participantID,
 				TenantID:      tenantID,
-				ApplicationID: applicationID,
+				ProductID: productID,
 			},
 			setup: func(partRepo *MockParticipantRepository, identRepo *MockParticipantIdentityRepository, addrRepo *MockParticipantAddressRepository, bankRepo *MockParticipantBankAccountRepository, famRepo *MockParticipantFamilyMemberRepository, empRepo *MockParticipantEmploymentRepository, penRepo *MockParticipantPensionRepository, benRepo *MockParticipantBeneficiaryRepository) {
-				participant := createMockParticipant(entity.ParticipantStatusDraft, tenantID, applicationID, userID)
+				participant := createMockParticipant(entity.ParticipantStatusDraft, tenantID, productID, userID)
 				participant.ID = participantID
 				partRepo.On("GetByID", mock.Anything, participantID).Return(participant, nil)
 
@@ -89,7 +89,7 @@ func TestUsecase_GetParticipant(t *testing.T) {
 			req: &participantdto.GetParticipantRequest{
 				ParticipantID: participantID,
 				TenantID:      tenantID,
-				ApplicationID: applicationID,
+				ProductID: productID,
 			},
 			setup: func(partRepo *MockParticipantRepository, identRepo *MockParticipantIdentityRepository, addrRepo *MockParticipantAddressRepository, bankRepo *MockParticipantBankAccountRepository, famRepo *MockParticipantFamilyMemberRepository, empRepo *MockParticipantEmploymentRepository, penRepo *MockParticipantPensionRepository, benRepo *MockParticipantBeneficiaryRepository) {
 				partRepo.On("GetByID", mock.Anything, participantID).Return(nil, errors.ErrNotFound("participant not found"))
@@ -102,10 +102,10 @@ func TestUsecase_GetParticipant(t *testing.T) {
 			req: &participantdto.GetParticipantRequest{
 				ParticipantID: participantID,
 				TenantID:      otherTenantID,
-				ApplicationID: applicationID,
+				ProductID: productID,
 			},
 			setup: func(partRepo *MockParticipantRepository, identRepo *MockParticipantIdentityRepository, addrRepo *MockParticipantAddressRepository, bankRepo *MockParticipantBankAccountRepository, famRepo *MockParticipantFamilyMemberRepository, empRepo *MockParticipantEmploymentRepository, penRepo *MockParticipantPensionRepository, benRepo *MockParticipantBeneficiaryRepository) {
-				participant := createMockParticipant(entity.ParticipantStatusDraft, tenantID, applicationID, userID)
+				participant := createMockParticipant(entity.ParticipantStatusDraft, tenantID, productID, userID)
 				participant.ID = participantID
 				partRepo.On("GetByID", mock.Anything, participantID).Return(participant, nil)
 			},

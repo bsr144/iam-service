@@ -8,14 +8,14 @@ import (
 
 type CreateParticipantRequest struct {
 	TenantID      uuid.UUID `json:"-"`
-	ApplicationID uuid.UUID `json:"-"`
+	ProductID uuid.UUID `json:"-"`
 	UserID        uuid.UUID `json:"-"`
 	FullName      string    `json:"full_name" validate:"required,min=2,max=255"`
 }
 
 type UpdatePersonalDataRequest struct {
 	TenantID      uuid.UUID  `json:"-"`
-	ApplicationID uuid.UUID  `json:"-"`
+	ProductID uuid.UUID  `json:"-"`
 	ParticipantID uuid.UUID  `json:"-"`
 	UserID        uuid.UUID  `json:"-"`
 	FullName      string     `json:"full_name" validate:"required,min=2,max=255"`
@@ -33,7 +33,7 @@ type UpdatePersonalDataRequest struct {
 type SaveIdentityRequest struct {
 	ID                *uuid.UUID `json:"id,omitempty"`
 	TenantID          uuid.UUID  `json:"-"`
-	ApplicationID     uuid.UUID  `json:"-"`
+	ProductID     uuid.UUID  `json:"-"`
 	ParticipantID     uuid.UUID  `json:"-"`
 	IdentityType      string     `json:"identity_type" validate:"required,max=50"`
 	IdentityNumber    string     `json:"identity_number" validate:"required,max=100"`
@@ -46,7 +46,7 @@ type SaveIdentityRequest struct {
 type SaveAddressRequest struct {
 	ID              *uuid.UUID `json:"id,omitempty"`
 	TenantID        uuid.UUID  `json:"-"`
-	ApplicationID   uuid.UUID  `json:"-"`
+	ProductID   uuid.UUID  `json:"-"`
 	ParticipantID   uuid.UUID  `json:"-"`
 	AddressType     string     `json:"address_type" validate:"required,max=50"`
 	CountryCode     *string    `json:"country_code,omitempty" validate:"omitempty,max=10"`
@@ -64,7 +64,7 @@ type SaveAddressRequest struct {
 type SaveBankAccountRequest struct {
 	ID                *uuid.UUID `json:"id,omitempty"`
 	TenantID          uuid.UUID  `json:"-"`
-	ApplicationID     uuid.UUID  `json:"-"`
+	ProductID     uuid.UUID  `json:"-"`
 	ParticipantID     uuid.UUID  `json:"-"`
 	BankCode          string     `json:"bank_code" validate:"required,max=10"`
 	AccountNumber     string     `json:"account_number" validate:"required,max=50"`
@@ -79,7 +79,7 @@ type SaveBankAccountRequest struct {
 type SaveFamilyMemberRequest struct {
 	ID                    *uuid.UUID `json:"id,omitempty"`
 	TenantID              uuid.UUID  `json:"-"`
-	ApplicationID         uuid.UUID  `json:"-"`
+	ProductID         uuid.UUID  `json:"-"`
 	ParticipantID         uuid.UUID  `json:"-"`
 	FullName              string     `json:"full_name" validate:"required,max=255"`
 	RelationshipType      string     `json:"relationship_type" validate:"required,max=50"`
@@ -90,7 +90,7 @@ type SaveFamilyMemberRequest struct {
 type SaveEmploymentRequest struct {
 	ID                 *uuid.UUID `json:"id,omitempty"`
 	TenantID           uuid.UUID  `json:"-"`
-	ApplicationID      uuid.UUID  `json:"-"`
+	ProductID      uuid.UUID  `json:"-"`
 	ParticipantID      uuid.UUID  `json:"-"`
 	PersonnelNumber    *string    `json:"personnel_number,omitempty" validate:"omitempty,max=50"`
 	DateOfHire         *time.Time `json:"date_of_hire,omitempty"`
@@ -113,7 +113,7 @@ type SaveEmploymentRequest struct {
 type SavePensionRequest struct {
 	ID                      *uuid.UUID `json:"id,omitempty"`
 	TenantID                uuid.UUID  `json:"-"`
-	ApplicationID           uuid.UUID  `json:"-"`
+	ProductID           uuid.UUID  `json:"-"`
 	ParticipantID           uuid.UUID  `json:"-"`
 	ParticipantNumber       *string    `json:"participant_number,omitempty" validate:"omitempty,max=50"`
 	PensionCategory         *string    `json:"pension_category,omitempty" validate:"omitempty,max=50"`
@@ -126,7 +126,7 @@ type SavePensionRequest struct {
 type SaveBeneficiaryRequest struct {
 	ID                      *uuid.UUID `json:"id,omitempty"`
 	TenantID                uuid.UUID  `json:"-"`
-	ApplicationID           uuid.UUID  `json:"-"`
+	ProductID           uuid.UUID  `json:"-"`
 	ParticipantID           uuid.UUID  `json:"-"`
 	FamilyMemberID          uuid.UUID  `json:"family_member_id" validate:"required"`
 	IdentityPhotoFilePath   *string    `json:"identity_photo_file_path,omitempty" validate:"omitempty,max=500"`
@@ -137,28 +137,28 @@ type SaveBeneficiaryRequest struct {
 
 type UploadFileRequest struct {
 	TenantID      uuid.UUID `json:"-"`
-	ApplicationID uuid.UUID `json:"-"`
+	ProductID uuid.UUID `json:"-"`
 	ParticipantID uuid.UUID `json:"-"`
 	FieldName     string    `json:"-"`
 }
 
 type SubmitParticipantRequest struct {
 	TenantID      uuid.UUID `json:"-"`
-	ApplicationID uuid.UUID `json:"-"`
+	ProductID uuid.UUID `json:"-"`
 	ParticipantID uuid.UUID `json:"-"`
 	UserID        uuid.UUID `json:"-"`
 }
 
 type ApproveParticipantRequest struct {
 	TenantID      uuid.UUID `json:"-"`
-	ApplicationID uuid.UUID `json:"-"`
+	ProductID uuid.UUID `json:"-"`
 	ParticipantID uuid.UUID `json:"-"`
 	UserID        uuid.UUID `json:"-"`
 }
 
 type RejectParticipantRequest struct {
 	TenantID      uuid.UUID `json:"-"`
-	ApplicationID uuid.UUID `json:"-"`
+	ProductID uuid.UUID `json:"-"`
 	ParticipantID uuid.UUID `json:"-"`
 	UserID        uuid.UUID `json:"-"`
 	Reason        string    `json:"reason" validate:"required,min=10,max=500"`
@@ -166,7 +166,7 @@ type RejectParticipantRequest struct {
 
 type ListParticipantsRequest struct {
 	TenantID      uuid.UUID `json:"-"`
-	ApplicationID uuid.UUID `json:"-"`
+	ProductID uuid.UUID `json:"-"`
 	Status        *string    `json:"status,omitempty" validate:"omitempty,oneof=DRAFT PENDING_APPROVAL APPROVED REJECTED"`
 	Search        string     `json:"search,omitempty"`
 	Page          int        `json:"page" validate:"min=1"`
@@ -178,13 +178,13 @@ type ListParticipantsRequest struct {
 type GetParticipantRequest struct {
 	ParticipantID uuid.UUID `json:"-"`
 	TenantID      uuid.UUID `json:"-"`
-	ApplicationID uuid.UUID `json:"-"`
+	ProductID uuid.UUID `json:"-"`
 }
 
 type DeleteParticipantRequest struct {
 	ParticipantID uuid.UUID `json:"-"`
 	TenantID      uuid.UUID `json:"-"`
-	ApplicationID uuid.UUID `json:"-"`
+	ProductID uuid.UUID `json:"-"`
 	UserID        uuid.UUID `json:"-"`
 }
 
@@ -192,7 +192,7 @@ type DeleteChildEntityRequest struct {
 	ChildID       uuid.UUID `json:"-"`
 	ParticipantID uuid.UUID `json:"-"`
 	TenantID      uuid.UUID `json:"-"`
-	ApplicationID uuid.UUID `json:"-"`
+	ProductID uuid.UUID `json:"-"`
 }
 
 type SelfRegisterRequest struct {

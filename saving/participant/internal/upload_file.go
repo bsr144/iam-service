@@ -15,7 +15,7 @@ func (uc *usecase) UploadFile(ctx context.Context, req *participantdto.UploadFil
 		return nil, fmt.Errorf("get participant: %w", err)
 	}
 
-	if err := validateParticipantOwnership(participant, req.TenantID, req.ApplicationID); err != nil {
+	if err := validateParticipantOwnership(participant, req.TenantID, req.ProductID); err != nil {
 		return nil, err
 	}
 
@@ -23,7 +23,7 @@ func (uc *usecase) UploadFile(ctx context.Context, req *participantdto.UploadFil
 		return nil, err
 	}
 
-	objectKey := generateObjectKey(req.TenantID, req.ApplicationID, req.ParticipantID, req.FieldName, filename)
+	objectKey := generateObjectKey(req.TenantID, req.ProductID, req.ParticipantID, req.FieldName, filename)
 
 	bucket := uc.cfg.Infra.Minio.Bucket
 	filePath, err := uc.fileStorage.UploadFile(ctx, bucket, objectKey, file, fileSize, contentType)

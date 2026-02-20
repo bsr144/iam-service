@@ -13,52 +13,52 @@ import (
 
 func TestValidateParticipantOwnership(t *testing.T) {
 	tenantID := uuid.New()
-	applicationID := uuid.New()
+	productID := uuid.New()
 	otherTenantID := uuid.New()
-	otherApplicationID := uuid.New()
+	otherProductID := uuid.New()
 
 	tests := []struct {
 		name          string
 		participant   *entity.Participant
 		tenantID      uuid.UUID
-		applicationID uuid.UUID
+		productID uuid.UUID
 		wantErr       bool
 	}{
 		{
-			name: "success - matching tenant and application",
+			name: "success - matching tenant and product",
 			participant: &entity.Participant{
 				TenantID:      tenantID,
-				ApplicationID: applicationID,
+				ProductID: productID,
 			},
 			tenantID:      tenantID,
-			applicationID: applicationID,
+			productID: productID,
 			wantErr:       false,
 		},
 		{
 			name: "error - different tenant (BOLA)",
 			participant: &entity.Participant{
 				TenantID:      tenantID,
-				ApplicationID: applicationID,
+				ProductID: productID,
 			},
 			tenantID:      otherTenantID,
-			applicationID: applicationID,
+			productID: productID,
 			wantErr:       true,
 		},
 		{
-			name: "error - different application (BOLA)",
+			name: "error - different product (BOLA)",
 			participant: &entity.Participant{
 				TenantID:      tenantID,
-				ApplicationID: applicationID,
+				ProductID: productID,
 			},
 			tenantID:      tenantID,
-			applicationID: otherApplicationID,
+			productID: otherProductID,
 			wantErr:       true,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			err := validateParticipantOwnership(tt.participant, tt.tenantID, tt.applicationID)
+			err := validateParticipantOwnership(tt.participant, tt.tenantID, tt.productID)
 
 			if tt.wantErr {
 				assert.Error(t, err)
@@ -238,13 +238,13 @@ func TestSanitizeFilename(t *testing.T) {
 
 func TestGenerateObjectKey(t *testing.T) {
 	tenantID := uuid.New()
-	applicationID := uuid.New()
+	productID := uuid.New()
 	participantID := uuid.New()
 
 	tests := []struct {
 		name          string
 		tenantID      uuid.UUID
-		applicationID uuid.UUID
+		productID uuid.UUID
 		participantID uuid.UUID
 		fieldName     string
 		filename      string
@@ -254,38 +254,38 @@ func TestGenerateObjectKey(t *testing.T) {
 		{
 			name:          "normal upload",
 			tenantID:      tenantID,
-			applicationID: applicationID,
+			productID: productID,
 			participantID: participantID,
 			fieldName:     "ktp_photo",
 			filename:      "ktp.jpg",
 			wantPrefix:    "participants/",
-			wantContains:  []string{tenantID.String(), applicationID.String(), participantID.String(), "ktp_photo", "ktp.jpg"},
+			wantContains:  []string{tenantID.String(), productID.String(), participantID.String(), "ktp_photo", "ktp.jpg"},
 		},
 		{
 			name:          "sanitizes malicious field name",
 			tenantID:      tenantID,
-			applicationID: applicationID,
+			productID: productID,
 			participantID: participantID,
 			fieldName:     "../etc/passwd",
 			filename:      "file.jpg",
 			wantPrefix:    "participants/",
-			wantContains:  []string{tenantID.String(), applicationID.String(), participantID.String(), "unknown", "file.jpg"},
+			wantContains:  []string{tenantID.String(), productID.String(), participantID.String(), "unknown", "file.jpg"},
 		},
 		{
 			name:          "sanitizes malicious filename",
 			tenantID:      tenantID,
-			applicationID: applicationID,
+			productID: productID,
 			participantID: participantID,
 			fieldName:     "ktp_photo",
 			filename:      "/etc/passwd",
 			wantPrefix:    "participants/",
-			wantContains:  []string{tenantID.String(), applicationID.String(), participantID.String(), "ktp_photo", "passwd"},
+			wantContains:  []string{tenantID.String(), productID.String(), participantID.String(), "ktp_photo", "passwd"},
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := generateObjectKey(tt.tenantID, tt.applicationID, tt.participantID, tt.fieldName, tt.filename)
+			got := generateObjectKey(tt.tenantID, tt.productID, tt.participantID, tt.fieldName, tt.filename)
 
 			assert.True(t, len(got) > 0, "object key should not be empty")
 			if tt.wantPrefix != "" {

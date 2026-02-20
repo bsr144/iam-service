@@ -12,7 +12,7 @@ func (uc *usecase) GetStatusHistory(ctx context.Context, req *participantdto.Get
 		return nil, err
 	}
 
-	if err := validateParticipantOwnership(participant, req.TenantID, req.ApplicationID); err != nil {
+	if err := validateParticipantOwnership(participant, req.TenantID, req.ProductID); err != nil {
 		return nil, err
 	}
 

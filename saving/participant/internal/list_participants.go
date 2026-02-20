@@ -11,9 +11,9 @@ import (
 
 func (uc *usecase) ListParticipants(ctx context.Context, req *participantdto.ListParticipantsRequest) (*participantdto.ListParticipantsResponse, error) {
 	filter := &contract.ParticipantFilter{
-		TenantID:      req.TenantID,
-		ApplicationID: req.ApplicationID,
-		Status:        req.Status,
+		TenantID:  req.TenantID,
+		ProductID: req.ProductID,
+		Status:    req.Status,
 		Search:        req.Search,
 		Page:          req.Page,
 		PerPage:       req.PerPage,

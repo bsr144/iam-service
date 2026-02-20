@@ -9,14 +9,14 @@ import (
 )
 
 type ParticipantFilter struct {
-	TenantID      uuid.UUID
-	ApplicationID uuid.UUID
-	Status        *string
-	Search        string
-	Page          int
-	PerPage       int
-	SortBy        string
-	SortOrder     string
+	TenantID  uuid.UUID
+	ProductID uuid.UUID
+	Status    *string
+	Search    string
+	Page      int
+	PerPage   int
+	SortBy    string
+	SortOrder string
 }
 
 type ParticipantRepository interface {
@@ -25,7 +25,7 @@ type ParticipantRepository interface {
 	Update(ctx context.Context, participant *entity.Participant) error
 	SoftDelete(ctx context.Context, id uuid.UUID) error
 	List(ctx context.Context, filter *ParticipantFilter) ([]*entity.Participant, int64, error)
-	GetByKTPAndPensionNumber(ctx context.Context, ktpNumber, pensionNumber string, tenantID, applicationID uuid.UUID) (*entity.Participant, *entity.ParticipantPension, error)
+	GetByKTPAndPensionNumber(ctx context.Context, ktpNumber, pensionNumber string, tenantID, productID uuid.UUID) (*entity.Participant, *entity.ParticipantPension, error)
 }
 
 type TenantRepository interface {
@@ -37,12 +37,12 @@ type ProductRepository interface {
 }
 
 type ProductRegistrationConfigRepository interface {
-	GetByApplicationAndType(ctx context.Context, applicationID uuid.UUID, regType string) (*entity.ProductRegistrationConfig, error)
+	GetByProductAndType(ctx context.Context, productID uuid.UUID, regType string) (*entity.ProductRegistrationConfig, error)
 }
 
 type UserTenantRegistrationRepository interface {
 	Create(ctx context.Context, reg *entity.UserTenantRegistration) error
-	GetByUserAndProduct(ctx context.Context, userID, tenantID, applicationID uuid.UUID, regType string) (*entity.UserTenantRegistration, error)
+	GetByUserAndProduct(ctx context.Context, userID, tenantID, productID uuid.UUID, regType string) (*entity.UserTenantRegistration, error)
 }
 
 type UserProfileRepository interface {

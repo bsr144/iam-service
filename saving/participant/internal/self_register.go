@@ -121,7 +121,7 @@ func (uc *usecase) SelfRegister(ctx context.Context, req *participantdto.SelfReg
 		return nil, err
 	}
 
-	config, err := uc.configRepo.GetByApplicationAndType(ctx, product.ID, "PARTICIPANT")
+	config, err := uc.configRepo.GetByProductAndType(ctx, product.ID, "PARTICIPANT")
 	if err != nil {
 		return nil, apperrors.ErrUnprocessable("self-registration is not enabled")
 	}
@@ -174,7 +174,7 @@ func (uc *usecase) linkExistingParticipantToUser(
 	req *participantdto.SelfRegisterRequest,
 	participant *entity.Participant,
 	pension *entity.ParticipantPension,
-	tenantID, applicationID uuid.UUID,
+	tenantID, productID uuid.UUID,
 ) (*participantdto.SelfRegisterResponse, error) {
 	var result *participantdto.SelfRegisterResponse
 
@@ -192,7 +192,7 @@ func (uc *usecase) linkExistingParticipantToUser(
 			return fmt.Errorf("update participant user link: %w", err)
 		}
 
-		utr := buildUTR(req.UserID, tenantID, applicationID)
+		utr := buildUTR(req.UserID, tenantID, productID)
 		if err := uc.utrRepo.Create(txCtx, utr); err != nil {
 			return fmt.Errorf("create user tenant registration: %w", err)
 		}
@@ -234,7 +234,7 @@ func (uc *usecase) createNewSelfRegisteredParticipant(
 	ctx context.Context,
 	req *participantdto.SelfRegisterRequest,
 	profile *entity.UserProfile,
-	tenantID, applicationID uuid.UUID,
+	tenantID, productID uuid.UUID,
 ) (*participantdto.SelfRegisterResponse, error) {
 	var result *participantdto.SelfRegisterResponse
 
@@ -243,9 +243,9 @@ func (uc *usecase) createNewSelfRegisteredParticipant(
 		genderStr := string(*profile.Gender)
 
 		newParticipant := &entity.Participant{
-			TenantID:      tenantID,
-			ApplicationID: applicationID,
-			UserID:        &req.UserID,
+			TenantID:  tenantID,
+			ProductID: productID,
+			UserID:    &req.UserID,
 			FullName:      profile.FullName(),
 			DateOfBirth:   profile.DateOfBirth,
 			Gender:        &genderStr,
@@ -291,7 +291,7 @@ func (uc *usecase) createNewSelfRegisteredParticipant(
 			return fmt.Errorf("create status history: %w", err)
 		}
 
-		utr := buildUTR(req.UserID, tenantID, applicationID)
+		utr := buildUTR(req.UserID, tenantID, productID)
 		if err := uc.utrRepo.Create(txCtx, utr); err != nil {
 			return fmt.Errorf("create user tenant registration: %w", err)
 		}
@@ -314,12 +314,12 @@ func (uc *usecase) createNewSelfRegisteredParticipant(
 	return result, nil
 }
 
-func buildUTR(userID, tenantID, applicationID uuid.UUID) *entity.UserTenantRegistration {
-	appID := applicationID
+func buildUTR(userID, tenantID, productID uuid.UUID) *entity.UserTenantRegistration {
+	pid := productID
 	return &entity.UserTenantRegistration{
 		UserID:           userID,
 		TenantID:         tenantID,
-		ApplicationID:    &appID,
+		ProductID:        &pid,
 		RegistrationType: "PARTICIPANT",
 		Status:           entity.UTRStatusPendingApproval,
 	}

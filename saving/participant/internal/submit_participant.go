@@ -19,7 +19,7 @@ func (uc *usecase) SubmitParticipant(ctx context.Context, req *participantdto.Su
 			return fmt.Errorf("get participant: %w", err)
 		}
 
-		if err := validateParticipantOwnership(participant, req.TenantID, req.ApplicationID); err != nil {
+		if err := validateParticipantOwnership(participant, req.TenantID, req.ProductID); err != nil {
 			return err
 		}
 

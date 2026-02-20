@@ -16,7 +16,7 @@ import (
 
 func TestUsecase_SubmitParticipant(t *testing.T) {
 	tenantID := uuid.New()
-	applicationID := uuid.New()
+	productID := uuid.New()
 	userID := uuid.New()
 	otherTenantID := uuid.New()
 
@@ -32,12 +32,12 @@ func TestUsecase_SubmitParticipant(t *testing.T) {
 			req: &participantdto.SubmitParticipantRequest{
 				ParticipantID: uuid.New(),
 				TenantID:      tenantID,
-				ApplicationID: applicationID,
+				ProductID: productID,
 				UserID:        userID,
 			},
 			setup: func(txMgr *MockTransactionManager, partRepo *MockParticipantRepository, histRepo *MockParticipantStatusHistoryRepository, identRepo *MockParticipantIdentityRepository, addrRepo *MockParticipantAddressRepository, bankRepo *MockParticipantBankAccountRepository, famRepo *MockParticipantFamilyMemberRepository, empRepo *MockParticipantEmploymentRepository, penRepo *MockParticipantPensionRepository, benRepo *MockParticipantBeneficiaryRepository) {
 				txMgr.On("WithTransaction", mock.Anything, mock.Anything).Return(nil)
-				participant := createMockParticipant(entity.ParticipantStatusDraft, tenantID, applicationID, userID)
+				participant := createMockParticipant(entity.ParticipantStatusDraft, tenantID, productID, userID)
 				partRepo.On("GetByID", mock.Anything, mock.Anything).Return(participant, nil)
 				partRepo.On("Update", mock.Anything, mock.MatchedBy(func(p *entity.Participant) bool {
 					return p.Status == entity.ParticipantStatusPendingApproval && p.SubmittedBy != nil
@@ -60,12 +60,12 @@ func TestUsecase_SubmitParticipant(t *testing.T) {
 			req: &participantdto.SubmitParticipantRequest{
 				ParticipantID: uuid.New(),
 				TenantID:      tenantID,
-				ApplicationID: applicationID,
+				ProductID: productID,
 				UserID:        userID,
 			},
 			setup: func(txMgr *MockTransactionManager, partRepo *MockParticipantRepository, histRepo *MockParticipantStatusHistoryRepository, identRepo *MockParticipantIdentityRepository, addrRepo *MockParticipantAddressRepository, bankRepo *MockParticipantBankAccountRepository, famRepo *MockParticipantFamilyMemberRepository, empRepo *MockParticipantEmploymentRepository, penRepo *MockParticipantPensionRepository, benRepo *MockParticipantBeneficiaryRepository) {
 				txMgr.On("WithTransaction", mock.Anything, mock.Anything).Return(nil)
-				participant := createMockParticipant(entity.ParticipantStatusRejected, tenantID, applicationID, userID)
+				participant := createMockParticipant(entity.ParticipantStatusRejected, tenantID, productID, userID)
 				partRepo.On("GetByID", mock.Anything, mock.Anything).Return(participant, nil)
 				partRepo.On("Update", mock.Anything, mock.Anything).Return(nil)
 				histRepo.On("Create", mock.Anything, mock.Anything).Return(nil)
@@ -84,7 +84,7 @@ func TestUsecase_SubmitParticipant(t *testing.T) {
 			req: &participantdto.SubmitParticipantRequest{
 				ParticipantID: uuid.New(),
 				TenantID:      tenantID,
-				ApplicationID: applicationID,
+				ProductID: productID,
 				UserID:        userID,
 			},
 			setup: func(txMgr *MockTransactionManager, partRepo *MockParticipantRepository, histRepo *MockParticipantStatusHistoryRepository, identRepo *MockParticipantIdentityRepository, addrRepo *MockParticipantAddressRepository, bankRepo *MockParticipantBankAccountRepository, famRepo *MockParticipantFamilyMemberRepository, empRepo *MockParticipantEmploymentRepository, penRepo *MockParticipantPensionRepository, benRepo *MockParticipantBeneficiaryRepository) {
@@ -99,12 +99,12 @@ func TestUsecase_SubmitParticipant(t *testing.T) {
 			req: &participantdto.SubmitParticipantRequest{
 				ParticipantID: uuid.New(),
 				TenantID:      otherTenantID,
-				ApplicationID: applicationID,
+				ProductID: productID,
 				UserID:        userID,
 			},
 			setup: func(txMgr *MockTransactionManager, partRepo *MockParticipantRepository, histRepo *MockParticipantStatusHistoryRepository, identRepo *MockParticipantIdentityRepository, addrRepo *MockParticipantAddressRepository, bankRepo *MockParticipantBankAccountRepository, famRepo *MockParticipantFamilyMemberRepository, empRepo *MockParticipantEmploymentRepository, penRepo *MockParticipantPensionRepository, benRepo *MockParticipantBeneficiaryRepository) {
 				txMgr.On("WithTransaction", mock.Anything, mock.Anything).Return(nil)
-				participant := createMockParticipant(entity.ParticipantStatusDraft, tenantID, applicationID, userID)
+				participant := createMockParticipant(entity.ParticipantStatusDraft, tenantID, productID, userID)
 				partRepo.On("GetByID", mock.Anything, mock.Anything).Return(participant, nil)
 			},
 			wantErr: true,
@@ -115,12 +115,12 @@ func TestUsecase_SubmitParticipant(t *testing.T) {
 			req: &participantdto.SubmitParticipantRequest{
 				ParticipantID: uuid.New(),
 				TenantID:      tenantID,
-				ApplicationID: applicationID,
+				ProductID: productID,
 				UserID:        userID,
 			},
 			setup: func(txMgr *MockTransactionManager, partRepo *MockParticipantRepository, histRepo *MockParticipantStatusHistoryRepository, identRepo *MockParticipantIdentityRepository, addrRepo *MockParticipantAddressRepository, bankRepo *MockParticipantBankAccountRepository, famRepo *MockParticipantFamilyMemberRepository, empRepo *MockParticipantEmploymentRepository, penRepo *MockParticipantPensionRepository, benRepo *MockParticipantBeneficiaryRepository) {
 				txMgr.On("WithTransaction", mock.Anything, mock.Anything).Return(nil)
-				participant := createMockParticipant(entity.ParticipantStatusPendingApproval, tenantID, applicationID, userID)
+				participant := createMockParticipant(entity.ParticipantStatusPendingApproval, tenantID, productID, userID)
 				partRepo.On("GetByID", mock.Anything, mock.Anything).Return(participant, nil)
 			},
 			wantErr: true,
@@ -131,12 +131,12 @@ func TestUsecase_SubmitParticipant(t *testing.T) {
 			req: &participantdto.SubmitParticipantRequest{
 				ParticipantID: uuid.New(),
 				TenantID:      tenantID,
-				ApplicationID: applicationID,
+				ProductID: productID,
 				UserID:        userID,
 			},
 			setup: func(txMgr *MockTransactionManager, partRepo *MockParticipantRepository, histRepo *MockParticipantStatusHistoryRepository, identRepo *MockParticipantIdentityRepository, addrRepo *MockParticipantAddressRepository, bankRepo *MockParticipantBankAccountRepository, famRepo *MockParticipantFamilyMemberRepository, empRepo *MockParticipantEmploymentRepository, penRepo *MockParticipantPensionRepository, benRepo *MockParticipantBeneficiaryRepository) {
 				txMgr.On("WithTransaction", mock.Anything, mock.Anything).Return(nil)
-				participant := createMockParticipant(entity.ParticipantStatusApproved, tenantID, applicationID, userID)
+				participant := createMockParticipant(entity.ParticipantStatusApproved, tenantID, productID, userID)
 				partRepo.On("GetByID", mock.Anything, mock.Anything).Return(participant, nil)
 			},
 			wantErr: true,

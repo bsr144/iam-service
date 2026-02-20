@@ -63,8 +63,8 @@ func (m *MockParticipantRepository) List(ctx context.Context, filter *contract.P
 	return args.Get(0).([]*entity.Participant), args.Get(1).(int64), args.Error(2)
 }
 
-func (m *MockParticipantRepository) GetByKTPAndPensionNumber(ctx context.Context, ktpNumber, pensionNumber string, tenantID, applicationID uuid.UUID) (*entity.Participant, *entity.ParticipantPension, error) {
-	args := m.Called(ctx, ktpNumber, pensionNumber, tenantID, applicationID)
+func (m *MockParticipantRepository) GetByKTPAndPensionNumber(ctx context.Context, ktpNumber, pensionNumber string, tenantID, productID uuid.UUID) (*entity.Participant, *entity.ParticipantPension, error) {
+	args := m.Called(ctx, ktpNumber, pensionNumber, tenantID, productID)
 	var p *entity.Participant
 	var pp *entity.ParticipantPension
 	if args.Get(0) != nil {

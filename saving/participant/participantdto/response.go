@@ -9,7 +9,7 @@ import (
 type ParticipantResponse struct {
 	ID              uuid.UUID              `json:"id"`
 	TenantID        uuid.UUID              `json:"tenant_id"`
-	ApplicationID   uuid.UUID              `json:"application_id"`
+	ProductID       uuid.UUID              `json:"product_id"`
 	UserID          *uuid.UUID             `json:"user_id,omitempty"`
 	FullName        string                 `json:"full_name"`
 	Gender          *string                `json:"gender,omitempty"`

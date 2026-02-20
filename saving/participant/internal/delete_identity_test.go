@@ -16,7 +16,7 @@ import (
 
 func TestUsecase_DeleteIdentity(t *testing.T) {
 	tenantID := uuid.New()
-	applicationID := uuid.New()
+	productID := uuid.New()
 	userID := uuid.New()
 	participantID := uuid.New()
 	identityID := uuid.New()
@@ -36,11 +36,11 @@ func TestUsecase_DeleteIdentity(t *testing.T) {
 				ChildID:       identityID,
 				ParticipantID: participantID,
 				TenantID:      tenantID,
-				ApplicationID: applicationID,
+				ProductID: productID,
 			},
 			setup: func(txMgr *MockTransactionManager, partRepo *MockParticipantRepository, identRepo *MockParticipantIdentityRepository) {
 				txMgr.On("WithTransaction", mock.Anything, mock.Anything).Return(nil)
-				participant := createMockParticipant(entity.ParticipantStatusDraft, tenantID, applicationID, userID)
+				participant := createMockParticipant(entity.ParticipantStatusDraft, tenantID, productID, userID)
 				participant.ID = participantID
 				partRepo.On("GetByID", mock.Anything, participantID).Return(participant, nil)
 
@@ -57,11 +57,11 @@ func TestUsecase_DeleteIdentity(t *testing.T) {
 				ChildID:       identityID,
 				ParticipantID: participantID,
 				TenantID:      tenantID,
-				ApplicationID: applicationID,
+				ProductID: productID,
 			},
 			setup: func(txMgr *MockTransactionManager, partRepo *MockParticipantRepository, identRepo *MockParticipantIdentityRepository) {
 				txMgr.On("WithTransaction", mock.Anything, mock.Anything).Return(nil)
-				participant := createMockParticipant(entity.ParticipantStatusRejected, tenantID, applicationID, userID)
+				participant := createMockParticipant(entity.ParticipantStatusRejected, tenantID, productID, userID)
 				participant.ID = participantID
 				partRepo.On("GetByID", mock.Anything, participantID).Return(participant, nil)
 
@@ -78,7 +78,7 @@ func TestUsecase_DeleteIdentity(t *testing.T) {
 				ChildID:       identityID,
 				ParticipantID: participantID,
 				TenantID:      tenantID,
-				ApplicationID: applicationID,
+				ProductID: productID,
 			},
 			setup: func(txMgr *MockTransactionManager, partRepo *MockParticipantRepository, identRepo *MockParticipantIdentityRepository) {
 				txMgr.On("WithTransaction", mock.Anything, mock.Anything).Return(nil)
@@ -93,11 +93,11 @@ func TestUsecase_DeleteIdentity(t *testing.T) {
 				ChildID:       identityID,
 				ParticipantID: participantID,
 				TenantID:      otherTenantID,
-				ApplicationID: applicationID,
+				ProductID: productID,
 			},
 			setup: func(txMgr *MockTransactionManager, partRepo *MockParticipantRepository, identRepo *MockParticipantIdentityRepository) {
 				txMgr.On("WithTransaction", mock.Anything, mock.Anything).Return(nil)
-				participant := createMockParticipant(entity.ParticipantStatusDraft, tenantID, applicationID, userID)
+				participant := createMockParticipant(entity.ParticipantStatusDraft, tenantID, productID, userID)
 				participant.ID = participantID
 				partRepo.On("GetByID", mock.Anything, participantID).Return(participant, nil)
 			},
@@ -110,11 +110,11 @@ func TestUsecase_DeleteIdentity(t *testing.T) {
 				ChildID:       identityID,
 				ParticipantID: participantID,
 				TenantID:      tenantID,
-				ApplicationID: applicationID,
+				ProductID: productID,
 			},
 			setup: func(txMgr *MockTransactionManager, partRepo *MockParticipantRepository, identRepo *MockParticipantIdentityRepository) {
 				txMgr.On("WithTransaction", mock.Anything, mock.Anything).Return(nil)
-				participant := createMockParticipant(entity.ParticipantStatusPendingApproval, tenantID, applicationID, userID)
+				participant := createMockParticipant(entity.ParticipantStatusPendingApproval, tenantID, productID, userID)
 				participant.ID = participantID
 				partRepo.On("GetByID", mock.Anything, participantID).Return(participant, nil)
 			},
@@ -127,11 +127,11 @@ func TestUsecase_DeleteIdentity(t *testing.T) {
 				ChildID:       identityID,
 				ParticipantID: participantID,
 				TenantID:      tenantID,
-				ApplicationID: applicationID,
+				ProductID: productID,
 			},
 			setup: func(txMgr *MockTransactionManager, partRepo *MockParticipantRepository, identRepo *MockParticipantIdentityRepository) {
 				txMgr.On("WithTransaction", mock.Anything, mock.Anything).Return(nil)
-				participant := createMockParticipant(entity.ParticipantStatusApproved, tenantID, applicationID, userID)
+				participant := createMockParticipant(entity.ParticipantStatusApproved, tenantID, productID, userID)
 				participant.ID = participantID
 				partRepo.On("GetByID", mock.Anything, participantID).Return(participant, nil)
 			},
@@ -144,11 +144,11 @@ func TestUsecase_DeleteIdentity(t *testing.T) {
 				ChildID:       identityID,
 				ParticipantID: participantID,
 				TenantID:      tenantID,
-				ApplicationID: applicationID,
+				ProductID: productID,
 			},
 			setup: func(txMgr *MockTransactionManager, partRepo *MockParticipantRepository, identRepo *MockParticipantIdentityRepository) {
 				txMgr.On("WithTransaction", mock.Anything, mock.Anything).Return(nil)
-				participant := createMockParticipant(entity.ParticipantStatusDraft, tenantID, applicationID, userID)
+				participant := createMockParticipant(entity.ParticipantStatusDraft, tenantID, productID, userID)
 				participant.ID = participantID
 				partRepo.On("GetByID", mock.Anything, participantID).Return(participant, nil)
 				identRepo.On("GetByID", mock.Anything, identityID).Return(nil, errors.ErrNotFound("identity not found"))
@@ -162,11 +162,11 @@ func TestUsecase_DeleteIdentity(t *testing.T) {
 				ChildID:       identityID,
 				ParticipantID: participantID,
 				TenantID:      tenantID,
-				ApplicationID: applicationID,
+				ProductID: productID,
 			},
 			setup: func(txMgr *MockTransactionManager, partRepo *MockParticipantRepository, identRepo *MockParticipantIdentityRepository) {
 				txMgr.On("WithTransaction", mock.Anything, mock.Anything).Return(nil)
-				participant := createMockParticipant(entity.ParticipantStatusDraft, tenantID, applicationID, userID)
+				participant := createMockParticipant(entity.ParticipantStatusDraft, tenantID, productID, userID)
 				participant.ID = participantID
 				partRepo.On("GetByID", mock.Anything, participantID).Return(participant, nil)
 
