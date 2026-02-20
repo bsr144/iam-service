@@ -1,9 +1,11 @@
 package middleware
 
 import (
+	"net"
+	"strings"
+
 	"iam-service/pkg/errors"
 	jwtpkg "iam-service/pkg/jwt"
-	"net"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/google/uuid"
@@ -83,13 +85,15 @@ func GetUserRoles(c *fiber.Ctx) ([]string, error) {
 }
 
 func GetClientIP(c *fiber.Ctx) net.IP {
-
 	forwarded := c.Get("X-Forwarded-For")
 	if forwarded != "" {
-
-		return net.ParseIP(forwarded)
+		if idx := strings.IndexByte(forwarded, ','); idx != -1 {
+			forwarded = strings.TrimSpace(forwarded[:idx])
+		}
+		if ip := net.ParseIP(forwarded); ip != nil {
+			return ip
+		}
 	}
-
 	return net.ParseIP(c.IP())
 }
 
