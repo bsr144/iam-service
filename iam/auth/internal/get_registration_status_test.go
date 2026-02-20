@@ -141,7 +141,7 @@ func TestMaskEmailForRegistration(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.input, func(t *testing.T) {
-			result := maskEmailForRegistration(tt.input)
+			result := maskEmail(tt.input)
 			assert.Equal(t, tt.expected, result)
 		})
 	}

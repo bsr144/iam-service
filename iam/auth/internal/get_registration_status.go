@@ -24,7 +24,7 @@ func (uc *usecase) GetRegistrationStatus(
 		return nil, errors.ErrNotFound("Registration session not found")
 	}
 
-	maskedEmail := maskEmailForRegistration(session.Email)
+	maskedEmail := maskEmail(session.Email)
 
 	return &authdto.RegistrationStatusResponse{
 		RegistrationID:       registrationID.String(),

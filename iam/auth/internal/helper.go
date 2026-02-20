@@ -15,20 +15,33 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
+var emailSendConcurrency = make(chan struct{}, 50)
+
 func (uc *usecase) sendEmailAsync(ctx context.Context, fn func(ctx context.Context) error) {
 	bgCtx := context.WithoutCancel(ctx)
-	go func() {
-		sendCtx, cancel := context.WithTimeout(bgCtx, 30*time.Second)
-		defer cancel()
-		if err := fn(sendCtx); err != nil {
-			uc.AuditLogger.Log(sendCtx, logger.AuditEvent{
-				Domain:  "auth",
-				Action:  "email_send_failed",
-				Success: false,
-				Reason:  err.Error(),
-			})
-		}
-	}()
+	select {
+	case emailSendConcurrency <- struct{}{}:
+		go func() {
+			defer func() { <-emailSendConcurrency }()
+			sendCtx, cancel := context.WithTimeout(bgCtx, 30*time.Second)
+			defer cancel()
+			if err := fn(sendCtx); err != nil {
+				uc.AuditLogger.Log(sendCtx, logger.AuditEvent{
+					Domain:  "auth",
+					Action:  "email_send_failed",
+					Success: false,
+					Reason:  err.Error(),
+				})
+			}
+		}()
+	default:
+		uc.AuditLogger.Log(bgCtx, logger.AuditEvent{
+			Domain:  "auth",
+			Action:  "email_send_shed",
+			Success: false,
+			Reason:  "email concurrency limit reached",
+		})
+	}
 }
 
 func (uc *usecase) validatePassword(password string) error {
@@ -101,7 +114,7 @@ func hashToken(token string) string {
 	return hex.EncodeToString(hash[:])
 }
 
-func maskEmailForRegistration(email string) string {
+func maskEmail(email string) string {
 	parts := strings.Split(email, "@")
 	if len(parts) != 2 {
 		return "***"

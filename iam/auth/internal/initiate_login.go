@@ -37,11 +37,11 @@ func (uc *usecase) InitiateLogin(
 
 	user, err := uc.UserRepo.GetByEmail(ctx, email)
 	if err != nil {
-		return nil, errors.New("INVALID_CREDENTIALS", "If an account exists with this email, an OTP has been sent.", http.StatusOK)
+		return dummyOTPResponse(email), nil
 	}
 
 	if !user.IsActive() {
-		return nil, errors.New("INVALID_CREDENTIALS", "If an account exists with this email, an OTP has been sent.", http.StatusOK)
+		return dummyOTPResponse(email), nil
 	}
 
 	otp, otpHash, err := uc.generateOTP()
@@ -82,10 +82,27 @@ func (uc *usecase) InitiateLogin(
 
 	return authdto.NewOTPRequiredResponse(
 		session.ID,
-		maskEmailForRegistration(email),
+		maskEmail(email),
 		session.ExpiresAt,
 		session.OTPExpiresAt,
 		LoginOTPMaxAttempts,
 		LoginOTPMaxResends,
 	), nil
+}
+
+func dummyOTPResponse(email string) *authdto.UnifiedLoginResponse {
+	now := time.Now()
+	sessionExpires := now.Add(time.Duration(LoginSessionExpiryMinutes) * time.Minute)
+	otpExpires := now.Add(time.Duration(LoginOTPExpiryMinutes) * time.Minute)
+	attempts := LoginOTPMaxAttempts
+	resends := LoginOTPMaxResends
+	fakeID := uuid.New()
+	return authdto.NewOTPRequiredResponse(
+		fakeID,
+		maskEmail(email),
+		sessionExpires,
+		otpExpires,
+		attempts,
+		resends,
+	)
 }

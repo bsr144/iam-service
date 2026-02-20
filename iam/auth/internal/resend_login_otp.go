@@ -61,7 +61,7 @@ func (uc *usecase) ResendLoginOTP(
 	return &authdto.ResendLoginOTPResponse{
 		Status:           "OTP_RESENT",
 		LoginSessionID:   req.LoginSessionID,
-		Email:            maskEmailForRegistration(session.Email),
+		Email:            maskEmail(session.Email),
 		OTPExpiresAt:     newOTPExpiresAt,
 		ResendsRemaining: updatedSession.RemainingResends(),
 		CooldownSeconds:  LoginOTPResendCooldown,

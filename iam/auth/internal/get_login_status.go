@@ -25,7 +25,7 @@ func (uc *usecase) GetLoginStatus(
 	return &authdto.LoginStatusResponse{
 		Status:            string(session.Status),
 		LoginSessionID:    req.LoginSessionID,
-		Email:             maskEmailForRegistration(session.Email),
+		Email:             maskEmail(session.Email),
 		AttemptsRemaining: session.RemainingAttempts(),
 		ResendsRemaining:  session.RemainingResends(),
 		ExpiresAt:         session.ExpiresAt,
