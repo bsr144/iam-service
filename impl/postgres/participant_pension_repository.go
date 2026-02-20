@@ -63,11 +63,14 @@ func (r *participantPensionRepository) Update(ctx context.Context, pension *enti
 }
 
 func (r *participantPensionRepository) SoftDelete(ctx context.Context, id uuid.UUID) error {
-	err := r.getDB(ctx).Model(&entity.ParticipantPension{}).
+	result := r.getDB(ctx).Model(&entity.ParticipantPension{}).
 		Where("id = ? AND deleted_at IS NULL", id).
-		Update("deleted_at", gorm.Expr("NOW()")).Error
-	if err != nil {
-		return translateError(err, "participant pension")
+		Update("deleted_at", gorm.Expr("NOW()"))
+	if result.Error != nil {
+		return translateError(result.Error, "participant pension")
+	}
+	if result.RowsAffected == 0 {
+		return errors.ErrNotFound("participant pension not found")
 	}
 	return nil
 }

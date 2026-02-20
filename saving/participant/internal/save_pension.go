@@ -52,6 +52,7 @@ func (uc *usecase) SavePension(ctx context.Context, req *participantdto.SavePens
 			pension.EffectiveDate = req.EffectiveDate
 			pension.EndDate = req.EndDate
 			pension.ProjectedRetirementDate = req.ProjectedRetirementDate
+			pension.UpdatedAt = time.Now()
 
 			if err := uc.pensionRepo.Update(txCtx, pension); err != nil {
 				return fmt.Errorf("update pension: %w", err)
