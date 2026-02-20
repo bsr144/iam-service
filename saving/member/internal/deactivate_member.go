@@ -14,7 +14,7 @@ func (uc *usecase) DeactivateMember(ctx context.Context, req *memberdto.Deactiva
 		return nil, err
 	}
 
-	if !uc.validateTenantBoundary(reg, req.TenantID, req.ApplicationID) {
+	if !uc.validateTenantBoundary(reg, req.TenantID, req.ProductID) {
 		return nil, errors.ErrNotFound("member not found")
 	}
 
@@ -33,7 +33,7 @@ func (uc *usecase) DeactivateMember(ctx context.Context, req *memberdto.Deactiva
 			return err
 		}
 
-		return uc.userRole.SoftDeleteByUserAndProduct(txCtx, reg.UserID, req.ApplicationID)
+		return uc.userRole.SoftDeleteByUserAndProduct(txCtx, reg.UserID, req.ProductID)
 	})
 	if err != nil {
 		return nil, err

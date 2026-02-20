@@ -9,9 +9,9 @@ import (
 
 func (uc *usecase) ListMembers(ctx context.Context, req *memberdto.ListRequest) (*memberdto.ListResponse, error) {
 	filter := &contract.MemberListFilter{
-		TenantID:      req.TenantID,
-		ApplicationID: req.ApplicationID,
-		Status:        req.Status,
+		TenantID:  req.TenantID,
+		ProductID: req.ProductID,
+		Status:    req.Status,
 		Search:        req.Search,
 		Page:          req.Page,
 		PerPage:       req.PerPage,

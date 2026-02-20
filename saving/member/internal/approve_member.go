@@ -15,7 +15,7 @@ func (uc *usecase) ApproveMember(ctx context.Context, req *memberdto.ApproveRequ
 		return nil, err
 	}
 
-	if !uc.validateTenantBoundary(reg, req.TenantID, req.ApplicationID) {
+	if !uc.validateTenantBoundary(reg, req.TenantID, req.ProductID) {
 		return nil, errors.ErrNotFound("member not found")
 	}
 
@@ -27,7 +27,7 @@ func (uc *usecase) ApproveMember(ctx context.Context, req *memberdto.ApproveRequ
 		return nil, errors.ErrForbidden("you cannot approve your own registration")
 	}
 
-	role, err := uc.roleRepo.GetByCodeAndApplication(ctx, req.ApplicationID, req.RoleCode)
+	role, err := uc.roleRepo.GetByCodeAndProduct(ctx, req.ProductID, req.RoleCode)
 	if err != nil {
 		if errors.IsNotFound(err) {
 			return nil, errors.ErrBadRequest("role not found for this product")
@@ -48,7 +48,7 @@ func (uc *usecase) ApproveMember(ctx context.Context, req *memberdto.ApproveRequ
 		userRole := &entity.UserRole{
 			UserID:     reg.UserID,
 			RoleID:     role.ID,
-			ProductID:  &req.ApplicationID,
+			ProductID:  &req.ProductID,
 			AssignedAt: now,
 		}
 

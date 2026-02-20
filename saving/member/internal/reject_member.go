@@ -15,7 +15,7 @@ func (uc *usecase) RejectMember(ctx context.Context, req *memberdto.RejectReques
 		return nil, err
 	}
 
-	if !uc.validateTenantBoundary(reg, req.TenantID, req.ApplicationID) {
+	if !uc.validateTenantBoundary(reg, req.TenantID, req.ProductID) {
 		return nil, errors.ErrNotFound("member not found")
 	}
 

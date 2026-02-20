@@ -15,7 +15,7 @@ func (uc *usecase) ChangeRole(ctx context.Context, req *memberdto.ChangeRoleRequ
 		return nil, err
 	}
 
-	if !uc.validateTenantBoundary(reg, req.TenantID, req.ApplicationID) {
+	if !uc.validateTenantBoundary(reg, req.TenantID, req.ProductID) {
 		return nil, errors.ErrNotFound("member not found")
 	}
 
@@ -27,7 +27,7 @@ func (uc *usecase) ChangeRole(ctx context.Context, req *memberdto.ChangeRoleRequ
 		return nil, errors.ErrForbidden("you cannot change your own role")
 	}
 
-	_, err = uc.userRole.GetActiveByUserAndProduct(ctx, reg.UserID, req.ApplicationID)
+	_, err = uc.userRole.GetActiveByUserAndProduct(ctx, reg.UserID, req.ProductID)
 	if err != nil {
 		if errors.IsNotFound(err) {
 			return nil, errors.ErrBadRequest("member has no active role to change")
@@ -35,7 +35,7 @@ func (uc *usecase) ChangeRole(ctx context.Context, req *memberdto.ChangeRoleRequ
 		return nil, err
 	}
 
-	newRole, err := uc.roleRepo.GetByCodeAndApplication(ctx, req.ApplicationID, req.RoleCode)
+	newRole, err := uc.roleRepo.GetByCodeAndProduct(ctx, req.ProductID, req.RoleCode)
 	if err != nil {
 		if errors.IsNotFound(err) {
 			return nil, errors.ErrBadRequest("role not found for this product")
@@ -44,14 +44,14 @@ func (uc *usecase) ChangeRole(ctx context.Context, req *memberdto.ChangeRoleRequ
 	}
 
 	err = uc.txManager.WithTransaction(ctx, func(txCtx context.Context) error {
-		if err := uc.userRole.SoftDeleteByUserAndProduct(txCtx, reg.UserID, req.ApplicationID); err != nil {
+		if err := uc.userRole.SoftDeleteByUserAndProduct(txCtx, reg.UserID, req.ProductID); err != nil {
 			return err
 		}
 
 		userRole := &entity.UserRole{
 			UserID:     reg.UserID,
 			RoleID:     newRole.ID,
-			ProductID:  &req.ApplicationID,
+			ProductID:  &req.ProductID,
 			AssignedAt: time.Now(),
 		}
 

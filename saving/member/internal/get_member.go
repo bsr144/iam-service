@@ -13,7 +13,7 @@ func (uc *usecase) GetMember(ctx context.Context, req *memberdto.GetMemberReques
 		return nil, err
 	}
 
-	if !uc.validateTenantBoundary(reg, req.TenantID, req.ApplicationID) {
+	if !uc.validateTenantBoundary(reg, req.TenantID, req.ProductID) {
 		return nil, errors.ErrNotFound("member not found")
 	}
 
@@ -27,7 +27,7 @@ func (uc *usecase) GetMember(ctx context.Context, req *memberdto.GetMemberReques
 	}
 
 	var roleCode, roleName *string
-	activeRole, err := uc.userRole.GetActiveByUserAndProduct(ctx, reg.UserID, req.ApplicationID)
+	activeRole, err := uc.userRole.GetActiveByUserAndProduct(ctx, reg.UserID, req.ProductID)
 	if err == nil && activeRole != nil {
 		role, rErr := uc.roleRepo.GetByID(ctx, activeRole.RoleID)
 		if rErr == nil && role != nil {

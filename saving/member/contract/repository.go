@@ -9,14 +9,14 @@ import (
 )
 
 type MemberListFilter struct {
-	TenantID      uuid.UUID
-	ApplicationID uuid.UUID
-	Status        *string
-	Search        string
-	Page          int
-	PerPage       int
-	SortBy        string
-	SortOrder     string
+	TenantID  uuid.UUID
+	ProductID uuid.UUID
+	Status    *string
+	Search    string
+	Page      int
+	PerPage   int
+	SortBy    string
+	SortOrder string
 }
 
 type MemberListRow struct {
@@ -31,7 +31,7 @@ type MemberListRow struct {
 type UserTenantRegistrationRepository interface {
 	Create(ctx context.Context, reg *entity.UserTenantRegistration) error
 	GetByID(ctx context.Context, id uuid.UUID) (*entity.UserTenantRegistration, error)
-	GetByUserAndProduct(ctx context.Context, userID, tenantID, applicationID uuid.UUID, regType string) (*entity.UserTenantRegistration, error)
+	GetByUserAndProduct(ctx context.Context, userID, tenantID, productID uuid.UUID, regType string) (*entity.UserTenantRegistration, error)
 	UpdateStatus(ctx context.Context, reg *entity.UserTenantRegistration) error
 	ListByProductWithFilters(ctx context.Context, filter *MemberListFilter) ([]MemberListRow, int64, error)
 }
@@ -48,11 +48,11 @@ type ProductRepository interface {
 
 type RoleRepository interface {
 	GetByID(ctx context.Context, id uuid.UUID) (*entity.Role, error)
-	GetByCodeAndApplication(ctx context.Context, applicationID uuid.UUID, code string) (*entity.Role, error)
+	GetByCodeAndProduct(ctx context.Context, productID uuid.UUID, code string) (*entity.Role, error)
 }
 
 type ProductRegistrationConfigRepository interface {
-	GetByApplicationAndType(ctx context.Context, applicationID uuid.UUID, regType string) (*entity.ProductRegistrationConfig, error)
+	GetByProductAndType(ctx context.Context, productID uuid.UUID, regType string) (*entity.ProductRegistrationConfig, error)
 }
 
 type UserProfileRepository interface {

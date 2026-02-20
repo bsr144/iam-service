@@ -22,11 +22,11 @@ func (uc *usecase) getUserEmail(ctx context.Context, userID uuid.UUID) (string, 
 	return user.Email, nil
 }
 
-func (uc *usecase) validateTenantBoundary(reg *entity.UserTenantRegistration, tenantID, applicationID uuid.UUID) bool {
+func (uc *usecase) validateTenantBoundary(reg *entity.UserTenantRegistration, tenantID, productID uuid.UUID) bool {
 	if reg.TenantID != tenantID {
 		return false
 	}
-	if reg.ApplicationID == nil || *reg.ApplicationID != applicationID {
+	if reg.ProductID == nil || *reg.ProductID != productID {
 		return false
 	}
 	return true
