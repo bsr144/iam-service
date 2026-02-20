@@ -2651,7 +2651,7 @@
               "code": 201,
               "_postman_previewlanguage": "json",
               "header": [{ "key": "Content-Type", "value": "application/json" }],
-              "body": "{\n    \"success\": true,\n    \"data\": {\n        \"id\": \"019500f1-...\",\n        \"tenant_id\": \"019500a0-...\",\n        \"application_id\": \"019500a1-...\",\n        \"user_id\": \"019500a2-...\",\n        \"full_name\": \"Budi Santoso\",\n        \"status\": \"DRAFT\",\n        \"created_by\": \"019500a2-...\",\n        \"version\": 1,\n        \"created_at\": \"2026-02-18T10:00:00Z\",\n        \"updated_at\": \"2026-02-18T10:00:00Z\"\n    }\n}"
+              "body": "{\n    \"success\": true,\n    \"data\": {\n        \"id\": \"019500f1-...\",\n        \"tenant_id\": \"019500a0-...\",\n        \"product_id\": \"019500a1-...\",\n        \"user_id\": \"019500a2-...\",\n        \"full_name\": \"Budi Santoso\",\n        \"status\": \"DRAFT\",\n        \"created_by\": \"019500a2-...\",\n        \"version\": 1,\n        \"created_at\": \"2026-02-18T10:00:00Z\",\n        \"updated_at\": \"2026-02-18T10:00:00Z\"\n    }\n}"
             },
             {
               "name": "401 - Unauthorized",

@@ -1529,6 +1529,54 @@ paths:
   # ==========================================
   # PARTICIPANTS
   # ==========================================
+  /api/v1/saving/participants/self-register:
+    post:
+      tags: [Participants]
+      summary: Self-register as participant
+      description: |
+        Allows an authenticated user to self-register as a participant by linking
+        an existing participant record via organization code, identity number,
+        participant number, and phone number.
+        Rate limited to 5 req/min per user. Returns 201 Created on new registration
+        or 200 OK if the participant record was already linked to this user.
+      operationId: selfRegisterParticipant
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SelfRegisterParticipantRequest'
+            example:
+              organization: "DAPEN001"
+              identity_number: "3201012345678901"
+              participant_number: "PART001"
+              phone_number: "+6281234567890"
+      responses:
+        '201':
+          description: Self-registration successful — participant linked for the first time
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SelfRegisterParticipantResponse'
+        '200':
+          description: Participant already linked — returning existing registration status
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SelfRegisterParticipantResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
   /api/v1/saving/products/{productId}/participants:
     post:
       tags: [Participants]
@@ -2009,6 +2057,46 @@ paths:
       responses:
         '200':
           description: Employment saved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ParticipantResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /api/v1/saving/products/{productId}/participants/{id}/pension:
+    put:
+      tags: [Participants]
+      summary: Save participant pension
+      description: Creates or updates pension information for a participant. Requires `participant:update` permission.
+      operationId: saveParticipantPension
+      parameters:
+        - $ref: '#/components/parameters/ProductID'
+        - $ref: '#/components/parameters/TenantIDHeader'
+        - $ref: '#/components/parameters/ParticipantID'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SavePensionRequest'
+            example:
+              participant_number: "PART-001"
+              pension_category: "REGULAR"
+              pension_status: "ACTIVE"
+      responses:
+        '200':
+          description: Pension saved
           content:
             application/json:
               schema:
@@ -2571,7 +2659,7 @@ components:
       name: productId
       in: path
       required: true
-      description: Product (application) UUID
+      description: Product UUID
       schema:
         type: string
         format: uuid
@@ -3963,6 +4051,39 @@ components:
           maxLength: 50
           nullable: true
 
+    SavePensionRequest:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          nullable: true
+          description: Provide to update existing pension record; omit to create new
+        participant_number:
+          type: string
+          maxLength: 50
+          nullable: true
+        pension_category:
+          type: string
+          maxLength: 50
+          nullable: true
+        pension_status:
+          type: string
+          maxLength: 50
+          nullable: true
+        effective_date:
+          type: string
+          format: date-time
+          nullable: true
+        end_date:
+          type: string
+          format: date-time
+          nullable: true
+        projected_retirement_date:
+          type: string
+          format: date-time
+          nullable: true
+
     SaveBeneficiaryRequest:
       type: object
       required: [family_member_id]
@@ -4003,6 +4124,67 @@ components:
           maxLength: 500
           example: "Incomplete identity documentation. Please resubmit with valid KTP."
 
+    SelfRegisterParticipantRequest:
+      type: object
+      required: [organization, identity_number, participant_number, phone_number]
+      properties:
+        organization:
+          type: string
+          minLength: 6
+          maxLength: 50
+          description: Organization code that owns the participant record
+          example: "DAPEN001"
+        identity_number:
+          type: string
+          minLength: 16
+          maxLength: 16
+          pattern: '^\d{16}$'
+          description: 16-digit national identity number (KTP)
+          example: "3201012345678901"
+        participant_number:
+          type: string
+          minLength: 5
+          maxLength: 20
+          description: Alphanumeric participant number assigned by the organization
+          example: "PART001"
+        phone_number:
+          type: string
+          minLength: 9
+          maxLength: 16
+          description: Registered phone number of the participant
+          example: "+6281234567890"
+
+    SelfRegisterParticipantResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          type: object
+          properties:
+            is_linked:
+              type: boolean
+              description: True if this call created the link; false if already linked
+              example: true
+            registration_status:
+              type: string
+              description: Current registration status of the participant
+              example: APPROVED
+            data:
+              type: object
+              nullable: true
+              properties:
+                participant_number:
+                  type: string
+                  example: "PART001"
+                status:
+                  type: string
+                  example: APPROVED
+                created_at:
+                  type: string
+                  format: date-time
+
     ParticipantResponse:
       type: object
       properties:
@@ -4021,7 +4203,7 @@ components:
         tenant_id:
           type: string
           format: uuid
-        application_id:
+        product_id:
           type: string
           format: uuid
         user_id:
@@ -4079,6 +4261,9 @@ components:
             $ref: '#/components/schemas/ParticipantFamilyMemberData'
         employment:
           $ref: '#/components/schemas/ParticipantEmploymentData'
+          nullable: true
+        pension:
+          $ref: '#/components/schemas/ParticipantPensionData'
           nullable: true
         beneficiaries:
           type: array
@@ -4264,6 +4449,44 @@ components:
         retirement_type_code:
           type: string
           nullable: true
+
+    ParticipantPensionData:
+      type: object
+      nullable: true
+      properties:
+        id:
+          type: string
+          format: uuid
+        participant_number:
+          type: string
+          nullable: true
+        pension_category:
+          type: string
+          nullable: true
+        pension_status:
+          type: string
+          nullable: true
+        effective_date:
+          type: string
+          format: date-time
+          nullable: true
+        end_date:
+          type: string
+          format: date-time
+          nullable: true
+        projected_retirement_date:
+          type: string
+          format: date-time
+          nullable: true
+        version:
+          type: integer
+          example: 1
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
 
     ParticipantBeneficiaryData:
       type: object
