@@ -86,9 +86,11 @@ type UpdateItemRequest struct {
 }
 
 type ValidateCodeRequest struct {
-	CategoryCode string     `json:"category_code" validate:"required"`
-	ItemCode     string     `json:"item_code" validate:"required"`
-	TenantID     *uuid.UUID `json:"tenant_id,omitempty"`
+	CategoryCode   string     `json:"category_code" validate:"required"`
+	ItemCode       string     `json:"item_code" validate:"required"`
+	TenantID       *uuid.UUID `json:"tenant_id,omitempty"`
+	ParentItemCode string     `json:"parent_item_code,omitempty"`
+	RequireActive  bool       `json:"require_active,omitempty"`
 }
 
 type ValidationItem struct {
