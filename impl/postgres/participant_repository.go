@@ -46,15 +46,9 @@ func (r *participantRepository) Create(ctx context.Context, participant *entity.
 	}
 	return nil
 }
-
-func (r *participantRepository) GetByKTPAndPensionNumber(ctx context.Context, ktpNumber, pensionNumber string, tenantID, applicationID uuid.UUID) (*entity.Participant, *entity.ParticipantPension, error) {
-	// MEM-001: single JOIN query — one DB round-trip instead of two
+func (r *participantRepository) GetByKTPAndPensionNumber(ctx context.Context, ktpNumber, pensionNumber string, tenantID, productID uuid.UUID) (*entity.Participant, *entity.ParticipantPension, error) {
 	type joinedRow struct {
-		// Participant columns (all columns from participants table)
-		entity.Participant `gorm:"embedded"`
-		// Pension columns selected with aliases to avoid collision.
-		// uuid.UUID fields allow GORM to scan UUID-formatted strings directly,
-		// eliminating uuid.MustParse and its panic risk (MEM-003).
+		entity.Participant   `gorm:"embedded"`
 		PensionID            uuid.UUID `gorm:"column:pension_id"`
 		PensionParticipantID uuid.UUID `gorm:"column:pension_participant_id"`
 		PensionNumber        *string   `gorm:"column:pension_participant_number"`
@@ -74,16 +68,15 @@ func (r *participantRepository) GetByKTPAndPensionNumber(ctx context.Context, kt
 		WHERE p.ktp_number     = ?
 		  AND pp.participant_number = ?
 		  AND p.tenant_id      = ?
-		  AND p.application_id = ?
+		  AND p.product_id     = ?
 		  AND p.deleted_at     IS NULL
 		LIMIT 1
-	`, ktpNumber, pensionNumber, tenantID, applicationID).Scan(&row).Error
+	`, ktpNumber, pensionNumber, tenantID, productID).Scan(&row).Error
 
 	if err != nil {
 		return nil, nil, fmt.Errorf("GetByKTPAndPensionNumber: %w", err)
 	}
 
-	// Scan() returns nil error when no rows found; detect via empty PK
 	if row.Participant.ID == (uuid.UUID{}) {
 		return nil, nil, apperrors.ErrNotFound("participant not found")
 	}
@@ -136,7 +129,7 @@ func (r *participantRepository) List(ctx context.Context, filter *contract.Parti
 	var total int64
 
 	query := r.getDB(ctx).Model(&entity.Participant{}).
-		Where("tenant_id = ? AND application_id = ? AND deleted_at IS NULL", filter.TenantID, filter.ApplicationID)
+		Where("tenant_id = ? AND product_id = ? AND deleted_at IS NULL", filter.TenantID, filter.ProductID)
 
 	if filter.Status != nil {
 		query = query.Where("status = ?", *filter.Status)

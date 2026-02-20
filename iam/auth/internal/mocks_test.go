@@ -241,16 +241,16 @@ func (m *MockRoleRepository) GetByID(ctx context.Context, id uuid.UUID) (*entity
 	return args.Get(0).(*entity.Role), args.Error(1)
 }
 
-func (m *MockRoleRepository) GetByName(ctx context.Context, tenantID uuid.UUID, name string) (*entity.Role, error) {
-	args := m.Called(ctx, tenantID, name)
+func (m *MockRoleRepository) GetByName(ctx context.Context, productID uuid.UUID, name string) (*entity.Role, error) {
+	args := m.Called(ctx, productID, name)
 	if args.Get(0) == nil {
 		return nil, args.Error(1)
 	}
 	return args.Get(0).(*entity.Role), args.Error(1)
 }
 
-func (m *MockRoleRepository) GetByCode(ctx context.Context, tenantID uuid.UUID, code string) (*entity.Role, error) {
-	args := m.Called(ctx, tenantID, code)
+func (m *MockRoleRepository) GetByCode(ctx context.Context, productID uuid.UUID, code string) (*entity.Role, error) {
+	args := m.Called(ctx, productID, code)
 	if args.Get(0) == nil {
 		return nil, args.Error(1)
 	}

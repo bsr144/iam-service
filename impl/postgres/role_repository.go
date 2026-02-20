@@ -35,18 +35,18 @@ func (r *roleRepository) GetByID(ctx context.Context, id uuid.UUID) (*entity.Rol
 	return &role, nil
 }
 
-func (r *roleRepository) GetByName(ctx context.Context, applicationID uuid.UUID, name string) (*entity.Role, error) {
+func (r *roleRepository) GetByName(ctx context.Context, productID uuid.UUID, name string) (*entity.Role, error) {
 	var role entity.Role
-	err := r.getDB(ctx).Where("application_id = ? AND name = ?", applicationID, name).First(&role).Error
+	err := r.getDB(ctx).Where("product_id = ? AND name = ? AND deleted_at IS NULL", productID, name).First(&role).Error
 	if err != nil {
 		return nil, translateError(err, "role")
 	}
 	return &role, nil
 }
 
-func (r *roleRepository) GetByCode(ctx context.Context, applicationID uuid.UUID, code string) (*entity.Role, error) {
+func (r *roleRepository) GetByCode(ctx context.Context, productID uuid.UUID, code string) (*entity.Role, error) {
 	var role entity.Role
-	err := r.getDB(ctx).Where("application_id = ? AND code = ?", applicationID, code).First(&role).Error
+	err := r.getDB(ctx).Where("product_id = ? AND code = ? AND deleted_at IS NULL", productID, code).First(&role).Error
 	if err != nil {
 		return nil, translateError(err, "role")
 	}
@@ -62,17 +62,17 @@ func (r *roleRepository) Update(ctx context.Context, role *entity.Role) error {
 
 func (r *roleRepository) GetByIDs(ctx context.Context, ids []uuid.UUID) ([]*entity.Role, error) {
 	var roles []*entity.Role
-	err := r.getDB(ctx).Where("id IN ? AND status = 'ACTIVE'", ids).Find(&roles).Error
+	err := r.getDB(ctx).Where("id IN ? AND status = 'ACTIVE' AND deleted_at IS NULL", ids).Find(&roles).Error
 	if err != nil {
 		return nil, translateError(err, "roles")
 	}
 	return roles, nil
 }
 
-func (r *roleRepository) GetByCodeAndApplication(ctx context.Context, applicationID uuid.UUID, code string) (*entity.Role, error) {
+func (r *roleRepository) GetByCodeAndProduct(ctx context.Context, productID uuid.UUID, code string) (*entity.Role, error) {
 	var role entity.Role
 	err := r.getDB(ctx).Table("roles").
-		Where("application_id = ? AND code = ? AND status = ? AND deleted_at IS NULL", applicationID, code, "ACTIVE").
+		Where("product_id = ? AND code = ? AND status = ? AND deleted_at IS NULL", productID, code, "ACTIVE").
 		First(&role).Error
 	if err != nil {
 		return nil, translateError(err, "role")

@@ -43,8 +43,8 @@ type TenantRepository interface {
 type RoleRepository interface {
 	Create(ctx context.Context, role *entity.Role) error
 	GetByID(ctx context.Context, id uuid.UUID) (*entity.Role, error)
-	GetByName(ctx context.Context, tenantID uuid.UUID, name string) (*entity.Role, error)
-	GetByCode(ctx context.Context, tenantID uuid.UUID, code string) (*entity.Role, error)
+	GetByName(ctx context.Context, productID uuid.UUID, name string) (*entity.Role, error)
+	GetByCode(ctx context.Context, productID uuid.UUID, code string) (*entity.Role, error)
 	GetByIDs(ctx context.Context, ids []uuid.UUID) ([]*entity.Role, error)
 }
 type RefreshTokenRepository interface {

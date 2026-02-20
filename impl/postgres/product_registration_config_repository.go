@@ -20,10 +20,10 @@ func NewProductRegistrationConfigRepository(db *gorm.DB) membercontract.ProductR
 	}
 }
 
-func (r *productRegistrationConfigRepository) GetByApplicationAndType(ctx context.Context, applicationID uuid.UUID, regType string) (*entity.ProductRegistrationConfig, error) {
+func (r *productRegistrationConfigRepository) GetByProductAndType(ctx context.Context, productID uuid.UUID, regType string) (*entity.ProductRegistrationConfig, error) {
 	var config entity.ProductRegistrationConfig
 	err := r.getDB(ctx).
-		Where("application_id = ? AND registration_type = ?", applicationID, regType).
+		Where("product_id = ? AND registration_type = ?", productID, regType).
 		First(&config).Error
 	if err != nil {
 		return nil, translateError(err, "product registration config")

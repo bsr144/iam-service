@@ -53,11 +53,11 @@ func (r *userTenantRegistrationRepository) GetByID(ctx context.Context, id uuid.
 	return &reg, nil
 }
 
-func (r *userTenantRegistrationRepository) GetByUserAndProduct(ctx context.Context, userID, tenantID, applicationID uuid.UUID, regType string) (*entity.UserTenantRegistration, error) {
+func (r *userTenantRegistrationRepository) GetByUserAndProduct(ctx context.Context, userID, tenantID, productID uuid.UUID, regType string) (*entity.UserTenantRegistration, error) {
 	var reg entity.UserTenantRegistration
 	err := r.getDB(ctx).
-		Where("user_id = ? AND tenant_id = ? AND application_id = ? AND registration_type = ? AND deleted_at IS NULL",
-			userID, tenantID, applicationID, regType).
+		Where("user_id = ? AND tenant_id = ? AND product_id = ? AND registration_type = ? AND deleted_at IS NULL",
+			userID, tenantID, productID, regType).
 		First(&reg).Error
 	if err != nil {
 		return nil, translateError(err, "member registration")
@@ -101,10 +101,10 @@ func (r *userTenantRegistrationRepository) ListByProductWithFilters(ctx context.
 	baseQuery := db.Table("user_tenant_registrations AS utr").
 		Joins("JOIN users u ON u.id = utr.user_id AND u.deleted_at IS NULL").
 		Joins("LEFT JOIN user_profiles up ON up.user_id = utr.user_id").
-		Joins("LEFT JOIN user_role_assignments ura ON ura.user_id = utr.user_id AND ura.product_id = utr.application_id AND ura.deleted_at IS NULL").
+		Joins("LEFT JOIN user_role_assignments ura ON ura.user_id = utr.user_id AND ura.product_id = utr.product_id AND ura.deleted_at IS NULL").
 		Joins("LEFT JOIN roles r ON r.id = ura.role_id AND r.deleted_at IS NULL AND r.status = 'ACTIVE'").
-		Where("utr.tenant_id = ? AND utr.application_id = ? AND utr.registration_type = ? AND utr.deleted_at IS NULL",
-			filter.TenantID, filter.ApplicationID, "MEMBER")
+		Where("utr.tenant_id = ? AND utr.product_id = ? AND utr.registration_type = ? AND utr.deleted_at IS NULL",
+			filter.TenantID, filter.ProductID, "MEMBER")
 
 	if filter.Status != nil && *filter.Status != "" {
 		baseQuery = baseQuery.Where("utr.status = ?", *filter.Status)
@@ -137,7 +137,7 @@ func (r *userTenantRegistrationRepository) ListByProductWithFilters(ctx context.
 		ID               uuid.UUID  `gorm:"column:id"`
 		UserID           uuid.UUID  `gorm:"column:user_id"`
 		TenantID         uuid.UUID  `gorm:"column:tenant_id"`
-		ApplicationID    *uuid.UUID `gorm:"column:application_id"`
+		ProductID        *uuid.UUID `gorm:"column:product_id"`
 		RegistrationType string     `gorm:"column:registration_type"`
 		Status           string     `gorm:"column:utr_status"`
 		CreatedAt        time.Time  `gorm:"column:utr_created_at"`
@@ -150,7 +150,7 @@ func (r *userTenantRegistrationRepository) ListByProductWithFilters(ctx context.
 
 	var scanRows []scanRow
 	err := baseQuery.
-		Select("utr.id, utr.user_id, utr.tenant_id, utr.application_id, utr.registration_type, utr.status AS utr_status, utr.created_at AS utr_created_at, COALESCE(up.first_name, '') AS first_name, COALESCE(up.last_name, '') AS last_name, u.email, r.code AS role_code, r.name AS role_name").
+		Select("utr.id, utr.user_id, utr.tenant_id, utr.product_id, utr.registration_type, utr.status AS utr_status, utr.created_at AS utr_created_at, COALESCE(up.first_name, '') AS first_name, COALESCE(up.last_name, '') AS last_name, u.email, r.code AS role_code, r.name AS role_name").
 		Order(orderClause).
 		Offset(offset).
 		Limit(filter.PerPage).
@@ -166,7 +166,7 @@ func (r *userTenantRegistrationRepository) ListByProductWithFilters(ctx context.
 				ID:               sr.ID,
 				UserID:           sr.UserID,
 				TenantID:         sr.TenantID,
-				ApplicationID:    sr.ApplicationID,
+				ProductID:        sr.ProductID,
 				RegistrationType: sr.RegistrationType,
 				Status:           entity.UserTenantRegistrationStatus(sr.Status),
 				CreatedAt:        sr.CreatedAt,

@@ -37,8 +37,8 @@ func (uc *usecase) Create(ctx context.Context, req *roledto.CreateRequest) (*rol
 
 	now := time.Now()
 	role := &entity.Role{
-		ApplicationID: req.TenantID,
-		Code:          req.Code,
+		ProductID: req.TenantID,
+		Code:      req.Code,
 		Name:          req.Name,
 		Description:   req.Description,
 		IsSystem:      false,
